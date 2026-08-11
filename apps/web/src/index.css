@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Brand scale aliased onto teal so the accent color can be swapped from one place. */
+  --color-brand-50: var(--color-teal-50);
+  --color-brand-100: var(--color-teal-100);
+  --color-brand-200: var(--color-teal-200);
+  --color-brand-300: var(--color-teal-300);
+  --color-brand-400: var(--color-teal-400);
+  --color-brand-500: var(--color-teal-500);
+  --color-brand-600: var(--color-teal-600);
+  --color-brand-700: var(--color-teal-700);
+  --color-brand-800: var(--color-teal-800);
+  --color-brand-900: var(--color-teal-900);
+}
+
+@layer base {
+  html {
+    font-feature-settings: "cv11", "ss01";
+  }
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased;
+  }
+}

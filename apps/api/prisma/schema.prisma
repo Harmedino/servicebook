@@ -1,0 +1,175 @@
+// ServiceBook data model.
+//
+// Provider is MongoDB, so `relationMode = "prisma"` tells Prisma Client to
+// emulate referential integrity (cascades, restricts) itself, since MongoDB
+// has no foreign keys. There is also no `prisma migrate` for Mongo — schema
+// changes are applied with `prisma db push`.
+//
+// Every business-owned model carries a `businessId` and an index on it; API
+// query layers must always filter by the authenticated user's businessId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mongodb"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+enum UserRole {
+  OWNER
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business Business?
+}
+
+model Business {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  ownerId     String   @unique @db.ObjectId
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String   @unique
+  description String?
+  phone       String?
+  email       String?
+  address     String?
+  timezone    String   @default("UTC")
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services      Service[]
+  staff         Staff[]
+  customers     Customer[]
+  bookings      Booking[]
+  businessHours BusinessHours[]
+}
+
+model Service {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId      String   @db.ObjectId
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  durationMinutes Int
+  price           Float
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  staffIds String[] @db.ObjectId
+  staff    Staff[]  @relation(fields: [staffIds], references: [id])
+
+  bookings Booking[]
+
+  @@index([businessId])
+  @@index([staffIds])
+}
+
+model Staff {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId String   @db.ObjectId
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  email      String?
+  phone      String?
+  avatarUrl  String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  serviceIds String[]  @db.ObjectId
+  services   Service[] @relation(fields: [serviceIds], references: [id])
+
+  availability StaffAvailability[]
+  bookings     Booking[]
+
+  @@index([businessId])
+  @@index([serviceIds])
+}
+
+model Customer {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId String   @db.ObjectId
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  phone      String
+  email      String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@unique([businessId, phone])
+  @@index([businessId])
+}
+
+model BusinessHours {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId String   @db.ObjectId
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  /// 0 = Sunday ... 6 = Saturday
+  dayOfWeek  Int
+  /// "HH:mm" 24h local business time
+  openTime   String
+  closeTime  String
+  isClosed   Boolean  @default(false)
+
+  @@unique([businessId, dayOfWeek])
+  @@index([businessId])
+}
+
+model StaffAvailability {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  staffId   String  @db.ObjectId
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  isOff     Boolean @default(false)
+
+  @@unique([staffId, dayOfWeek])
+  @@index([staffId])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Booking {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  businessId String        @db.ObjectId
+  business   Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  staffId    String        @db.ObjectId
+  staff      Staff         @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  serviceId  String        @db.ObjectId
+  service    Service       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  customerId String        @db.ObjectId
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  startTime  DateTime
+  endTime    DateTime
+  status     BookingStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([staffId, startTime])
+  @@index([businessId, startTime])
+  @@index([customerId])
+}
