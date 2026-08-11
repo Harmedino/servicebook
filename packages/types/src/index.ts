@@ -27,3 +27,26 @@ export interface AuthResponse {
 export interface MeResponse {
   user: SafeUser;
 }
+
+export interface BusinessProfile {
+  id: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  timezone: string;
+  logoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BusinessResponse {
+  business: BusinessProfile;
+}
+
+export interface MyBusinessResponse {
+  business: BusinessProfile | null;
+}

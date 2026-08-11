@@ -1,0 +1,52 @@
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
+import type { BusinessResponse, MyBusinessResponse } from "@servicebook/types";
+import { apiRequest } from "./apiClient";
+
+const BUSINESS_QUERY_KEY = ["business", "me"] as const;
+
+export interface CreateBusinessInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  description?: string;
+  timezone?: string;
+}
+
+export interface UpdateBusinessInput {
+  name?: string;
+  email?: string;
+  phone?: string;
+  description?: string;
+  address?: string;
+  timezone?: string;
+  logoUrl?: string;
+}
+
+export function useMyBusiness(): UseQueryResult<MyBusinessResponse> {
+  return useQuery({
+    queryKey: BUSINESS_QUERY_KEY,
+    queryFn: () => apiRequest<MyBusinessResponse>("/api/business"),
+  });
+}
+
+export function useCreateBusiness(): UseMutationResult<BusinessResponse, unknown, CreateBusinessInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateBusinessInput) =>
+      apiRequest<BusinessResponse>("/api/business", { method: "POST", body: input }),
+    onSuccess: (data) => {
+      queryClient.setQueryData<MyBusinessResponse>(BUSINESS_QUERY_KEY, { business: data.business });
+    },
+  });
+}
+
+export function useUpdateBusiness(): UseMutationResult<BusinessResponse, unknown, UpdateBusinessInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateBusinessInput) =>
+      apiRequest<BusinessResponse>("/api/business", { method: "PATCH", body: input }),
+    onSuccess: (data) => {
+      queryClient.setQueryData<MyBusinessResponse>(BUSINESS_QUERY_KEY, { business: data.business });
+    },
+  });
+}

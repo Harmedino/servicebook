@@ -1,5 +1,22 @@
-import { useNavigate } from "react-router-dom";
+import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
+import { useMyBusiness } from "../lib/business";
+import { BusinessSettingsPage } from "./BusinessSettingsPage";
+
+function DashboardHome() {
+  const { data } = useMyBusiness();
+
+  return (
+    <>
+      <h1 className="text-2xl font-semibold text-stone-900">
+        Welcome{data?.business ? `, ${data.business.name}` : ""}
+      </h1>
+      <p className="mt-1 text-sm text-stone-500">
+        Owner features (bookings, services, staff, customers) land in upcoming steps.
+      </p>
+    </>
+  );
+}
 
 export function DashboardPage() {
   const { user, logout } = useAuth();
@@ -13,7 +30,17 @@ export function DashboardPage() {
   return (
     <div className="min-h-screen bg-stone-50">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4">
-        <span className="text-lg font-semibold text-stone-900">ServiceBook</span>
+        <div className="flex items-center gap-6">
+          <span className="text-lg font-semibold text-stone-900">ServiceBook</span>
+          <nav className="flex items-center gap-4 text-sm text-stone-600">
+            <Link to="/dashboard" className="hover:text-stone-900">
+              Dashboard
+            </Link>
+            <Link to="/dashboard/settings" className="hover:text-stone-900">
+              Settings
+            </Link>
+          </nav>
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-stone-600">{user?.name}</span>
           <button
@@ -26,10 +53,10 @@ export function DashboardPage() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="text-2xl font-semibold text-stone-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Owner features (bookings, services, staff, customers) land in upcoming steps.
-        </p>
+        <Routes>
+          <Route index element={<DashboardHome />} />
+          <Route path="settings" element={<BusinessSettingsPage />} />
+        </Routes>
       </main>
     </div>
   );
