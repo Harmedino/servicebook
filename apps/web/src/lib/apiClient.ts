@@ -2,6 +2,7 @@ import type { ApiErrorBody } from "@servicebook/types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const TOKEN_STORAGE_KEY = "servicebook_token";
+const UNAUTHORIZED_EVENT = "servicebook:unauthorized";
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -13,6 +14,12 @@ export function setStoredToken(token: string | null): void {
   } else {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
+}
+
+/** Fires when an authenticated request comes back 401 (expired/invalid token). Never fires for public requests (auth: false), so a failed login attempt never triggers this. */
+export function onUnauthorized(callback: () => void): () => void {
+  window.addEventListener(UNAUTHORIZED_EVENT, callback);
+  return () => window.removeEventListener(UNAUTHORIZED_EVENT, callback);
 }
 
 export class ApiError extends Error {
@@ -61,6 +68,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const data = await response.json();
 
   if (!response.ok) {
+    if (response.status === 401 && auth) {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
     throw new ApiError(response.status, data as ApiErrorBody);
   }
 

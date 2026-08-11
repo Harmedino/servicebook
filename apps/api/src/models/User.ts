@@ -29,6 +29,7 @@ const userSchema = new Schema(
       type: String,
       enum: USER_ROLES,
       default: "OWNER",
+      required: true,
     },
   },
   { timestamps: true },

@@ -9,3 +9,21 @@ export interface ApiErrorBody {
     details?: Record<string, string[]>;
   };
 }
+
+export type UserRole = "OWNER";
+
+export interface SafeUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AuthResponse {
+  user: SafeUser;
+  token: string;
+}
+
+export interface MeResponse {
+  user: SafeUser;
+}
