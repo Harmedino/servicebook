@@ -5,7 +5,7 @@ A multi-tenant booking platform for appointment-based service businesses (barber
 ## Stack
 
 - **Frontend** — React, TypeScript, Vite, React Router, TanStack Query, Tailwind CSS
-- **Backend** — Node.js, Express, TypeScript, MongoDB, Prisma ORM, REST, JWT
+- **Backend** — Node.js, Express, TypeScript, MongoDB, Mongoose, REST, JWT
 - **Monorepo** — pnpm workspaces
 
 ```text
@@ -29,14 +29,13 @@ servicebook/
 ```bash
 pnpm install
 
-cp apps/api/.env.example apps/api/.env      # fill in DATABASE_URL and JWT_SECRET
+cp apps/api/.env.example apps/api/.env      # fill in MONGODB_URI and JWT_SECRET
 cp apps/web/.env.example apps/web/.env
-
-pnpm prisma:generate
-pnpm prisma:push   # syncs the Prisma schema to MongoDB (no migration history — Mongo is schemaless)
 
 pnpm dev           # runs api (:4000) and web (:5173) together
 ```
+
+Mongoose schemas live in `apps/api/src/models/` — there's no separate generate/push step; models are applied the moment the API connects, and indexes are created (or synced) by Mongoose on first use of each model.
 
 ## Multi-tenancy
 
@@ -44,4 +43,4 @@ Every business-owned record (`Service`, `Staff`, `Customer`, `Booking`, `Busines
 
 ## Double-booking prevention
 
-MongoDB has no equivalent of a Postgres `EXCLUDE` constraint, so overlapping-booking prevention is enforced in application code: booking creation runs inside a MongoDB transaction that checks for overlapping, non-cancelled bookings for the same staff member before inserting. This requires the replica-set connection noted above.
+MongoDB has no equivalent of a Postgres `EXCLUDE` constraint, so overlapping-booking prevention will be enforced in application code: booking creation will run inside a MongoDB transaction that checks for overlapping, non-cancelled bookings for the same staff member before inserting. This requires the replica-set connection noted above. **Not implemented yet** — the `Booking` model exists, but the availability/conflict-checking logic is future work.

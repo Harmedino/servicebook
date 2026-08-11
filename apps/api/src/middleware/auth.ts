@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma";
+import { User } from "../models/User";
+import { Business } from "../models/Business";
 import { verifyAccessToken } from "../lib/jwt";
 import { ForbiddenError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -17,7 +18,7 @@ export const requireAuth = asyncHandler(async (req, _res, next) => {
     throw new UnauthorizedError("Invalid or expired token");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+  const user = await User.findById(payload.userId);
   if (!user) {
     throw new UnauthorizedError("User no longer exists");
   }
@@ -36,7 +37,7 @@ export const requireBusiness = asyncHandler(async (req, _res, next) => {
     throw new UnauthorizedError();
   }
 
-  const business = await prisma.business.findUnique({ where: { ownerId: req.user.id } });
+  const business = await Business.findOne({ ownerId: req.user.id });
   if (!business) {
     throw new ForbiddenError("Create a business profile before accessing this resource");
   }

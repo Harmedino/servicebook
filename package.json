@@ -1,0 +1,14 @@
+{
+  "name": "servicebook",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" run dev",
+    "build": "pnpm --recursive --filter \"./apps/*\" run build",
+    "typecheck": "pnpm --recursive run --if-present typecheck"
+  }
+}

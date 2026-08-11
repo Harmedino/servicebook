@@ -1,36 +1,8 @@
-# Dependencies
 node_modules/
-
-# Env files
-.env
-.env.local
-.env.*.local
-
-# Build output
 dist/
 build/
-.vite/
-.next/
-out/
-
-# Prisma
-apps/api/prisma/*.db
-apps/api/prisma/migrations/dev.db
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+.env
+.env.*
+!.env.example
 *.log
-
-# Editor / OS
 .DS_Store
-.vscode/
-.idea/
-
-# Testing / coverage
-coverage/
-
-# TypeScript
-*.tsbuildinfo

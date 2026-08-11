@@ -1,4 +1,5 @@
-import type { Business, UserRole } from "@prisma/client";
+import type { UserRole } from "../models/User";
+import type { BusinessDocument } from "../models/Business";
 
 declare global {
   namespace Express {
@@ -9,7 +10,7 @@ declare global {
         name: string;
         role: UserRole;
       };
-      business?: Business;
+      business?: BusinessDocument;
       businessId?: string;
     }
   }
