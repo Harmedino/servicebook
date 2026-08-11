@@ -132,12 +132,12 @@ export function BusinessSettingsPage() {
         </label>
 
         {serverError && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="animate-fade-in-up rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {serverError}
           </p>
         )}
         {successMessage && (
-          <p role="status" className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          <p role="status" className="animate-fade-in-up rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
             {successMessage}
           </p>
         )}

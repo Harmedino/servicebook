@@ -64,9 +64,9 @@ export function BusinessOnboardingPage() {
           <span className="text-xl font-semibold text-stone-900">ServiceBook</span>
         </div>
 
-        <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
+        <div className="animate-fade-in-up rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
           <h1 className="text-xl font-semibold text-stone-900">Set up your business</h1>
-          <p className="mt-1 text-sm text-stone-500">Let&apos;s get your business ready for bookings.</p>
+          <p className="mt-1 text-sm text-stone-500">Add your business details so customers can find and book with you.</p>
 
           <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
             <FormField
