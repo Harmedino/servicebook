@@ -70,3 +70,24 @@ export interface ServiceResponse {
 export interface ServiceListResponse {
   services: ServiceProfile[];
 }
+
+export interface StaffProfile {
+  id: string;
+  businessId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+  isActive: boolean;
+  serviceIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffResponse {
+  staff: StaffProfile;
+}
+
+export interface StaffListResponse {
+  staff: StaffProfile[];
+}

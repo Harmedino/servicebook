@@ -6,6 +6,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { BusinessOnboardingPage } from "./pages/BusinessOnboardingPage";
 import { BusinessSettingsPage } from "./pages/BusinessSettingsPage";
 import { ServicesPage } from "./pages/ServicesPage";
+import { StaffPage } from "./pages/StaffPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -57,6 +58,14 @@ export function App() {
         element={
           <OwnerRoute>
             <ServicesPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/staff"
+        element={
+          <OwnerRoute>
+            <StaffPage />
           </OwnerRoute>
         }
       />
