@@ -50,3 +50,23 @@ export interface BusinessResponse {
 export interface MyBusinessResponse {
   business: BusinessProfile | null;
 }
+
+export interface ServiceProfile {
+  id: string;
+  businessId: string;
+  name: string;
+  description?: string;
+  durationMinutes: number;
+  price: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceResponse {
+  service: ServiceProfile;
+}
+
+export interface ServiceListResponse {
+  services: ServiceProfile[];
+}

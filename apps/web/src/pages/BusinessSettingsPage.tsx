@@ -3,6 +3,7 @@ import { useMyBusiness, useUpdateBusiness } from "../lib/business";
 import { TIMEZONES } from "../lib/timezones";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
+import { DashboardLayout } from "../components/DashboardLayout";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -72,15 +73,20 @@ export function BusinessSettingsPage() {
   }
 
   if (isBusinessLoading) {
-    return <p className="text-sm text-stone-500">Loading…</p>;
+    return (
+      <DashboardLayout>
+        <p className="text-sm text-stone-500">Loading…</p>
+      </DashboardLayout>
+    );
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-stone-900">Business profile</h1>
-      <p className="mt-1 text-sm text-stone-500">Update the information customers and staff will see.</p>
+    <DashboardLayout>
+      <div className="max-w-2xl">
+        <h1 className="text-2xl font-semibold text-stone-900">Business profile</h1>
+        <p className="mt-1 text-sm text-stone-500">Update the information customers and staff will see.</p>
 
-      <form
+        <form
         onSubmit={handleSubmit}
         noValidate
         className="mt-6 space-y-4 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
@@ -149,7 +155,8 @@ export function BusinessSettingsPage() {
         >
           {updateBusiness.isPending ? "Saving…" : "Save changes"}
         </button>
-      </form>
-    </div>
+        </form>
+      </div>
+    </DashboardLayout>
   );
 }

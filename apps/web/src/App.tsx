@@ -1,12 +1,23 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { BusinessOnboardingPage } from "./pages/BusinessOnboardingPage";
+import { BusinessSettingsPage } from "./pages/BusinessSettingsPage";
+import { ServicesPage } from "./pages/ServicesPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BusinessGate } from "./components/BusinessGate";
+
+function OwnerRoute({ children }: { children: ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <BusinessGate requireBusiness>{children}</BusinessGate>
+    </ProtectedRoute>
+  );
+}
 
 export function App() {
   return (
@@ -26,13 +37,27 @@ export function App() {
         }
       />
       <Route
-        path="/dashboard/*"
+        path="/dashboard"
         element={
-          <ProtectedRoute>
-            <BusinessGate requireBusiness>
-              <DashboardPage />
-            </BusinessGate>
-          </ProtectedRoute>
+          <OwnerRoute>
+            <DashboardPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/dashboard/settings"
+        element={
+          <OwnerRoute>
+            <BusinessSettingsPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/services"
+        element={
+          <OwnerRoute>
+            <ServicesPage />
+          </OwnerRoute>
         }
       />
       <Route path="*" element={<NotFoundPage />} />
