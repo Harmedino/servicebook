@@ -14,11 +14,12 @@ import { BadRequestError, NotFoundError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { ensureBusinessHours } from "../lib/businessHours";
+import { ensureStaffAvailability } from "../lib/staffAvailability";
+import { objectIdField } from "../lib/validation";
 
 const nameField = z.string().trim().min(1, "Staff name is required").max(120, "Name is too long");
 const emailField = z.string().trim().toLowerCase().email("Enter a valid email address");
 const phoneField = z.string().trim().max(30, "Phone number is too long");
-const objectIdField = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid service id");
 const serviceIdsField = z.array(objectIdField).max(200);
 
 const createStaffSchema = z.object({
@@ -205,23 +206,7 @@ staffRouter.get(
       throw new NotFoundError("Staff member not found");
     }
 
-    let availability = await StaffAvailability.find({ staffId: staff.id }).sort({ dayOfWeek: 1 });
-
-    if (availability.length === 0) {
-      // Default a new staff member's availability to the business's current
-      // hours — always compliant with the "within business hours" rule by
-      // construction, and a sensible starting point for the owner to adjust.
-      const businessHours = await ensureBusinessHours(req.businessId as string);
-      availability = await StaffAvailability.insertMany(
-        businessHours.map((day) => ({
-          staffId: staff.id,
-          dayOfWeek: day.dayOfWeek,
-          isOff: day.isClosed,
-          startTime: day.openTime,
-          endTime: day.closeTime,
-        })),
-      );
-    }
+    const availability = await ensureStaffAvailability(staff.id, req.businessId as string);
 
     const body: StaffAvailabilityResponse = { availability: availability.map(toStaffAvailabilityEntry) };
     res.json(body);

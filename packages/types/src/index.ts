@@ -134,3 +134,37 @@ export interface CustomerResponse {
 export interface CustomerListResponse {
   customers: CustomerProfile[];
 }
+
+export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+
+export interface BookingProfile {
+  id: string;
+  businessId: string;
+  customerId: string;
+  customerName: string;
+  serviceId: string;
+  serviceName: string;
+  staffId: string;
+  staffName: string;
+  /** ISO 8601 UTC instant */
+  startTime: string;
+  /** ISO 8601 UTC instant */
+  endTime: string;
+  status: BookingStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookingResponse {
+  booking: BookingProfile;
+}
+
+export interface BookingListResponse {
+  bookings: BookingProfile[];
+}
+
+export interface AvailableSlotsResponse {
+  /** ISO 8601 UTC instants, each a valid booking start time for the requested staff/service/date */
+  slots: string[];
+}
