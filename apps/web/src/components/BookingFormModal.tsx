@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { useCustomers } from "../lib/customers";
 import { useServices } from "../lib/services";
@@ -18,6 +18,8 @@ export interface BookingFormSubmitValues {
 interface BookingFormModalProps {
   isSubmitting: boolean;
   serverError: string | null;
+  /** Pre-fills the date field — e.g. when opened by clicking an empty calendar slot. */
+  initialDate?: string;
   onSubmit: (values: BookingFormSubmitValues) => void;
   onClose: () => void;
 }
@@ -25,7 +27,7 @@ interface BookingFormModalProps {
 const selectClassName =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100";
 
-export function BookingFormModal({ isSubmitting, serverError, onSubmit, onClose }: BookingFormModalProps) {
+export function BookingFormModal({ isSubmitting, serverError, initialDate, onSubmit, onClose }: BookingFormModalProps) {
   useEscapeToClose(onClose);
 
   const { data: businessData } = useMyBusiness();
@@ -42,7 +44,7 @@ export function BookingFormModal({ isSubmitting, serverError, onSubmit, onClose 
   const [customerId, setCustomerId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [staffId, setStaffId] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(initialDate ?? "");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -59,7 +61,13 @@ export function BookingFormModal({ isSubmitting, serverError, onSubmit, onClose 
   const slots = slotsData?.slots ?? [];
 
   // Progressive filtering: each upstream selection resets what depends on it.
+  // Skips the very first run so an initialDate pre-fill survives mount.
+  const isFirstServiceEffect = useRef(true);
   useEffect(() => {
+    if (isFirstServiceEffect.current) {
+      isFirstServiceEffect.current = false;
+      return;
+    }
     setStaffId("");
     setDate("");
     setSelectedSlot(null);

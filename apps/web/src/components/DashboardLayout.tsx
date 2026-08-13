@@ -32,6 +32,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <Link to="/bookings" className="hover:text-stone-900">
               Bookings
             </Link>
+            <Link to="/calendar" className="hover:text-stone-900">
+              Calendar
+            </Link>
             <Link to="/dashboard/settings" className="hover:text-stone-900">
               Settings
             </Link>

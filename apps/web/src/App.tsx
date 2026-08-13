@@ -11,6 +11,7 @@ import { StaffDetailPage } from "./pages/StaffDetailPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import { CustomerDetailPage } from "./pages/CustomerDetailPage";
 import { BookingsPage } from "./pages/BookingsPage";
+import { CalendarPage } from "./pages/CalendarPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -102,6 +103,14 @@ export function App() {
         element={
           <OwnerRoute>
             <BookingsPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/calendar"
+        element={
+          <OwnerRoute>
+            <CalendarPage />
           </OwnerRoute>
         }
       />

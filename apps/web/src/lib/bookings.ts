@@ -4,6 +4,8 @@ import { apiRequest } from "./apiClient";
 
 export interface BookingFilters {
   date?: string;
+  startDate?: string;
+  endDate?: string;
   status?: BookingStatus;
   staffId?: string;
   customerId?: string;

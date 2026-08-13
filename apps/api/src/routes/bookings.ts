@@ -41,6 +41,8 @@ const updateBookingSchema = z
 
 const listQuerySchema = z.object({
   date: dateKeyField.optional(),
+  startDate: dateKeyField.optional(),
+  endDate: dateKeyField.optional(),
   status: z.enum(BOOKING_STATUSES).optional(),
   staffId: objectIdField.optional(),
   customerId: objectIdField.optional(),
@@ -233,7 +235,17 @@ bookingsRouter.get(
     if (query.customerId) {
       filter.customerId = query.customerId;
     }
-    if (query.date) {
+    if (query.startDate || query.endDate) {
+      // Calendar range fetch: only download the days actually being displayed.
+      const startKey = query.startDate ?? query.endDate ?? query.date;
+      const endKey = query.endDate ?? query.startDate ?? query.date;
+      if (startKey && endKey) {
+        filter.startTime = {
+          $gte: localDayStartUtc(startKey, req.business.timezone),
+          $lt: localDayStartUtc(nextDateKey(endKey), req.business.timezone),
+        };
+      }
+    } else if (query.date) {
       filter.startTime = {
         $gte: localDayStartUtc(query.date, req.business.timezone),
         $lt: localDayStartUtc(nextDateKey(query.date), req.business.timezone),

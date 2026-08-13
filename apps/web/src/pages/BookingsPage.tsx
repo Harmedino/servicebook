@@ -6,21 +6,14 @@ import { useMyBusiness } from "../lib/business";
 import { ApiError } from "../lib/apiClient";
 import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
 
 type Tab = "today" | "upcoming" | "all";
 
-const STATUS_STYLES: Record<BookingStatus, string> = {
-  PENDING: "bg-amber-100 text-amber-700",
-  CONFIRMED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-stone-100 text-stone-500",
-  COMPLETED: "bg-blue-100 text-blue-700",
-  NO_SHOW: "bg-red-100 text-red-700",
-};
-
 function StatusBadge({ status }: { status: BookingStatus }) {
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
-      {status.charAt(0) + status.slice(1).toLowerCase().replace("_", "-")}
+    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[status]}`}>
+      {STATUS_LABELS[status]}
     </span>
   );
 }
