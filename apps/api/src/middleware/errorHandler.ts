@@ -16,6 +16,8 @@ interface MongoDuplicateKeyError {
   keyValue?: Record<string, unknown>;
 }
 
+const TENANT_SCOPE_KEYS = new Set(["businessId", "staffId", "ownerId"]);
+
 function isDuplicateKeyError(err: unknown): err is MongoDuplicateKeyError {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === 11000;
 }
@@ -67,7 +69,10 @@ export function errorHandler(
 
   // MongoDB duplicate-key error (violates a unique index).
   if (isDuplicateKeyError(err)) {
-    const field = err.keyValue ? Object.keys(err.keyValue)[0] : undefined;
+    const keys = err.keyValue ? Object.keys(err.keyValue) : [];
+    // Tenant-scope fields are always part of a compound unique index but
+    // never the meaningful part of the message — prefer the other field.
+    const field = keys.find((key) => !TENANT_SCOPE_KEYS.has(key)) ?? keys[0];
     const body: ApiErrorBody = {
       error: {
         message: field

@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { ServiceProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
+import { useEscapeToClose } from "../lib/useEscapeToClose";
 
 export interface ServiceFormSubmitValues {
   name: string;
@@ -33,15 +34,7 @@ export function ServiceFormModal({ service, isSubmitting, serverError, onSubmit,
   const [isActive, setIsActive] = useState(service?.isActive ?? true);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   function validate(): boolean {
     const errors: FieldErrors = {};

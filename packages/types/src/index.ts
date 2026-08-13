@@ -115,3 +115,22 @@ export interface StaffAvailabilityEntry {
 export interface StaffAvailabilityResponse {
   availability: StaffAvailabilityEntry[];
 }
+
+export interface CustomerProfile {
+  id: string;
+  businessId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerResponse {
+  customer: CustomerProfile;
+}
+
+export interface CustomerListResponse {
+  customers: CustomerProfile[];
+}

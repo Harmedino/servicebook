@@ -8,6 +8,8 @@ import { BusinessSettingsPage } from "./pages/BusinessSettingsPage";
 import { ServicesPage } from "./pages/ServicesPage";
 import { StaffPage } from "./pages/StaffPage";
 import { StaffDetailPage } from "./pages/StaffDetailPage";
+import { CustomersPage } from "./pages/CustomersPage";
+import { CustomerDetailPage } from "./pages/CustomerDetailPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -75,6 +77,22 @@ export function App() {
         element={
           <OwnerRoute>
             <StaffDetailPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/customers"
+        element={
+          <OwnerRoute>
+            <CustomersPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/customers/:customerId"
+        element={
+          <OwnerRoute>
+            <CustomerDetailPage />
           </OwnerRoute>
         }
       />

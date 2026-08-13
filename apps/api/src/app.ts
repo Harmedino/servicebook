@@ -8,6 +8,7 @@ import { authRouter } from "./routes/auth";
 import { businessRouter } from "./routes/business";
 import { servicesRouter } from "./routes/services";
 import { staffRouter } from "./routes/staff";
+import { customersRouter } from "./routes/customers";
 
 export function createApp() {
   const app = express();
@@ -32,8 +33,9 @@ export function createApp() {
   app.use("/api/business", businessRouter);
   app.use("/api/services", servicesRouter);
   app.use("/api/staff", staffRouter);
+  app.use("/api/customers", customersRouter);
 
-  // Feature routers mount here as they're built (customers, bookings, ...).
+  // Feature routers mount here as they're built (bookings, ...).
 
   app.use(notFoundHandler);
   app.use(errorHandler);

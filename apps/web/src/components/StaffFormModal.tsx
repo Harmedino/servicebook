@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
+import { useEscapeToClose } from "../lib/useEscapeToClose";
 
 export interface StaffFormSubmitValues {
   name: string;
@@ -43,15 +44,7 @@ export function StaffFormModal({
   const [isActive, setIsActive] = useState(staff?.isActive ?? true);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   function toggleService(id: string) {
     setSelectedServiceIds((current) =>
