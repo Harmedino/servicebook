@@ -1,0 +1,240 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { formatInTimeZone } from "date-fns-tz";
+import { useCustomers } from "../lib/customers";
+import { useServices } from "../lib/services";
+import { useStaffList } from "../lib/staff";
+import { useAvailableSlots } from "../lib/bookings";
+import { useMyBusiness } from "../lib/business";
+import { useEscapeToClose } from "../lib/useEscapeToClose";
+
+export interface BookingFormSubmitValues {
+  customerId: string;
+  serviceId: string;
+  staffId: string;
+  startTime: string;
+  notes?: string;
+}
+
+interface BookingFormModalProps {
+  isSubmitting: boolean;
+  serverError: string | null;
+  onSubmit: (values: BookingFormSubmitValues) => void;
+  onClose: () => void;
+}
+
+const selectClassName =
+  "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100";
+
+export function BookingFormModal({ isSubmitting, serverError, onSubmit, onClose }: BookingFormModalProps) {
+  useEscapeToClose(onClose);
+
+  const { data: businessData } = useMyBusiness();
+  const timezone = businessData?.business?.timezone ?? "UTC";
+
+  const { data: customersData } = useCustomers();
+  const { data: servicesData } = useServices();
+  const { data: staffData } = useStaffList();
+
+  const customers = customersData?.customers ?? [];
+  const activeServices = (servicesData?.services ?? []).filter((service) => service.isActive);
+  const allStaff = staffData?.staff ?? [];
+
+  const [customerId, setCustomerId] = useState("");
+  const [serviceId, setServiceId] = useState("");
+  const [staffId, setStaffId] = useState("");
+  const [date, setDate] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const [fieldError, setFieldError] = useState<string | null>(null);
+
+  const eligibleStaff = allStaff.filter((staff) => staff.isActive && Boolean(serviceId) && staff.serviceIds.includes(serviceId));
+
+  const today = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+
+  const { data: slotsData, isFetching: isLoadingSlots } = useAvailableSlots(
+    serviceId || undefined,
+    staffId || undefined,
+    date || undefined,
+  );
+  const slots = slotsData?.slots ?? [];
+
+  // Progressive filtering: each upstream selection resets what depends on it.
+  useEffect(() => {
+    setStaffId("");
+    setDate("");
+    setSelectedSlot(null);
+  }, [serviceId]);
+
+  useEffect(() => {
+    setSelectedSlot(null);
+  }, [staffId, date]);
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setFieldError(null);
+
+    if (!customerId) {
+      setFieldError("Select a customer");
+      return;
+    }
+    if (!serviceId) {
+      setFieldError("Select a service");
+      return;
+    }
+    if (!staffId) {
+      setFieldError("Select a staff member");
+      return;
+    }
+    if (!selectedSlot) {
+      setFieldError("Select an available time");
+      return;
+    }
+
+    onSubmit({ customerId, serviceId, staffId, startTime: selectedSlot, notes: notes.trim() || undefined });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
+      <div className="animate-fade-in-up w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-stone-900">New booking</h2>
+
+        <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Customer</span>
+            <select
+              value={customerId}
+              onChange={(event) => setCustomerId(event.target.value)}
+              disabled={isSubmitting}
+              className={selectClassName}
+            >
+              <option value="">Select customer</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Service</span>
+            <select
+              value={serviceId}
+              onChange={(event) => setServiceId(event.target.value)}
+              disabled={isSubmitting}
+              className={selectClassName}
+            >
+              <option value="">Select service</option>
+              {activeServices.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name} ({service.durationMinutes} min)
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Staff</span>
+            <select
+              value={staffId}
+              onChange={(event) => setStaffId(event.target.value)}
+              disabled={isSubmitting || !serviceId}
+              className={selectClassName}
+            >
+              <option value="">{serviceId ? "Select staff" : "Select a service first"}</option>
+              {eligibleStaff.map((staff) => (
+                <option key={staff.id} value={staff.id}>
+                  {staff.name}
+                </option>
+              ))}
+            </select>
+            {serviceId && eligibleStaff.length === 0 && (
+              <p className="mt-1 text-xs text-stone-500">No staff currently provide this service.</p>
+            )}
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Date</span>
+            <input
+              type="date"
+              value={date}
+              min={today}
+              onChange={(event) => setDate(event.target.value)}
+              disabled={isSubmitting || !staffId}
+              className={selectClassName}
+            />
+          </label>
+
+          {staffId && date && (
+            <div>
+              <span className="text-sm font-medium text-stone-700">Time</span>
+              {isLoadingSlots ? (
+                <p className="mt-2 text-sm text-stone-500">Loading available times…</p>
+              ) : slots.length === 0 ? (
+                <div className="mt-2 rounded-lg border border-dashed border-stone-300 bg-stone-50 p-3 text-sm">
+                  <p className="font-medium text-stone-700">No available times</p>
+                  <p className="mt-0.5 text-stone-500">
+                    This staff member has no available appointments for the selected date.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {slots.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setSelectedSlot(slot)}
+                      disabled={isSubmitting}
+                      className={`rounded-lg border px-2 py-1.5 text-sm transition-colors disabled:cursor-not-allowed ${
+                        selectedSlot === slot
+                          ? "border-brand-600 bg-brand-600 text-white"
+                          : "border-stone-300 text-stone-700 hover:border-brand-400"
+                      }`}
+                    >
+                      {formatInTimeZone(new Date(slot), timezone, "h:mm a")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Notes</span>
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              disabled={isSubmitting}
+              rows={2}
+              className={selectClassName}
+            />
+          </label>
+
+          {(fieldError || serverError) && (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {fieldError ?? serverError}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Creating…" : "Create booking"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
