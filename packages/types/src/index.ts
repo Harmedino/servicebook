@@ -91,3 +91,27 @@ export interface StaffResponse {
 export interface StaffListResponse {
   staff: StaffProfile[];
 }
+
+export interface BusinessHoursEntry {
+  /** 0 = Sunday ... 6 = Saturday */
+  dayOfWeek: number;
+  isClosed: boolean;
+  openTime: string;
+  closeTime: string;
+}
+
+export interface BusinessHoursResponse {
+  hours: BusinessHoursEntry[];
+}
+
+export interface StaffAvailabilityEntry {
+  /** 0 = Sunday ... 6 = Saturday */
+  dayOfWeek: number;
+  isOff: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+export interface StaffAvailabilityResponse {
+  availability: StaffAvailabilityEntry[];
+}

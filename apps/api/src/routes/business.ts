@@ -1,11 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { BusinessProfile, BusinessResponse, MyBusinessResponse } from "@servicebook/types";
+import type {
+  BusinessHoursEntry,
+  BusinessHoursResponse,
+  BusinessProfile,
+  BusinessResponse,
+  MyBusinessResponse,
+} from "@servicebook/types";
 import { Business, type BusinessDocument } from "../models/Business";
+import { BusinessHours, type BusinessHoursDocument } from "../models/BusinessHours";
 import { ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { slugify } from "../lib/slugify";
+import { ensureBusinessHours } from "../lib/businessHours";
 
 const VALID_TIMEZONES = new Set(
   typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"],
@@ -41,6 +49,43 @@ const updateBusinessSchema = z
     logoUrl: logoUrlField.optional(),
   })
   .strict();
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PLACEHOLDER_OPEN_TIME = "09:00";
+const PLACEHOLDER_CLOSE_TIME = "17:00";
+
+const businessHourEntrySchema = z
+  .object({
+    dayOfWeek: z.number().int("dayOfWeek must be a whole number").min(0).max(6),
+    isClosed: z.boolean(),
+    openTime: z.string().regex(TIME_PATTERN, "openTime must be HH:mm (24h)").optional(),
+    closeTime: z.string().regex(TIME_PATTERN, "closeTime must be HH:mm (24h)").optional(),
+  })
+  .refine((entry) => entry.isClosed || (entry.openTime !== undefined && entry.closeTime !== undefined), {
+    message: "Open days require both an opening and closing time",
+  })
+  .refine(
+    (entry) =>
+      entry.isClosed || entry.openTime === undefined || entry.closeTime === undefined || entry.openTime < entry.closeTime,
+    { message: "Closing time must be later than opening time" },
+  );
+
+const updateBusinessHoursSchema = z
+  .object({
+    hours: z.array(businessHourEntrySchema).length(7, "All seven days of the week must be included"),
+  })
+  .refine((body) => new Set(body.hours.map((entry) => entry.dayOfWeek)).size === 7, {
+    message: "Each day of the week must appear exactly once",
+  });
+
+function toBusinessHoursEntry(entry: BusinessHoursDocument): BusinessHoursEntry {
+  return {
+    dayOfWeek: entry.dayOfWeek,
+    isClosed: entry.isClosed ?? false,
+    openTime: entry.openTime,
+    closeTime: entry.closeTime,
+  };
+}
 
 async function generateUniqueSlug(name: string): Promise<string> {
   const base = slugify(name) || "business";
@@ -138,6 +183,47 @@ businessRouter.patch(
     }
 
     const body: BusinessResponse = { business: toBusinessProfile(business) };
+    res.json(body);
+  }),
+);
+
+businessRouter.get(
+  "/hours",
+  requireAuth,
+  requireBusiness,
+  asyncHandler(async (req, res) => {
+    const hours = await ensureBusinessHours(req.businessId as string);
+
+    const body: BusinessHoursResponse = { hours: hours.map(toBusinessHoursEntry) };
+    res.json(body);
+  }),
+);
+
+businessRouter.put(
+  "/hours",
+  requireAuth,
+  requireBusiness,
+  asyncHandler(async (req, res) => {
+    const { hours } = updateBusinessHoursSchema.parse(req.body);
+
+    const operations = hours.map((entry) => ({
+      updateOne: {
+        filter: { businessId: req.businessId, dayOfWeek: entry.dayOfWeek },
+        update: {
+          $set: {
+            isClosed: entry.isClosed,
+            openTime: entry.openTime ?? PLACEHOLDER_OPEN_TIME,
+            closeTime: entry.closeTime ?? PLACEHOLDER_CLOSE_TIME,
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await BusinessHours.bulkWrite(operations);
+
+    const updated = await BusinessHours.find({ businessId: req.businessId }).sort({ dayOfWeek: 1 });
+    const body: BusinessHoursResponse = { hours: updated.map(toBusinessHoursEntry) };
     res.json(body);
   }),
 );

@@ -1,11 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { StaffListResponse, StaffProfile, StaffResponse } from "@servicebook/types";
+import type {
+  StaffAvailabilityEntry,
+  StaffAvailabilityResponse,
+  StaffListResponse,
+  StaffProfile,
+  StaffResponse,
+} from "@servicebook/types";
 import { Staff, type StaffDocument } from "../models/Staff";
 import { Service } from "../models/Service";
+import { StaffAvailability, type StaffAvailabilityDocument } from "../models/StaffAvailability";
 import { BadRequestError, NotFoundError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
+import { ensureBusinessHours } from "../lib/businessHours";
 
 const nameField = z.string().trim().min(1, "Staff name is required").max(120, "Name is too long");
 const emailField = z.string().trim().toLowerCase().email("Enter a valid email address");
@@ -67,6 +75,44 @@ function toStaffProfile(staff: StaffDocument): StaffProfile {
     serviceIds: staff.serviceIds.map((id) => id.toString()),
     createdAt: staff.createdAt.toISOString(),
     updatedAt: staff.updatedAt.toISOString(),
+  };
+}
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PLACEHOLDER_START_TIME = "09:00";
+const PLACEHOLDER_END_TIME = "17:00";
+
+const staffAvailabilityEntrySchema = z
+  .object({
+    dayOfWeek: z.number().int("dayOfWeek must be a whole number").min(0).max(6),
+    isOff: z.boolean(),
+    startTime: z.string().regex(TIME_PATTERN, "startTime must be HH:mm (24h)").optional(),
+    endTime: z.string().regex(TIME_PATTERN, "endTime must be HH:mm (24h)").optional(),
+  })
+  .refine((entry) => entry.isOff || (entry.startTime !== undefined && entry.endTime !== undefined), {
+    message: "Working days require both a start and end time",
+  })
+  .refine(
+    (entry) =>
+      entry.isOff || entry.startTime === undefined || entry.endTime === undefined || entry.startTime < entry.endTime,
+    { message: "End time must be later than start time" },
+  );
+
+const updateStaffAvailabilitySchema = z
+  .object({
+    availability: z.array(staffAvailabilityEntrySchema).length(7, "All seven days of the week must be included"),
+  })
+  .refine((body) => new Set(body.availability.map((entry) => entry.dayOfWeek)).size === 7, {
+    message: "Each day of the week must appear exactly once",
+  });
+
+function toStaffAvailabilityEntry(entry: StaffAvailabilityDocument): StaffAvailabilityEntry {
+  return {
+    dayOfWeek: entry.dayOfWeek,
+    isOff: entry.isOff ?? false,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
   };
 }
 
