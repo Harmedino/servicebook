@@ -4,6 +4,7 @@ import { TIMEZONES } from "../lib/timezones";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { BusinessHoursEditor } from "../components/BusinessHoursEditor";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -156,6 +157,10 @@ export function BusinessSettingsPage() {
           {updateBusiness.isPending ? "Saving…" : "Save changes"}
         </button>
         </form>
+
+        <div className="mt-6">
+          <BusinessHoursEditor />
+        </div>
       </div>
     </DashboardLayout>
   );

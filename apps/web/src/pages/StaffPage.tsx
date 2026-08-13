@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { useCreateStaff, useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
@@ -160,7 +161,11 @@ export function StaffPage() {
               <tbody className="divide-y divide-stone-100">
                 {staffMembers.map((staff) => (
                   <tr key={staff.id}>
-                    <td className="px-4 py-3 font-medium text-stone-900">{staff.name}</td>
+                    <td className="px-4 py-3 font-medium text-stone-900">
+                      <Link to={`/staff/${staff.id}`} className="hover:text-brand-700">
+                        {staff.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-stone-600">
                       {staff.email && <div>{staff.email}</div>}
                       {staff.phone && <div>{staff.phone}</div>}
@@ -200,7 +205,9 @@ export function StaffPage() {
                 <li key={staff.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-stone-900">{staff.name}</p>
+                      <Link to={`/staff/${staff.id}`} className="font-medium text-stone-900 hover:text-brand-700">
+                        {staff.name}
+                      </Link>
                       {staff.email && <p className="mt-0.5 text-sm text-stone-500">{staff.email}</p>}
                       {staff.phone && <p className="text-sm text-stone-500">{staff.phone}</p>}
                       <p className="mt-1 text-sm text-stone-500">{resolveServiceNames(staff.serviceIds, allServices)}</p>

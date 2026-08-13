@@ -196,3 +196,93 @@ staffRouter.patch(
     res.json(body);
   }),
 );
+
+staffRouter.get(
+  "/:staffId/availability",
+  asyncHandler(async (req, res) => {
+    const staff = await Staff.findOne({ _id: req.params.staffId, businessId: req.businessId });
+    if (!staff) {
+      throw new NotFoundError("Staff member not found");
+    }
+
+    let availability = await StaffAvailability.find({ staffId: staff.id }).sort({ dayOfWeek: 1 });
+
+    if (availability.length === 0) {
+      // Default a new staff member's availability to the business's current
+      // hours — always compliant with the "within business hours" rule by
+      // construction, and a sensible starting point for the owner to adjust.
+      const businessHours = await ensureBusinessHours(req.businessId as string);
+      availability = await StaffAvailability.insertMany(
+        businessHours.map((day) => ({
+          staffId: staff.id,
+          dayOfWeek: day.dayOfWeek,
+          isOff: day.isClosed,
+          startTime: day.openTime,
+          endTime: day.closeTime,
+        })),
+      );
+    }
+
+    const body: StaffAvailabilityResponse = { availability: availability.map(toStaffAvailabilityEntry) };
+    res.json(body);
+  }),
+);
+
+staffRouter.put(
+  "/:staffId/availability",
+  asyncHandler(async (req, res) => {
+    const staff = await Staff.findOne({ _id: req.params.staffId, businessId: req.businessId });
+    if (!staff) {
+      throw new NotFoundError("Staff member not found");
+    }
+
+    const { availability } = updateStaffAvailabilitySchema.parse(req.body);
+
+    const businessHours = await ensureBusinessHours(req.businessId as string);
+    const businessHoursByDay = new Map(businessHours.map((day) => [day.dayOfWeek, day]));
+
+    for (const entry of availability) {
+      if (entry.isOff) {
+        continue;
+      }
+
+      const dayHours = businessHoursByDay.get(entry.dayOfWeek);
+      if (!dayHours || dayHours.isClosed) {
+        throw new BadRequestError(
+          `The business is closed on ${DAY_NAMES[entry.dayOfWeek]}, so staff can't be available that day`,
+        );
+      }
+
+      const { startTime, endTime } = entry;
+      if (startTime === undefined || endTime === undefined) {
+        throw new BadRequestError("Working days require both a start and end time");
+      }
+
+      if (startTime < dayHours.openTime || endTime > dayHours.closeTime) {
+        throw new BadRequestError(
+          `${DAY_NAMES[entry.dayOfWeek]} availability must be within business hours (${dayHours.openTime}-${dayHours.closeTime})`,
+        );
+      }
+    }
+
+    const operations = availability.map((entry) => ({
+      updateOne: {
+        filter: { staffId: staff.id, dayOfWeek: entry.dayOfWeek },
+        update: {
+          $set: {
+            isOff: entry.isOff,
+            startTime: entry.startTime ?? PLACEHOLDER_START_TIME,
+            endTime: entry.endTime ?? PLACEHOLDER_END_TIME,
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await StaffAvailability.bulkWrite(operations);
+
+    const updated = await StaffAvailability.find({ staffId: staff.id }).sort({ dayOfWeek: 1 });
+    const body: StaffAvailabilityResponse = { availability: updated.map(toStaffAvailabilityEntry) };
+    res.json(body);
+  }),
+);
