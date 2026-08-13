@@ -17,6 +17,6 @@ export async function ensureBusinessHours(businessId: string): Promise<BusinessH
     return existing;
   }
 
-  const created = await BusinessHours.insertMany(DEFAULT_WEEKLY_HOURS.map((day) => ({ businessId, ...day })));
-  return created.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  await BusinessHours.insertMany(DEFAULT_WEEKLY_HOURS.map((day) => ({ businessId, ...day })));
+  return BusinessHours.find({ businessId }).sort({ dayOfWeek: 1 });
 }
