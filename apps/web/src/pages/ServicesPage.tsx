@@ -4,19 +4,7 @@ import { useCreateService, useDeactivateService, useServices, useUpdateService }
 import { ApiError } from "../lib/apiClient";
 import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price);
-}
-
-function formatDuration(minutes: number): string {
-  if (minutes < 60) {
-    return `${minutes} min`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`;
-}
+import { formatDuration, formatPrice } from "../lib/format";
 
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (

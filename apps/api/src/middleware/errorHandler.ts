@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import { ZodError } from "zod";
 import type { ApiErrorBody } from "@servicebook/types";
-import { AppError } from "../lib/errors";
+import { AppError, isDuplicateKeyError } from "../lib/errors";
 
 export function notFoundHandler(req: Request, res: Response) {
   const body: ApiErrorBody = {
@@ -11,16 +11,7 @@ export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json(body);
 }
 
-interface MongoDuplicateKeyError {
-  code: 11000;
-  keyValue?: Record<string, unknown>;
-}
-
 const TENANT_SCOPE_KEYS = new Set(["businessId", "staffId", "ownerId"]);
-
-function isDuplicateKeyError(err: unknown): err is MongoDuplicateKeyError {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === 11000;
-}
 
 export function errorHandler(
   err: unknown,

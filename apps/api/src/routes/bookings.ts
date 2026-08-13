@@ -12,6 +12,7 @@ import { requireAuth, requireBusiness } from "../middleware/auth";
 import { objectIdField } from "../lib/validation";
 import {
   computeAvailableSlots,
+  createValidatedBooking,
   findConflictMessage,
   localDayStartUtc,
   nextDateKey,
@@ -106,76 +107,17 @@ bookingsRouter.post(
       throw new BadRequestError("Customer not found");
     }
 
-    const service = await Service.findOne({ _id: payload.serviceId, businessId: req.businessId });
-    if (!service) {
-      throw new BadRequestError("Service not found");
-    }
-    if (!service.isActive) {
-      throw new BadRequestError("This service is no longer offered");
-    }
-
-    const staff = await Staff.findOne({ _id: payload.staffId, businessId: req.businessId });
-    if (!staff) {
-      throw new BadRequestError("Staff member not found");
-    }
-    if (!staff.isActive) {
-      throw new BadRequestError("This staff member is no longer active");
-    }
-    if (!staff.serviceIds.some((id) => id.toString() === payload.serviceId)) {
-      throw new BadRequestError("This staff member doesn't provide the selected service");
-    }
-
-    const startTime = new Date(payload.startTime);
-    const endTime = new Date(startTime.getTime() + service.durationMinutes * 60_000);
-
-    await validateBookingWindow({
+    const { booking } = await createValidatedBooking({
       businessId: req.businessId,
       business: req.business,
+      serviceId: payload.serviceId,
       staffId: payload.staffId,
-      startTime,
-      endTime,
+      customerId: payload.customerId,
+      startTime: new Date(payload.startTime),
+      notes: payload.notes,
     });
 
-    // Only the conflict check + insert need to be atomic — everything above
-    // is ownership/business-rule validation, not part of the race this
-    // guards against. See the transaction note below.
-    const session = await mongoose.startSession();
-    let booking: BookingDocument | undefined;
-    try {
-      await session.withTransaction(async () => {
-        const conflictMessage = await findConflictMessage({
-          businessId: req.businessId as string,
-          staffId: payload.staffId,
-          customerId: payload.customerId,
-          startTime,
-          endTime,
-          session,
-        });
-        if (conflictMessage) {
-          throw new ConflictError(conflictMessage);
-        }
-
-        const [created] = await Booking.create(
-          [
-            {
-              businessId: req.businessId,
-              staffId: payload.staffId,
-              serviceId: payload.serviceId,
-              customerId: payload.customerId,
-              startTime,
-              endTime,
-              notes: payload.notes,
-            },
-          ],
-          { session },
-        );
-        booking = created;
-      });
-    } finally {
-      await session.endSession();
-    }
-
-    const [profile] = await toBookingProfiles([booking as BookingDocument]);
+    const [profile] = await toBookingProfiles([booking]);
     const body: BookingResponse = { booking: profile };
     res.status(201).json(body);
   }),

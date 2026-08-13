@@ -1,8 +1,10 @@
-import type { ClientSession } from "mongoose";
+import mongoose, { type ClientSession } from "mongoose";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import { Booking } from "../models/Booking";
+import { Booking, type BookingDocument } from "../models/Booking";
+import { Service, type ServiceDocument } from "../models/Service";
+import { Staff, type StaffDocument } from "../models/Staff";
 import type { BusinessDocument } from "../models/Business";
-import { BadRequestError } from "./errors";
+import { BadRequestError, ConflictError } from "./errors";
 import { ensureBusinessHours } from "./businessHours";
 import { ensureStaffAvailability } from "./staffAvailability";
 
@@ -153,7 +155,7 @@ export async function findConflictMessage(params: {
   return null;
 }
 
-// ---- Available slot computation (also the basis for the future public booking page) --
+// ---- Available slot computation (shared by the internal and public booking APIs) --
 
 export async function computeAvailableSlots(params: {
   businessId: string;
@@ -214,4 +216,71 @@ export async function computeAvailableSlots(params: {
   }
 
   return slots;
+}
+
+// ---- Shared booking creation (the single code path both the internal and --
+// ---- public booking APIs use, so neither can bypass the other's rules)  --
+
+/**
+ * Resolves and validates service/staff ownership, computes the service-duration
+ * end time server-side, validates the window (hours/availability/past-date),
+ * and — inside a transaction — re-checks for conflicts and inserts the
+ * booking. This is the single source of truth for "is this booking allowed,"
+ * called by both POST /api/bookings (internal) and the public booking route,
+ * so the public flow can never bypass a rule the internal flow enforces.
+ */
+export async function createValidatedBooking(params: {
+  businessId: string;
+  business: BusinessDocument;
+  serviceId: string;
+  staffId: string;
+  customerId: string;
+  startTime: Date;
+  notes?: string;
+}): Promise<{ booking: BookingDocument; service: ServiceDocument; staff: StaffDocument }> {
+  const { businessId, business, serviceId, staffId, customerId, startTime, notes } = params;
+
+  const service = await Service.findOne({ _id: serviceId, businessId });
+  if (!service) {
+    throw new BadRequestError("Service not found");
+  }
+  if (!service.isActive) {
+    throw new BadRequestError("This service is no longer offered");
+  }
+
+  const staff = await Staff.findOne({ _id: staffId, businessId });
+  if (!staff) {
+    throw new BadRequestError("Staff member not found");
+  }
+  if (!staff.isActive) {
+    throw new BadRequestError("This staff member is no longer active");
+  }
+  if (!staff.serviceIds.some((id) => id.toString() === serviceId)) {
+    throw new BadRequestError("This staff member doesn't provide the selected service");
+  }
+
+  const endTime = new Date(startTime.getTime() + service.durationMinutes * 60_000);
+
+  await validateBookingWindow({ businessId, business, staffId, startTime, endTime });
+
+  const session = await mongoose.startSession();
+  let booking: BookingDocument | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const conflictMessage = await findConflictMessage({ businessId, staffId, customerId, startTime, endTime, session });
+      if (conflictMessage) {
+        throw new ConflictError(conflictMessage);
+      }
+
+      const [created] = await Booking.create(
+        [{ businessId, staffId, serviceId, customerId, startTime, endTime, notes }],
+        { session },
+      );
+      booking = created;
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  return { booking: booking as BookingDocument, service, staff };
 }

@@ -168,3 +168,69 @@ export interface AvailableSlotsResponse {
   /** ISO 8601 UTC instants, each a valid booking start time for the requested staff/service/date */
   slots: string[];
 }
+
+// ---- Public (unauthenticated) booking ----------------------------------
+
+export interface PublicBusinessProfile {
+  name: string;
+  slug: string;
+  description?: string;
+  timezone: string;
+  logoUrl?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
+export interface PublicServiceProfile {
+  id: string;
+  name: string;
+  description?: string;
+  durationMinutes: number;
+  price: number;
+}
+
+export interface PublicStaffProfile {
+  id: string;
+  name: string;
+}
+
+export interface PublicBusinessResponse {
+  business: PublicBusinessProfile;
+  services: PublicServiceProfile[];
+}
+
+export interface PublicStaffListResponse {
+  staff: PublicStaffProfile[];
+}
+
+export interface PublicBookingCustomerInput {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
+export interface PublicCreateBookingInput {
+  serviceId: string;
+  staffId: string;
+  /** ISO 8601 UTC instant */
+  startTime: string;
+  customer: PublicBookingCustomerInput;
+  notes?: string;
+}
+
+export interface PublicBookingConfirmation {
+  serviceName: string;
+  staffName: string;
+  /** ISO 8601 UTC instant */
+  startTime: string;
+  /** ISO 8601 UTC instant */
+  endTime: string;
+  customerName: string;
+  customerEmail?: string;
+  status: BookingStatus;
+}
+
+export interface PublicBookingConfirmationResponse {
+  confirmation: PublicBookingConfirmation;
+}

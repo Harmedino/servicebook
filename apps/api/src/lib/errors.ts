@@ -45,3 +45,13 @@ export class ConflictError extends AppError {
     super(409, "CONFLICT", message);
   }
 }
+
+export interface MongoDuplicateKeyError {
+  code: 11000;
+  keyValue?: Record<string, unknown>;
+}
+
+/** True for a MongoDB duplicate-key error (a write that violated a unique index). */
+export function isDuplicateKeyError(err: unknown): err is MongoDuplicateKeyError {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === 11000;
+}
