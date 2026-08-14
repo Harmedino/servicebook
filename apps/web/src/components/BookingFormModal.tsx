@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import { useCustomers } from "../lib/customers";
+import { useCreateCustomer, useCustomers } from "../lib/customers";
 import { useServices } from "../lib/services";
 import { useStaffList } from "../lib/staff";
 import { useAvailableSlots } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
+import { ApiError } from "../lib/apiClient";
+import { CustomerFormModal, type CustomerFormSubmitValues } from "./CustomerFormModal";
 
 export interface BookingFormSubmitValues {
   customerId: string;
@@ -47,6 +49,7 @@ export function BookingFormModal({
   const { data: customersData } = useCustomers({ limit: 200 });
   const { data: servicesData } = useServices();
   const { data: staffData } = useStaffList();
+  const createCustomer = useCreateCustomer();
 
   const customers = customersData?.customers ?? [];
   const activeServices = (servicesData?.services ?? []).filter((service) => service.isActive);
@@ -59,6 +62,8 @@ export function BookingFormModal({
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
+  const [newCustomerError, setNewCustomerError] = useState<string | null>(null);
 
   const eligibleStaff = allStaff.filter((staff) => staff.isActive && Boolean(serviceId) && staff.serviceIds.includes(serviceId));
 
@@ -112,6 +117,17 @@ export function BookingFormModal({
     onSubmit({ customerId, serviceId, staffId, startTime: selectedSlot, notes: notes.trim() || undefined });
   }
 
+  async function handleCreateCustomer(values: CustomerFormSubmitValues) {
+    setNewCustomerError(null);
+    try {
+      const result = await createCustomer.mutateAsync(values);
+      setCustomerId(result.customer.id);
+      setIsNewCustomerOpen(false);
+    } catch (error) {
+      setNewCustomerError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
       <div className="animate-fade-in-up w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg">
@@ -119,7 +135,17 @@ export function BookingFormModal({
 
         <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
           <label className="block">
-            <span className="text-sm font-medium text-stone-700">Customer</span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-stone-700">Customer</span>
+              <button
+                type="button"
+                onClick={() => setIsNewCustomerOpen(true)}
+                disabled={isSubmitting}
+                className="text-xs font-medium text-brand-700 hover:text-brand-800 disabled:cursor-not-allowed"
+              >
+                + New customer
+              </button>
+            </div>
             <select
               value={customerId}
               onChange={(event) => setCustomerId(event.target.value)}
@@ -254,6 +280,19 @@ export function BookingFormModal({
           </div>
         </form>
       </div>
+
+      {isNewCustomerOpen && (
+        <CustomerFormModal
+          customer={null}
+          isSubmitting={createCustomer.isPending}
+          serverError={newCustomerError}
+          onSubmit={handleCreateCustomer}
+          onClose={() => {
+            setIsNewCustomerOpen(false);
+            setNewCustomerError(null);
+          }}
+        />
+      )}
     </div>
   );
 }

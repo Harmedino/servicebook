@@ -33,7 +33,7 @@ const listQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(200).default(25),
-  sort: z.enum(["newest", "oldest", "name"]).default("name"),
+  sort: z.enum(["recent", "newest", "oldest", "name"]).default("recent"),
   filter: z.enum(["all", "upcoming", "past"]).default("all"),
 });
 
@@ -117,21 +117,71 @@ customersRouter.get(
       filter._id = { $in: matchingCustomerIds };
     }
 
-    const sortSpec: Record<string, 1 | -1> =
-      query.sort === "newest" ? { createdAt: -1 } : query.sort === "oldest" ? { createdAt: 1 } : { name: 1 };
+    let customers: CustomerDocument[];
+    let total: number;
+    let totalPages: number;
+    let page: number;
 
-    const total = await Customer.countDocuments(filter);
-    const totalPages = Math.max(1, Math.ceil(total / query.limit));
-    const page = Math.min(query.page, totalPages);
+    if (query.sort === "recent") {
+      // "Recently active" needs each matching customer's most recent booking
+      // date before it can even determine page order, which a plain
+      // find().sort() can't express. Resolved in two lightweight steps
+      // instead of a $lookup: (1) a single Booking aggregation scoped to
+      // this business (indexed on businessId) to get last-booking-per-customer
+      // for everyone, then (2) an in-memory sort of just the matching
+      // customer ids (id + createdAt only, not full documents) to pick the
+      // page. Full documents are fetched only for that one page.
+      const [matchingCustomers, lastBookingRows] = await Promise.all([
+        Customer.find(filter).select("_id createdAt"),
+        Booking.aggregate<{ _id: unknown; lastBookingAt: Date }>([
+          { $match: { businessId: req.businessId } },
+          { $group: { _id: "$customerId", lastBookingAt: { $max: "$startTime" } } },
+        ]),
+      ]);
+      const lastBookingByCustomerId = new Map(
+        lastBookingRows.map((row) => [(row._id as { toString(): string }).toString(), row.lastBookingAt]),
+      );
 
-    const customers = await Customer.find(filter)
-      .sort(sortSpec)
-      .skip((page - 1) * query.limit)
-      .limit(query.limit);
+      const sortedIds = matchingCustomers
+        .slice()
+        .sort((a, b) => {
+          const aLast = lastBookingByCustomerId.get(a.id);
+          const bLast = lastBookingByCustomerId.get(b.id);
+          if (aLast && bLast) return bLast.getTime() - aLast.getTime();
+          if (aLast) return -1;
+          if (bLast) return 1;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        })
+        .map((customer) => customer._id);
+
+      total = sortedIds.length;
+      totalPages = Math.max(1, Math.ceil(total / query.limit));
+      page = Math.min(query.page, totalPages);
+      const pageIds = sortedIds.slice((page - 1) * query.limit, (page - 1) * query.limit + query.limit);
+
+      const pageDocs = await Customer.find({ _id: { $in: pageIds } });
+      const docById = new Map(pageDocs.map((doc) => [doc.id, doc]));
+      customers = pageIds.map((id) => docById.get(id.toString())).filter((doc): doc is CustomerDocument => Boolean(doc));
+    } else {
+      const sortSpec: Record<string, 1 | -1> =
+        query.sort === "newest" ? { createdAt: -1 } : query.sort === "oldest" ? { createdAt: 1 } : { name: 1 };
+
+      total = await Customer.countDocuments(filter);
+      totalPages = Math.max(1, Math.ceil(total / query.limit));
+      page = Math.min(query.page, totalPages);
+
+      customers = await Customer.find(filter)
+        .sort(sortSpec)
+        .skip((page - 1) * query.limit)
+        .limit(query.limit);
+    }
 
     // Appointment count + last appointment, computed on the fly for just the
     // customers on this page (never stored) — bounded to page size, so this
     // stays cheap regardless of how many customers or bookings exist overall.
+    // Count includes every booking regardless of status (a cancelled visit
+    // still happened as a booking event) — Completed/Cancelled are broken
+    // out separately on the customer detail page for anyone who needs that split.
     const customerIds = customers.map((customer) => customer._id);
     const stats = await Booking.aggregate<{ _id: unknown; count: number; lastAppointment: Date }>([
       { $match: { customerId: { $in: customerIds } } },

@@ -17,6 +17,7 @@ const FILTER_OPTIONS: { value: CustomerAppointmentFilter; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { value: CustomerSort; label: string }[] = [
+  { value: "recent", label: "Recently active" },
   { value: "name", label: "Name (A–Z)" },
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
@@ -35,7 +36,7 @@ function CustomersLoadingSkeleton() {
 export function CustomersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sort, setSort] = useState<CustomerSort>("name");
+  const [sort, setSort] = useState<CustomerSort>("recent");
   const [filter, setFilter] = useState<CustomerAppointmentFilter>("all");
   const [page, setPage] = useState(1);
 
@@ -65,6 +66,7 @@ export function CustomersPage() {
   // undefined = modal closed, null = adding, a CustomerProfile = editing
   const [modalCustomer, setModalCustomer] = useState<CustomerProfile | null | undefined>(undefined);
   const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const customers = data?.customers ?? [];
   const pagination = data?.pagination;
@@ -91,8 +93,10 @@ export function CustomersPage() {
     try {
       if (modalCustomer) {
         await updateCustomer.mutateAsync({ id: modalCustomer.id, ...values });
+        setSuccessMessage("Customer updated.");
       } else {
         await createCustomer.mutateAsync(values);
+        setSuccessMessage("Customer added.");
       }
       closeModal();
     } catch (error) {
@@ -153,6 +157,12 @@ export function CustomersPage() {
       </div>
 
       <div className="mt-6">
+        {successMessage && (
+          <p role="status" className="animate-fade-in-up mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+            {successMessage}
+          </p>
+        )}
+
         {isPending && <CustomersLoadingSkeleton />}
 
         {isError && (

@@ -26,9 +26,11 @@ export function CustomerDetailPage() {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormError, setBookingFormError] = useState<string | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
 
   const allBookings = useMemo(() => bookingsData?.bookings ?? [], [bookingsData?.bookings]);
   const selectedBooking = allBookings.find((booking) => booking.id === selectedBookingId) ?? null;
@@ -59,10 +61,22 @@ export function CustomerDetailPage() {
     };
   }, [allBookings, now]);
 
-  const history = useMemo(
-    () => [...allBookings].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()),
-    [allBookings],
-  );
+  const history = useMemo(() => {
+    let filtered = allBookings;
+    if (historyFilter === "upcoming") {
+      filtered = allBookings.filter(
+        (booking) => new Date(booking.startTime).getTime() >= now && booking.status !== "CANCELLED",
+      );
+    } else if (historyFilter === "completed") {
+      filtered = allBookings.filter((booking) => booking.status === "COMPLETED");
+    } else if (historyFilter === "cancelled") {
+      filtered = allBookings.filter((booking) => booking.status === "CANCELLED");
+    }
+
+    const sorted = [...filtered].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+    // Upcoming reads more naturally soonest-first rather than newest-first.
+    return historyFilter === "upcoming" ? sorted.reverse() : sorted;
+  }, [allBookings, historyFilter, now]);
 
   function formatDateTime(iso: string): string {
     return formatInTimeZone(new Date(iso), timezone, "MMM d, yyyy · h:mm a");
@@ -96,6 +110,7 @@ export function CustomerDetailPage() {
     try {
       await updateCustomer.mutateAsync({ id: customer.id, ...values });
       setIsEditOpen(false);
+      setSuccessMessage("Customer updated.");
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
     }
@@ -142,6 +157,12 @@ export function CustomerDetailPage() {
           </button>
         </div>
       </div>
+
+      {successMessage && (
+        <p role="status" className="animate-fade-in-up mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          {successMessage}
+        </p>
+      )}
 
       <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -216,7 +237,19 @@ export function CustomerDetailPage() {
       </div>
 
       <div className="mt-6">
-        <h2 className="text-base font-semibold text-stone-900">Appointment history</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-stone-900">Appointment history</h2>
+          <select
+            value={historyFilter}
+            onChange={(event) => setHistoryFilter(event.target.value as typeof historyFilter)}
+            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          >
+            <option value="all">All</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
 
         <div className="mt-3">
           {isBookingsPending && (
@@ -235,7 +268,9 @@ export function CustomerDetailPage() {
 
           {!isBookingsPending && !isBookingsError && history.length === 0 && (
             <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
-              No appointments yet for this customer.
+              {historyFilter === "all"
+                ? "No appointments yet for this customer."
+                : "No appointments match this filter."}
             </p>
           )}
 

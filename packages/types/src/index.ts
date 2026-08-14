@@ -143,7 +143,7 @@ export interface CustomerResponse {
   customer: CustomerProfile;
 }
 
-export type CustomerSort = "newest" | "oldest" | "name";
+export type CustomerSort = "recent" | "newest" | "oldest" | "name";
 export type CustomerAppointmentFilter = "all" | "upcoming" | "past";
 
 export interface CustomerListResponse {
