@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMyBusiness, useUpdateBusiness, type UpdateBusinessInput } from "../lib/business";
 import { ApiError } from "../lib/apiClient";
 import { Toggle } from "./Toggle";
+import { Card } from "./ui/Card";
 
 type NotificationField = keyof Pick<
   UpdateBusinessInput,
@@ -48,21 +49,14 @@ export function NotificationSettingsSection() {
   }
 
   if (isPending || !business) {
-    return (
-      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-stone-500">Loading…</p>
-      </div>
-    );
+    return <p className="text-sm text-stone-500">Loading…</p>;
   }
 
   const masterEnabled = business.emailNotificationsEnabled;
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-stone-900">Notifications</h2>
-      <p className="mt-1 text-sm text-stone-500">Choose which emails ServiceBook sends automatically.</p>
-
-      <div className="mt-4 divide-y divide-stone-100">
+    <Card className="max-w-lg p-5">
+      <div className="divide-y divide-stone-100">
         <ToggleRow
           label="Email notifications"
           description="Turns all automatic emails on or off."
@@ -103,6 +97,6 @@ export function NotificationSettingsSection() {
           {successMessage}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

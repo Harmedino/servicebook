@@ -4,14 +4,15 @@ import { BusinessInfoSection } from "../components/BusinessInfoSection";
 import { BookingPageSection } from "../components/BookingPageSection";
 import { BusinessHoursEditor } from "../components/BusinessHoursEditor";
 import { NotificationSettingsSection } from "../components/NotificationSettingsSection";
+import { PageHeader } from "../components/ui/PageHeader";
 
 type Tab = "business" | "booking-page" | "hours" | "notifications";
 
 const TABS: { key: Tab; label: string; description: string }[] = [
   { key: "business", label: "Business", description: "Business information and contact details." },
-  { key: "booking-page", label: "Booking page", description: "Manage what customers see." },
+  { key: "booking-page", label: "Booking page", description: "Manage what customers see when they book online." },
   { key: "hours", label: "Business hours", description: "Configure when your business is open." },
-  { key: "notifications", label: "Notifications", description: "Manage automatic booking emails." },
+  { key: "notifications", label: "Notifications", description: "Manage the emails ServiceBook sends automatically." },
 ];
 
 export function SettingsPage() {
@@ -20,29 +21,37 @@ export function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-semibold text-stone-900">Settings</h1>
-      <p className="mt-1 text-sm text-stone-500">{activeTab.description}</p>
+      <PageHeader title="Settings" description="Manage your business configuration." />
 
-      <div className="mt-4 flex gap-2 overflow-x-auto">
-        {TABS.map((entry) => (
-          <button
-            key={entry.key}
-            type="button"
-            onClick={() => setTab(entry.key)}
-            className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === entry.key ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-            }`}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
+          {TABS.map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              onClick={() => setTab(entry.key)}
+              className={`shrink-0 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors lg:shrink ${
+                tab === entry.key ? "bg-brand-50 text-brand-700" : "text-stone-600 hover:bg-stone-100"
+              }`}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </nav>
 
-      <div className="animate-fade-in-up mt-6 max-w-2xl">
-        {tab === "business" && <BusinessInfoSection />}
-        {tab === "booking-page" && <BookingPageSection />}
-        {tab === "hours" && <BusinessHoursEditor />}
-        {tab === "notifications" && <NotificationSettingsSection />}
+        <div className="max-w-2xl">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-stone-900">{activeTab.label}</h2>
+            <p className="mt-0.5 text-sm text-stone-500">{activeTab.description}</p>
+          </div>
+
+          <div className="animate-fade-in-up">
+            {tab === "business" && <BusinessInfoSection />}
+            {tab === "booking-page" && <BookingPageSection />}
+            {tab === "hours" && <BusinessHoursEditor />}
+            {tab === "notifications" && <NotificationSettingsSection />}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

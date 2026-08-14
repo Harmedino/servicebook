@@ -84,21 +84,14 @@ export function BusinessInfoSection() {
 
   if (isBusinessLoading) {
     return (
-      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+      <div className="max-w-lg">
         <p className="text-sm text-stone-500">Loading…</p>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="space-y-4 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
-    >
-      <h2 className="text-lg font-semibold text-stone-900">Business information</h2>
-      <p className="text-sm text-stone-500">This information may appear on your public booking page.</p>
-
+    <form onSubmit={handleSubmit} noValidate className="max-w-lg space-y-4">
       <FormField
         label="Business name"
         type="text"

@@ -3,6 +3,8 @@ import type { BusinessHoursEntry } from "@servicebook/types";
 import { useBusinessHours, useUpdateBusinessHours } from "../lib/businessHours";
 import { DAY_LABELS, WEEK_DISPLAY_ORDER } from "../lib/weekDays";
 import { ApiError } from "../lib/apiClient";
+import { Card } from "./ui/Card";
+import { Button } from "./ui/Button";
 
 export function BusinessHoursEditor() {
   const { data, isPending, isError } = useBusinessHours();

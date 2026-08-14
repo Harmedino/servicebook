@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import type { BookingStatus } from "@servicebook/types";
 import { useBookings, useCreateBooking } from "../lib/bookings";
 import { useStaffList } from "../lib/staff";
@@ -10,24 +10,29 @@ import { BookingFormModal, type BookingFormSubmitValues } from "../components/Bo
 import { BookingDetailModal } from "../components/BookingDetailModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { STATUS_LABELS } from "../lib/bookingStatus";
-import { addDaysToKey, startOfWeekKey } from "../lib/calendarDates";
+import { addDaysToKey } from "../lib/calendarDates";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
-import { CardListSkeleton } from "../components/ui/Skeleton";
+import { Skeleton } from "../components/ui/Skeleton";
 
-type DateScope = "today" | "tomorrow" | "week" | "upcoming" | "past" | "all" | "custom";
+type Tab = "today" | "upcoming" | "past" | "all";
 
-const DATE_SCOPE_OPTIONS: { value: DateScope; label: string }[] = [
+const TABS: { value: Tab; label: string }[] = [
   { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "week", label: "This week" },
   { value: "upcoming", label: "Upcoming" },
   { value: "past", label: "Past" },
   { value: "all", label: "All" },
-  { value: "custom", label: "Custom date…" },
 ];
+
+const STATUS_ACCENT: Record<BookingStatus, string> = {
+  PENDING: "bg-amber-400",
+  CONFIRMED: "bg-green-500",
+  CANCELLED: "bg-stone-300",
+  COMPLETED: "bg-blue-400",
+  NO_SHOW: "bg-red-400",
+};
 
 export function BookingsPage() {
   const { data: businessData } = useMyBusiness();
@@ -37,9 +42,8 @@ export function BookingsPage() {
   const { data: staffData } = useStaffList();
   const activeStaff = staffData?.staff ?? [];
 
-  const [dateScope, setDateScope] = useState<DateScope>("upcoming");
+  const [tab, setTab] = useState<Tab>("upcoming");
   const todayKey = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
-  const [customDate, setCustomDate] = useState(todayKey);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [staffFilter, setStaffFilter] = useState<string>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -50,31 +54,21 @@ export function BookingsPage() {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  // Maps the selected scope to a server-side date range — bookings are
-  // always fetched pre-scoped, never downloaded in bulk and filtered here.
+  // Maps the selected tab to a server-side date range — bookings are always
+  // fetched pre-scoped, never downloaded in bulk and filtered here.
   const { startDate, endDate } = useMemo(() => {
-    switch (dateScope) {
+    switch (tab) {
       case "today":
         return { startDate: todayKey, endDate: todayKey };
-      case "tomorrow": {
-        const tomorrow = addDaysToKey(todayKey, 1);
-        return { startDate: tomorrow, endDate: tomorrow };
-      }
-      case "week": {
-        const start = startOfWeekKey(todayKey);
-        return { startDate: start, endDate: addDaysToKey(start, 6) };
-      }
       case "upcoming":
         return { startDate: todayKey, endDate: undefined };
       case "past":
         return { startDate: undefined, endDate: addDaysToKey(todayKey, -1) };
-      case "custom":
-        return { startDate: customDate, endDate: customDate };
       case "all":
       default:
         return { startDate: undefined, endDate: undefined };
     }
-  }, [dateScope, todayKey, customDate]);
+  }, [tab, todayKey]);
 
   const { data, isPending, isError } = useBookings({
     startDate,
@@ -107,24 +101,31 @@ export function BookingsPage() {
     }
   }
 
-  function formatDateTime(iso: string): string {
-    return formatInTimeZone(new Date(iso), timezone, "MMM d, h:mm a");
+  function dayLabel(dateKey: string): string {
+    if (dateKey === todayKey) return "Today";
+    if (dateKey === addDaysToKey(todayKey, 1)) return "Tomorrow";
+    if (dateKey === addDaysToKey(todayKey, -1)) return "Yesterday";
+    return formatInTimeZone(new Date(`${dateKey}T12:00:00Z`), "UTC", "EEEE, MMMM d");
   }
 
-  // "Upcoming" and "All" are the two neutral/default views — narrowing to
-  // any other scope, or adding a status/staff/search filter, is what makes
-  // an empty result read as "no matches" rather than "no bookings yet."
-  const hasActiveFilters =
-    (dateScope !== "all" && dateScope !== "upcoming") ||
-    statusFilter !== "all" ||
-    staffFilter !== "all" ||
-    debouncedSearch.length > 0;
+  const groupedByDate = useMemo(() => {
+    const groups = new Map<string, typeof bookings>();
+    for (const booking of bookings) {
+      const dateKey = formatInTimeZone(new Date(booking.startTime), timezone, "yyyy-MM-dd");
+      const list = groups.get(dateKey) ?? [];
+      list.push(booking);
+      groups.set(dateKey, list);
+    }
+    return [...groups.entries()];
+  }, [bookings, timezone]);
+
+  const hasActiveFilters = statusFilter !== "all" || staffFilter !== "all" || debouncedSearch.length > 0;
 
   return (
     <DashboardLayout>
       <PageHeader
         title="Bookings"
-        description="Manage your appointments."
+        description="Your appointments, all in one place."
         actions={
           <Button onClick={openForm}>
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -133,37 +134,38 @@ export function BookingsPage() {
         }
       />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search customer name, phone, or email…"
-          className="w-full max-w-xs rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-        />
-        <select
-          value={dateScope}
-          onChange={(event) => setDateScope(event.target.value as DateScope)}
-          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-        >
-          {DATE_SCOPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-b border-stone-200">
+        <div className="flex gap-5">
+          {TABS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setTab(option.value)}
+              className={`-mb-px border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+                tab === option.value ? "border-brand-600 text-stone-900" : "border-transparent text-stone-500 hover:text-stone-700"
+              }`}
+            >
               {option.label}
-            </option>
+            </button>
           ))}
-        </select>
-        {dateScope === "custom" && (
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" aria-hidden="true" />
           <input
-            type="date"
-            value={customDate}
-            onChange={(event) => setCustomDate(event.target.value)}
-            className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search customers…"
+            className="w-full rounded-lg border border-stone-300 py-1.5 pl-8 pr-3 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
           />
-        )}
+        </div>
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          className="rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-stone-500 transition-colors hover:border-stone-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         >
           <option value="all">All statuses</option>
           {Object.entries(STATUS_LABELS).map(([value, label]) => (
@@ -175,7 +177,7 @@ export function BookingsPage() {
         <select
           value={staffFilter}
           onChange={(event) => setStaffFilter(event.target.value)}
-          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          className="rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-stone-500 transition-colors hover:border-stone-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         >
           <option value="all">All staff</option>
           {activeStaff.map((staff) => (
@@ -186,8 +188,14 @@ export function BookingsPage() {
         </select>
       </div>
 
-      <div className="mt-6">
-        {isPending && <CardListSkeleton />}
+      <div className="mt-4">
+        {isPending && (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-14 rounded-lg" />
+            ))}
+          </div>
+        )}
 
         {isError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -197,7 +205,7 @@ export function BookingsPage() {
 
         {!isPending && !isError && bookings.length === 0 && !hasActiveFilters && (
           <EmptyState
-            title="No bookings yet"
+            title="No appointments"
             description="Create a booking manually or share your public booking page with customers."
             action={
               <>
@@ -216,66 +224,41 @@ export function BookingsPage() {
         )}
 
         {!isPending && !isError && bookings.length === 0 && hasActiveFilters && (
-          <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+          <p className="rounded-lg border border-dashed border-stone-300 px-6 py-8 text-center text-sm text-stone-500">
             No bookings match this view.
           </p>
         )}
 
-        {!isPending && !isError && bookings.length > 0 && (
-          <>
-            <table className="hidden w-full overflow-hidden rounded-2xl border border-stone-200 bg-white text-sm shadow-sm md:table">
-              <thead className="bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-500">
-                <tr>
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3">Service</th>
-                  <th className="px-4 py-3">Staff</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {bookings.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    onClick={() => setSelectedBookingId(booking.id)}
-                    className="cursor-pointer transition-colors hover:bg-stone-50"
-                  >
-                    <td className="px-4 py-3 font-medium text-stone-900">{booking.customerName}</td>
-                    <td className="px-4 py-3 text-stone-600">{booking.serviceName}</td>
-                    <td className="px-4 py-3 text-stone-600">{booking.staffName}</td>
-                    <td className="px-4 py-3 text-stone-600">{formatDateTime(booking.startTime)}</td>
-                    <td className="px-4 py-3">
-                      <BookingStatusBadge status={booking.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <ul className="space-y-3 md:hidden">
-              {bookings.map((booking) => (
-                <li key={booking.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBookingId(booking.id)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300"
-                  >
-                    <div className="flex items-start justify-between gap-3">
+        {!isPending &&
+          !isError &&
+          groupedByDate.map(([dateKey, dayBookings]) => (
+            <div key={dateKey} className="mb-6">
+              <p className="section-label">{dayLabel(dateKey)}</p>
+              <ol className="mt-1">
+                {dayBookings.map((booking) => (
+                  <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
+                    <div className="w-16 shrink-0 pt-3 text-sm font-medium text-stone-500">
+                      {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
+                    </div>
+                    <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBookingId(booking.id)}
+                      className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
+                    >
                       <div>
-                        <p className="font-medium text-stone-900">{booking.customerName}</p>
-                        <p className="mt-0.5 text-sm text-stone-500">
-                          {booking.serviceName} · {booking.staffName}
+                        <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
+                        <p className="text-xs text-stone-500">
+                          {booking.serviceName} <span className="text-stone-400">with</span> {booking.staffName}
                         </p>
-                        <p className="text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
                       </div>
                       <BookingStatusBadge status={booking.status} />
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
       </div>
 
       {isFormOpen && (
