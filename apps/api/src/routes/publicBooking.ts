@@ -214,7 +214,7 @@ publicBookingRouter.post(
       business,
       serviceId: payload.serviceId,
       staffId: payload.staffId,
-      customerId: customer.id,
+      customer,
       startTime: new Date(payload.startTime),
       notes: payload.notes,
     });

@@ -22,6 +22,10 @@ export interface UpdateBusinessInput {
   timezone?: string;
   logoUrl?: string;
   isPublicBookingEnabled?: boolean;
+  emailNotificationsEnabled?: boolean;
+  notifyCustomerOnBooking?: boolean;
+  notifyCustomerReminder?: boolean;
+  notifyOwnerOnBooking?: boolean;
 }
 
 export function useMyBusiness(): UseQueryResult<MyBusinessResponse> {

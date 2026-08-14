@@ -41,6 +41,10 @@ export interface BusinessProfile {
   timezone: string;
   logoUrl?: string;
   isPublicBookingEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  notifyCustomerOnBooking: boolean;
+  notifyCustomerReminder: boolean;
+  notifyOwnerOnBooking: boolean;
   createdAt: string;
   updatedAt: string;
 }

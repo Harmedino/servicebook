@@ -1,6 +1,7 @@
 import { createApp } from "./app";
 import { env } from "./config/env";
 import { connectDatabase, disconnectDatabase } from "./lib/database";
+import { startReminderScheduler, stopReminderScheduler } from "./services/reminderScheduler";
 
 async function main() {
   await connectDatabase();
@@ -11,8 +12,11 @@ async function main() {
     console.log(`API listening on http://localhost:${env.PORT}`);
   });
 
+  startReminderScheduler();
+
   async function shutdown(signal: string) {
     console.log(`${signal} received, shutting down`);
+    stopReminderScheduler();
     server.close();
     await disconnectDatabase();
     process.exit(0);

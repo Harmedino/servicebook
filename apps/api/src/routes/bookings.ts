@@ -4,8 +4,8 @@ import mongoose from "mongoose";
 import type { AvailableSlotsResponse, BookingListResponse, BookingProfile, BookingResponse } from "@servicebook/types";
 import { Booking, type BookingDocument } from "../models/Booking";
 import { Customer } from "../models/Customer";
-import { Service } from "../models/Service";
-import { Staff } from "../models/Staff";
+import { Service, type ServiceDocument } from "../models/Service";
+import { Staff, type StaffDocument } from "../models/Staff";
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
@@ -18,6 +18,7 @@ import {
   nextDateKey,
   validateBookingWindow,
 } from "../lib/bookingEngine";
+import { notifyBookingCancelled, notifyBookingRescheduled } from "../services/notifications";
 
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"] as const;
 const dateKeyField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
@@ -220,13 +221,18 @@ bookingsRouter.patch(
     if (!req.business || !req.businessId) {
       throw new UnauthorizedError();
     }
+    const business = req.business;
+    const businessId = req.businessId;
 
     const updates = updateBookingSchema.parse(req.body);
 
-    const existingBooking = await Booking.findOne({ _id: req.params.id, businessId: req.businessId });
+    const existingBooking = await Booking.findOne({ _id: req.params.id, businessId });
     if (!existingBooking) {
       throw new NotFoundError("Booking not found");
     }
+    const previousStartTime = existingBooking.startTime;
+    const previousEndTime = existingBooking.endTime;
+    const previousStatus = existingBooking.status;
 
     const isRescheduling = updates.staffId !== undefined || updates.serviceId !== undefined || updates.startTime !== undefined;
 
@@ -235,31 +241,34 @@ bookingsRouter.patch(
     const startTime = updates.startTime ? new Date(updates.startTime) : existingBooking.startTime;
     let endTime = existingBooking.endTime;
 
+    let rescheduledService: ServiceDocument | null = null;
+    let rescheduledStaff: StaffDocument | null = null;
+
     if (isRescheduling) {
-      const service = await Service.findOne({ _id: serviceId, businessId: req.businessId });
-      if (!service) {
+      rescheduledService = await Service.findOne({ _id: serviceId, businessId });
+      if (!rescheduledService) {
         throw new BadRequestError("Service not found");
       }
-      if (!service.isActive) {
+      if (!rescheduledService.isActive) {
         throw new BadRequestError("This service is no longer offered");
       }
 
-      const staff = await Staff.findOne({ _id: staffId, businessId: req.businessId });
-      if (!staff) {
+      rescheduledStaff = await Staff.findOne({ _id: staffId, businessId });
+      if (!rescheduledStaff) {
         throw new BadRequestError("Staff member not found");
       }
-      if (!staff.isActive) {
+      if (!rescheduledStaff.isActive) {
         throw new BadRequestError("This staff member is no longer active");
       }
-      if (!staff.serviceIds.some((id) => id.toString() === serviceId)) {
+      if (!rescheduledStaff.serviceIds.some((id) => id.toString() === serviceId)) {
         throw new BadRequestError("This staff member doesn't provide the selected service");
       }
 
-      endTime = new Date(startTime.getTime() + service.durationMinutes * 60_000);
+      endTime = new Date(startTime.getTime() + rescheduledService.durationMinutes * 60_000);
 
       await validateBookingWindow({
-        businessId: req.businessId,
-        business: req.business,
+        businessId,
+        business,
         staffId,
         startTime,
         endTime,
@@ -272,7 +281,7 @@ bookingsRouter.patch(
       await session.withTransaction(async () => {
         if (isRescheduling) {
           const conflictMessage = await findConflictMessage({
-            businessId: req.businessId as string,
+            businessId,
             staffId,
             customerId: existingBooking.customerId.toString(),
             startTime,
@@ -312,8 +321,39 @@ bookingsRouter.patch(
     if (!updatedBooking) {
       throw new NotFoundError("Booking not found");
     }
+    const confirmedBooking = updatedBooking;
 
-    const [profile] = await toBookingProfiles([updatedBooking]);
+    const isNewlyCancelled = previousStatus !== "CANCELLED" && confirmedBooking.status === "CANCELLED";
+
+    // Fire-and-forget, after the transaction — same reasoning as booking
+    // creation: email I/O must never block the response or affect the
+    // already-committed update.
+    if (isNewlyCancelled || isRescheduling) {
+      void (async () => {
+        try {
+          const customer = await Customer.findById(confirmedBooking.customerId);
+          if (!customer) {
+            return;
+          }
+          const service = rescheduledService ?? (await Service.findById(confirmedBooking.serviceId));
+          const staff = rescheduledStaff ?? (await Staff.findById(confirmedBooking.staffId));
+          if (!service || !staff) {
+            return;
+          }
+
+          const ctx = { business, customer, service, staff, booking: confirmedBooking };
+          if (isNewlyCancelled) {
+            await notifyBookingCancelled(ctx);
+          } else if (isRescheduling) {
+            await notifyBookingRescheduled(ctx, { startTime: previousStartTime, endTime: previousEndTime });
+          }
+        } catch (error) {
+          console.error(`Booking-update notification failed for booking ${confirmedBooking.id}:`, error);
+        }
+      })();
+    }
+
+    const [profile] = await toBookingProfiles([confirmedBooking]);
     const body: BookingResponse = { booking: profile };
     res.json(body);
   }),

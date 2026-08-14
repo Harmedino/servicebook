@@ -50,6 +50,10 @@ const updateBusinessSchema = z
     timezone: timezoneField.optional(),
     logoUrl: logoUrlField.optional(),
     isPublicBookingEnabled: z.boolean().optional(),
+    emailNotificationsEnabled: z.boolean().optional(),
+    notifyCustomerOnBooking: z.boolean().optional(),
+    notifyCustomerReminder: z.boolean().optional(),
+    notifyOwnerOnBooking: z.boolean().optional(),
   })
   .strict();
 
@@ -116,6 +120,10 @@ function toBusinessProfile(business: BusinessDocument): BusinessProfile {
     timezone: business.timezone,
     logoUrl: business.logoUrl ?? undefined,
     isPublicBookingEnabled: business.isPublicBookingEnabled ?? true,
+    emailNotificationsEnabled: business.emailNotificationsEnabled ?? true,
+    notifyCustomerOnBooking: business.notifyCustomerOnBooking ?? true,
+    notifyCustomerReminder: business.notifyCustomerReminder ?? true,
+    notifyOwnerOnBooking: business.notifyOwnerOnBooking ?? true,
     createdAt: business.createdAt.toISOString(),
     updatedAt: business.updatedAt.toISOString(),
   };
