@@ -3,6 +3,7 @@ import { useMyBusiness, useUpdateBusiness } from "../lib/business";
 import { TIMEZONES } from "../lib/timezones";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "./FormField";
+import { Button } from "./ui/Button";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

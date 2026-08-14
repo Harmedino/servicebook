@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Calendar, CalendarDays, CheckCircle2, Menu, UserPlus, Users, X, type LucideIcon } from "lucide-react";
 import { useState } from "react";
+import { motion } from "motion/react";
 import { buttonClassName } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
@@ -25,10 +26,33 @@ const TEAM_PREVIEW = [
   { name: "David Smith", appointments: 2 },
 ];
 
-function FloatingNotification({ icon: Icon, tone, title, subtitle, className = "" }: { icon: LucideIcon; tone: "success" | "brand"; title: string; subtitle: string; className?: string }) {
+function FloatingNotification({
+  icon: Icon,
+  tone,
+  title,
+  subtitle,
+  className = "",
+  delay = 0,
+}: {
+  icon: LucideIcon;
+  tone: "success" | "brand";
+  title: string;
+  subtitle: string;
+  className?: string;
+  delay?: number;
+}) {
   const toneClasses = tone === "success" ? "bg-green-100 text-green-600" : "bg-brand-100 text-brand-600";
   return (
-    <div className={`hidden items-center gap-2.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 shadow-[var(--shadow-elevated)] sm:flex ${className}`}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 12 }}
+      animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
+      transition={{
+        opacity: { duration: 0.4, delay: 0.6 + delay },
+        scale: { duration: 0.4, delay: 0.6 + delay },
+        y: { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 + delay },
+      }}
+      className={`hidden items-center gap-2.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 shadow-[var(--shadow-elevated)] sm:flex ${className}`}
+    >
       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${toneClasses}`}>
         <Icon className="h-3.5 w-3.5" aria-hidden="true" />
       </span>
@@ -36,13 +60,18 @@ function FloatingNotification({ icon: Icon, tone, title, subtitle, className = "
         <p className="text-xs font-semibold text-stone-900">{title}</p>
         <p className="text-[11px] text-stone-500">{subtitle}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 function HeroPreview() {
   return (
-    <div className="relative">
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.2 }}
+      className="relative"
+    >
       <Card elevated className="w-full max-w-md overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3.5">
           <span className="text-sm font-semibold text-stone-900">Today&apos;s schedule</span>
@@ -89,16 +118,17 @@ function HeroPreview() {
         tone="success"
         title="Booking confirmed"
         subtitle="Sarah — 10:30 AM"
-        className="animate-float absolute -left-6 -top-6 sm:-left-10"
+        className="absolute -left-6 -top-6 sm:-left-10"
       />
       <FloatingNotification
         icon={UserPlus}
         tone="brand"
         title="New customer"
         subtitle="John Smith"
-        className="animate-float-delayed absolute -bottom-5 -right-4 sm:-right-8"
+        delay={0.8}
+        className="absolute -bottom-5 -right-4 sm:-right-8"
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -248,7 +278,11 @@ export function LandingPage() {
       <section className="relative overflow-hidden bg-hero-mesh">
         <div className="relative z-10 mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
               <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-indigo-100">
                 Booking software for service businesses
               </span>
@@ -274,7 +308,7 @@ export function LandingPage() {
                   See how it works
                 </a>
               </div>
-            </div>
+            </motion.div>
 
             <div className="flex justify-center pt-6 lg:justify-end lg:pt-0">
               <HeroPreview />
@@ -294,7 +328,13 @@ export function LandingPage() {
 
       {/* Why ServiceBook — split, booking flow preview */}
       <section id="features" className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2"
+        >
           <div>
             <p className="section-label">Why ServiceBook</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
@@ -318,7 +358,7 @@ export function LandingPage() {
           <div className="flex justify-center">
             <BookingFlowPreview />
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Dark contrast section */}
