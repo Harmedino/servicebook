@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import { Plus } from "lucide-react";
 import type { BookingStatus } from "@servicebook/types";
 import { useBookings, useCreateBooking } from "../lib/bookings";
 import { useStaffList } from "../lib/staff";
@@ -8,8 +9,14 @@ import { ApiError } from "../lib/apiClient";
 import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
 import { DashboardLayout } from "../components/DashboardLayout";
-import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
+import { STATUS_LABELS } from "../lib/bookingStatus";
 import { addDaysToKey, startOfWeekKey } from "../lib/calendarDates";
+import { Button, buttonClassName } from "../components/ui/Button";
+import { BookingStatusBadge } from "../components/ui/Badge";
+import { Card } from "../components/ui/Card";
+import { PageHeader } from "../components/ui/PageHeader";
+import { EmptyState } from "../components/ui/EmptyState";
+import { CardListSkeleton } from "../components/ui/Skeleton";
 
 type DateScope = "today" | "tomorrow" | "week" | "upcoming" | "past" | "all" | "custom";
 
@@ -22,24 +29,6 @@ const DATE_SCOPE_OPTIONS: { value: DateScope; label: string }[] = [
   { value: "all", label: "All" },
   { value: "custom", label: "Custom date…" },
 ];
-
-function StatusBadge({ status }: { status: BookingStatus }) {
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[status]}`}>
-      {STATUS_LABELS[status]}
-    </span>
-  );
-}
-
-function BookingsLoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-16 animate-pulse rounded-2xl border border-stone-200 bg-white" />
-      ))}
-    </div>
-  );
-}
 
 export function BookingsPage() {
   const { data: businessData } = useMyBusiness();
@@ -134,19 +123,16 @@ export function BookingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-900">Bookings</h1>
-          <p className="mt-1 text-sm text-stone-500">Manage your appointments.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openForm}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          + New booking
-        </button>
-      </div>
+      <PageHeader
+        title="Bookings"
+        description="Manage your appointments."
+        actions={
+          <Button onClick={openForm}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New booking
+          </Button>
+        }
+      />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <input
@@ -202,7 +188,7 @@ export function BookingsPage() {
       </div>
 
       <div className="mt-6">
-        {isPending && <BookingsLoadingSkeleton />}
+        {isPending && <CardListSkeleton />}
 
         {isError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -211,31 +197,23 @@ export function BookingsPage() {
         )}
 
         {!isPending && !isError && bookings.length === 0 && !hasActiveFilters && (
-          <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
-            <h2 className="text-base font-semibold text-stone-900">No bookings yet</h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Create a booking manually or share your public booking page with customers.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <button
-                type="button"
-                onClick={openForm}
-                className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-              >
-                + New booking
-              </button>
-              {bookingUrl && (
-                <a
-                  href={bookingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
-                >
-                  Open booking page
-                </a>
-              )}
-            </div>
-          </div>
+          <EmptyState
+            title="No bookings yet"
+            description="Create a booking manually or share your public booking page with customers."
+            action={
+              <>
+                <Button onClick={openForm}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  New booking
+                </Button>
+                {bookingUrl && (
+                  <a href={bookingUrl} target="_blank" rel="noreferrer" className={buttonClassName("secondary", "md")}>
+                    Open booking page
+                  </a>
+                )}
+              </>
+            }
+          />
         )}
 
         {!isPending && !isError && bookings.length === 0 && hasActiveFilters && (
@@ -268,7 +246,7 @@ export function BookingsPage() {
                     <td className="px-4 py-3 text-stone-600">{booking.staffName}</td>
                     <td className="px-4 py-3 text-stone-600">{formatDateTime(booking.startTime)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={booking.status} />
+                      <BookingStatusBadge status={booking.status} />
                     </td>
                   </tr>
                 ))}
@@ -291,7 +269,7 @@ export function BookingsPage() {
                         </p>
                         <p className="text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
                       </div>
-                      <StatusBadge status={booking.status} />
+                      <BookingStatusBadge status={booking.status} />
                     </div>
                   </button>
                 </li>

@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -59,10 +61,12 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <span className="text-xl font-semibold text-stone-900">ServiceBook</span>
+          <Link to="/" className="text-xl font-semibold tracking-tight text-stone-900">
+            ServiceBook
+          </Link>
         </div>
 
-        <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
+        <Card className="p-8">
           <h1 className="text-xl font-semibold text-stone-900">Welcome back</h1>
           <p className="mt-1 text-sm text-stone-500">Log in to your ServiceBook account.</p>
 
@@ -92,15 +96,11 @@ export function LoginPage() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="submit" size="lg" isLoading={isSubmitting} className="w-full">
               {isSubmitting ? "Logging in…" : "Log in"}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
 
         <p className="mt-6 text-center text-sm text-stone-500">
           Don&apos;t have an account?{" "}

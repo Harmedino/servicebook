@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
+import { Plus } from "lucide-react";
 import type { CustomerAppointmentFilter, CustomerProfile, CustomerSort } from "@servicebook/types";
 import { useCreateCustomer, useCustomers, useUpdateCustomer } from "../lib/customers";
 import { useMyBusiness } from "../lib/business";
 import { ApiError } from "../lib/apiClient";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { Button } from "../components/ui/Button";
+import { PageHeader } from "../components/ui/PageHeader";
+import { EmptyState } from "../components/ui/EmptyState";
+import { CardListSkeleton } from "../components/ui/Skeleton";
 
 const PAGE_SIZE = 25;
 
@@ -22,16 +27,6 @@ const SORT_OPTIONS: { value: CustomerSort; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
 ];
-
-function CustomersLoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-16 animate-pulse rounded-2xl border border-stone-200 bg-white" />
-      ))}
-    </div>
-  );
-}
 
 export function CustomersPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -110,19 +105,16 @@ export function CustomersPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-900">Customers</h1>
-          <p className="mt-1 text-sm text-stone-500">Manage your customers and their contact information.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          + Add customer
-        </button>
-      </div>
+      <PageHeader
+        title="Customers"
+        description="Manage your customers and their contact information."
+        actions={
+          <Button onClick={openAddModal}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add customer
+          </Button>
+        }
+      />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <input
@@ -163,7 +155,7 @@ export function CustomersPage() {
           </p>
         )}
 
-        {isPending && <CustomersLoadingSkeleton />}
+        {isPending && <CardListSkeleton />}
 
         {isError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -172,19 +164,16 @@ export function CustomersPage() {
         )}
 
         {!isPending && !isError && customers.length === 0 && !hasActiveFilters && (
-          <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
-            <h2 className="text-base font-semibold text-stone-900">No customers yet</h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Customers will appear here when you add them or when they make their first booking.
-            </p>
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              + Add customer
-            </button>
-          </div>
+          <EmptyState
+            title="No customers yet"
+            description="Customers will appear here when you add them or when they make their first booking."
+            action={
+              <Button onClick={openAddModal}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add customer
+              </Button>
+            }
+          />
         )}
 
         {!isPending && !isError && customers.length === 0 && hasActiveFilters && (
@@ -264,22 +253,22 @@ export function CustomersPage() {
                   {pagination.total === 1 ? "" : "s"}
                 </p>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                     disabled={pagination.page <= 1}
-                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Previous
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
                     disabled={pagination.page >= pagination.totalPages}
-                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

@@ -1,11 +1,17 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { useCreateStaff, useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
 import { ApiError } from "../lib/apiClient";
 import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { Button } from "../components/ui/Button";
+import { ActiveBadge } from "../components/ui/Badge";
+import { PageHeader } from "../components/ui/PageHeader";
+import { EmptyState } from "../components/ui/EmptyState";
+import { CardListSkeleton } from "../components/ui/Skeleton";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -15,28 +21,6 @@ function resolveServiceNames(serviceIds: string[], services: ServiceProfile[]): 
   }
   const nameById = new Map(services.map((service) => [service.id, service.name]));
   return serviceIds.map((id) => nameById.get(id) ?? "Unknown service").join(", ");
-}
-
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-600"
-      }`}
-    >
-      {isActive ? "Active" : "Inactive"}
-    </span>
-  );
-}
-
-function StaffLoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-16 animate-pulse rounded-2xl border border-stone-200 bg-white" />
-      ))}
-    </div>
-  );
 }
 
 export function StaffPage() {
@@ -138,19 +122,16 @@ export function StaffPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-900">Staff</h1>
-          <p className="mt-1 text-sm text-stone-500">Manage your team and their availability.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          + Add staff
-        </button>
-      </div>
+      <PageHeader
+        title="Staff"
+        description="Manage your team and their availability."
+        actions={
+          <Button onClick={openAddModal}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add staff
+          </Button>
+        }
+      />
 
       {allStaffMembers.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -185,7 +166,7 @@ export function StaffPage() {
           </p>
         )}
 
-        {isPending && <StaffLoadingSkeleton />}
+        {isPending && <CardListSkeleton />}
 
         {isError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -194,17 +175,16 @@ export function StaffPage() {
         )}
 
         {!isPending && !isError && allStaffMembers.length === 0 && (
-          <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
-            <h2 className="text-base font-semibold text-stone-900">You haven&apos;t added any team members yet</h2>
-            <p className="mt-1 text-sm text-stone-500">Add staff so customers can book appointments with them.</p>
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              + Add staff
-            </button>
-          </div>
+          <EmptyState
+            title="You haven't added any team members yet"
+            description="Add staff so customers can book appointments with them."
+            action={
+              <Button onClick={openAddModal}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add staff
+              </Button>
+            }
+          />
         )}
 
         {!isPending && !isError && allStaffMembers.length > 0 && staffMembers.length === 0 && (

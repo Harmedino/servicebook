@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
 import type { ServiceProfile } from "@servicebook/types";
 import { useCreateService, useDeactivateService, useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
@@ -7,30 +8,13 @@ import { ApiError } from "../lib/apiClient";
 import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { formatDuration, formatPrice } from "../lib/format";
+import { Button } from "../components/ui/Button";
+import { ActiveBadge } from "../components/ui/Badge";
+import { PageHeader } from "../components/ui/PageHeader";
+import { EmptyState } from "../components/ui/EmptyState";
+import { CardListSkeleton } from "../components/ui/Skeleton";
 
 type StatusFilter = "all" | "active" | "inactive";
-
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-600"
-      }`}
-    >
-      {isActive ? "Active" : "Inactive"}
-    </span>
-  );
-}
-
-function ServicesLoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-16 animate-pulse rounded-2xl border border-stone-200 bg-white" />
-      ))}
-    </div>
-  );
-}
 
 export function ServicesPage() {
   const { data, isPending, isError } = useServices();
@@ -127,19 +111,16 @@ export function ServicesPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-900">Services</h1>
-          <p className="mt-1 text-sm text-stone-500">Manage the services your customers can book.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          + Add Service
-        </button>
-      </div>
+      <PageHeader
+        title="Services"
+        description="Manage the services your customers can book."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add service
+          </Button>
+        }
+      />
 
       {allServices.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -174,7 +155,7 @@ export function ServicesPage() {
           </p>
         )}
 
-        {isPending && <ServicesLoadingSkeleton />}
+        {isPending && <CardListSkeleton />}
 
         {isError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -183,17 +164,16 @@ export function ServicesPage() {
         )}
 
         {!isPending && !isError && allServices.length === 0 && (
-          <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
-            <h2 className="text-base font-semibold text-stone-900">You haven&apos;t added any services yet</h2>
-            <p className="mt-1 text-sm text-stone-500">Add your services so customers can book them online.</p>
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              + Add service
-            </button>
-          </div>
+          <EmptyState
+            title="You haven't added any services yet"
+            description="Add your services so customers can book them online."
+            action={
+              <Button onClick={openCreateModal}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add service
+              </Button>
+            }
+          />
         )}
 
         {!isPending && !isError && allServices.length > 0 && services.length === 0 && (
@@ -227,7 +207,7 @@ export function ServicesPage() {
                     <td className="px-4 py-3 text-stone-600">{formatPrice(service.price)}</td>
                     <td className="px-4 py-3 text-stone-600">{staffNames(service)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge isActive={service.isActive} />
+                      <ActiveBadge isActive={service.isActive} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
