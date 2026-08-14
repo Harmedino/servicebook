@@ -61,7 +61,7 @@ const availableSlotsQuerySchema = z.object({
 });
 
 /** Batch-resolves customer/service/staff names for display, without storing them on the booking document. */
-async function toBookingProfiles(bookings: BookingDocument[]): Promise<BookingProfile[]> {
+export async function toBookingProfiles(bookings: BookingDocument[]): Promise<BookingProfile[]> {
   const customerIds = [...new Set(bookings.map((booking) => booking.customerId.toString()))];
   const serviceIds = [...new Set(bookings.map((booking) => booking.serviceId.toString()))];
   const staffIds = [...new Set(bookings.map((booking) => booking.staffId.toString()))];

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type { AvailableSlotsResponse, BookingListResponse, BookingResponse, BookingStatus } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
+import { DASHBOARD_QUERY_KEY } from "./dashboard";
 
 export interface BookingFilters {
   date?: string;

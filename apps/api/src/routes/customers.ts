@@ -42,7 +42,7 @@ interface CustomerStats {
   lastAppointmentAt: Date;
 }
 
-function toCustomerProfile(customer: CustomerDocument, stats?: CustomerStats): CustomerProfile {
+export function toCustomerProfile(customer: CustomerDocument, stats?: CustomerStats): CustomerProfile {
   return {
     id: customer.id,
     businessId: customer.businessId.toString(),

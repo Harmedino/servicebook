@@ -11,6 +11,7 @@ import { staffRouter } from "./routes/staff";
 import { customersRouter } from "./routes/customers";
 import { bookingsRouter } from "./routes/bookings";
 import { publicBookingRouter } from "./routes/publicBooking";
+import { dashboardRouter } from "./routes/dashboard";
 
 export function createApp() {
   const app = express();
@@ -38,6 +39,7 @@ export function createApp() {
   app.use("/api/customers", customersRouter);
   app.use("/api/bookings", bookingsRouter);
   app.use("/api/public", publicBookingRouter);
+  app.use("/api/dashboard", dashboardRouter);
 
   // Feature routers mount here as they're built (payments, notifications, ...).
 

@@ -187,6 +187,46 @@ export interface BookingListResponse {
   bookings: BookingProfile[];
 }
 
+// ---- Dashboard summary -------------------------------------------------
+
+export interface DashboardSetupStatus {
+  businessInfoComplete: boolean;
+  hasActiveService: boolean;
+  hasActiveStaff: boolean;
+  hasStaffAvailability: boolean;
+  publicBookingEnabled: boolean;
+}
+
+export interface DashboardStaffToday {
+  staffId: string;
+  staffName: string;
+  todayAppointmentCount: number;
+}
+
+export interface DashboardSummary {
+  businessName: string;
+  businessSlug: string;
+  isPublicBookingEnabled: boolean;
+  todayAppointmentCount: number;
+  upcomingAppointmentCount: number;
+  customerCount: number;
+  activeServiceCount: number;
+  inactiveServiceCount: number;
+  activeStaffCount: number;
+  pendingBookingCount: number;
+  staffMissingAvailabilityCount: number;
+  todayAppointments: BookingProfile[];
+  /** A short preview of the next appointments after today — not the full count, see upcomingAppointmentCount. */
+  upcomingAppointments: BookingProfile[];
+  recentCustomers: CustomerProfile[];
+  staffToday: DashboardStaffToday[];
+  setupStatus: DashboardSetupStatus;
+}
+
+export interface DashboardSummaryResponse {
+  summary: DashboardSummary;
+}
+
 export interface AvailableSlotsResponse {
   /** ISO 8601 UTC instants, each a valid booking start time for the requested staff/service/date */
   slots: string[];
