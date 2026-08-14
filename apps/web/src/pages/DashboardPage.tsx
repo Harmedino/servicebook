@@ -30,11 +30,13 @@ import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffF
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Avatar } from "../components/ui/Avatar";
+import { MiniCalendar } from "../components/ui/MiniCalendar";
 import { Skeleton } from "../components/ui/Skeleton";
 import { addDaysToKey, dayOfWeekFromKey } from "../lib/calendarDates";
 import { DAY_LABELS } from "../lib/weekDays";
 
-const STATUS_ACCENT: Record<BookingStatus, string> = {
+const STATUS_DOT: Record<BookingStatus, string> = {
   PENDING: "bg-amber-400",
   CONFIRMED: "bg-green-500",
   CANCELLED: "bg-stone-300",
@@ -52,7 +54,7 @@ function getGreeting(): string {
 function DashboardSkeleton() {
   return (
     <div className="mt-6 space-y-6">
-      <Skeleton className="h-16 rounded-xl" />
+      <Skeleton className="h-40 rounded-2xl" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Skeleton className="h-96 rounded-xl" />
         <Skeleton className="h-96 rounded-xl" />
@@ -157,13 +159,20 @@ export function DashboardPage() {
     }
   }
 
+  const todayKey = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
   const todayLabel = formatInTimeZone(new Date(), timezone, "EEEE, MMMM d");
+  const monthLabel = formatInTimeZone(new Date(), timezone, "MMMM yyyy");
 
   const todayHoursLabel = (() => {
     const hours = businessHoursData?.hours ?? [];
     const entry = hours.find((h) => h.dayOfWeek === new Date().getDay());
     if (!entry || entry.isClosed) return "Closed today";
-    return `Open · ${entry.openTime} – ${entry.closeTime}`;
+    return `${entry.openTime} – ${entry.closeTime}`;
+  })();
+  const isOpenToday = (() => {
+    const hours = businessHoursData?.hours ?? [];
+    const entry = hours.find((h) => h.dayOfWeek === new Date().getDay());
+    return Boolean(entry && !entry.isClosed);
   })();
 
   if (isError) {
@@ -228,6 +237,14 @@ export function DashboardPage() {
   const todayPending = summary?.todayAppointments.filter((b) => b.status === "PENDING").length ?? 0;
   const todayCancelled = summary?.todayAppointments.filter((b) => b.status === "CANCELLED").length ?? 0;
 
+  const markedDateKeys = new Set<string>(
+    summary
+      ? [...summary.todayAppointments, ...summary.upcomingAppointments].map((b) =>
+          formatInTimeZone(new Date(b.startTime), timezone, "yyyy-MM-dd"),
+        )
+      : [],
+  );
+
   const QUICK_ACTIONS: { key: "booking" | "customer" | "service" | "staff"; label: string; icon: LucideIcon }[] = [
     { key: "booking", label: "New booking", icon: CalendarClock },
     { key: "customer", label: "Add customer", icon: UserPlus },
@@ -237,36 +254,64 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
-            {getGreeting()}
-            {user ? `, ${user.name.split(" ")[0]}` : ""}
-          </h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Here&apos;s what&apos;s happening with {summary?.businessName ?? "your business"} today.
-          </p>
-          <p className="mt-1 text-xs font-medium text-stone-400">{todayLabel}</p>
+      {/* Branded hero */}
+      <div className="relative overflow-hidden rounded-2xl bg-hero-mesh px-6 py-8 sm:px-9 sm:py-10">
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <p className="text-sm font-medium text-indigo-200">{todayLabel}</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+              {getGreeting()}
+              {user ? `, ${user.name.split(" ")[0]}` : ""}
+            </h1>
+            <p className="mt-2 max-w-md text-sm text-indigo-100/80">
+              Here&apos;s what&apos;s happening with {summary?.businessName ?? "your business"} today.
+            </p>
+
+            {summary && (
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-semibold text-white">{summary.todayAppointmentCount}</span>
+                  <span className="text-sm text-indigo-100/80">appointment{summary.todayAppointmentCount === 1 ? "" : "s"} today</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-indigo-100/80">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> {todayConfirmed} confirmed
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-300" /> {todayPending} pending
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/40" /> {todayCancelled} cancelled
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {summary && (
+            <button
+              type="button"
+              onClick={() => setOpenModal("booking")}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-[var(--shadow-glow)] transition-colors hover:bg-indigo-50"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New booking
+            </button>
+          )}
         </div>
-        {summary && (
-          <Button onClick={() => setOpenModal("booking")}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New booking
-          </Button>
-        )}
       </div>
 
       {isPending && <DashboardSkeleton />}
 
       {!isPending && summary && isBrandNewBusiness && (
-        <div className="mt-10 max-w-lg">
+        <div className="mt-8 max-w-lg">
           <p className="section-label">Get your business ready</p>
           <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">
             Complete your setup to start accepting bookings.
           </h2>
-          <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-stone-200">
+          <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-stone-200">
             <div
-              className="h-full rounded-full bg-brand-600 transition-all duration-500"
+              className="animate-grow-width h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
               style={{ width: `${setupPercent}%` }}
             />
           </div>
@@ -322,35 +367,6 @@ export function DashboardPage() {
             </div>
           )}
 
-          {/* Today summary strip */}
-          <div className="border-y border-stone-200 py-4">
-            <p className="section-label">Today</p>
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-8 gap-y-2">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-semibold tracking-tight text-stone-900">
-                  {summary.todayAppointmentCount}
-                </span>
-                <span className="text-sm text-stone-500">appointment{summary.todayAppointmentCount === 1 ? "" : "s"}</span>
-              </div>
-              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                {todayConfirmed} confirmed
-              </div>
-              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
-                {todayPending} pending
-              </div>
-              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-stone-300" aria-hidden="true" />
-                {todayCancelled} cancelled
-              </div>
-              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
-                {summary.upcomingAppointmentCount} upcoming
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
             {/* Left: today's schedule timeline */}
             <div>
@@ -373,23 +389,33 @@ export function DashboardPage() {
                   </Button>
                 </div>
               ) : (
-                <ol className="mt-2">
-                  {summary.todayAppointments.map((booking) => (
-                    <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
-                      <div className="w-16 shrink-0 pt-3 text-sm font-medium text-stone-500">
+                <ol className="mt-3">
+                  {summary.todayAppointments.map((booking, index) => (
+                    <li key={booking.id} className="flex gap-4">
+                      <div className="w-14 shrink-0 pt-2 text-sm font-medium text-stone-500">
                         {formatTime(booking.startTime)}
                       </div>
-                      <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
+                      <div className="flex w-4 shrink-0 flex-col items-center">
+                        <span className={`h-3 w-px ${index === 0 ? "bg-transparent" : "bg-stone-200"}`} aria-hidden="true" />
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[booking.status]}`} aria-hidden="true" />
+                        <span
+                          className={`w-px flex-1 ${index === summary.todayAppointments.length - 1 ? "bg-transparent" : "bg-stone-200"}`}
+                          aria-hidden="true"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={() => setSelectedBookingId(booking.id)}
-                        className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
+                        className="mb-2 flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
                       >
-                        <div>
-                          <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
-                          <p className="text-xs text-stone-500">
-                            {booking.serviceName} · {booking.staffName}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={booking.staffName} size="sm" />
+                          <div>
+                            <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
+                            <p className="text-xs text-stone-500">
+                              {booking.serviceName} <span className="text-stone-400">with</span> {booking.staffName}
+                            </p>
+                          </div>
                         </div>
                         <BookingStatusBadge status={booking.status} />
                       </button>
@@ -414,10 +440,13 @@ export function DashboardPage() {
                           onClick={() => setSelectedBookingId(booking.id)}
                           className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
                         >
-                          <p className="text-sm text-stone-700">
-                            <span className="font-medium text-stone-900">{relativeDayLabel(booking.startTime)}</span>,{" "}
-                            {formatTime(booking.startTime)} — {booking.customerName}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <Avatar name={booking.customerName} size="xs" />
+                            <p className="text-sm text-stone-700">
+                              <span className="font-medium text-stone-900">{relativeDayLabel(booking.startTime)}</span>,{" "}
+                              {formatTime(booking.startTime)} — {booking.customerName}
+                            </p>
+                          </div>
                           <span className="shrink-0 text-xs text-stone-400">{booking.serviceName}</span>
                         </button>
                       </li>
@@ -431,12 +460,19 @@ export function DashboardPage() {
             <div className="lg:sticky lg:top-8 lg:self-start">
               <Card className="divide-y divide-stone-200">
                 <div className="p-5">
-                  <p className="section-label">Business today</p>
-                  <p className="mt-2 text-sm font-medium text-stone-900">{todayHoursLabel}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${isOpenToday ? "bg-green-500" : "bg-stone-300"}`} />
+                    <p className="section-label">{isOpenToday ? "Open today" : "Closed today"}</p>
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium text-stone-900">{todayHoursLabel}</p>
                   <p className="mt-1 text-sm text-stone-500">
                     {summary.customerCount} customer{summary.customerCount === 1 ? "" : "s"} ·{" "}
                     {summary.activeServiceCount} active service{summary.activeServiceCount === 1 ? "" : "s"}
                   </p>
+                </div>
+
+                <div className="p-5">
+                  <MiniCalendar referenceDateKey={todayKey} todayKey={todayKey} markedDateKeys={markedDateKeys} monthLabel={monthLabel} />
                 </div>
 
                 <div className="p-5">
@@ -461,6 +497,9 @@ export function DashboardPage() {
                   <p className="mt-2 text-sm text-stone-600">
                     {summary.isPublicBookingEnabled ? "Your booking page is live." : "Online booking is disabled."}
                   </p>
+                  <code className="mt-2 block truncate rounded-lg bg-stone-50 px-2.5 py-2 text-xs text-stone-600">
+                    {bookingUrl.replace(/^https?:\/\//, "")}
+                  </code>
                   <div className="mt-3 flex flex-col gap-2">
                     <a href={bookingUrl} target="_blank" rel="noreferrer" className={buttonClassName("secondary", "sm", "justify-center")}>
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

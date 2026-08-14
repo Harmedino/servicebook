@@ -4,7 +4,7 @@ import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
+import { AuthBrandPanel } from "../components/AuthBrandPanel";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -68,16 +68,21 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <Link to="/" className="text-xl font-semibold tracking-tight text-stone-900">
-            ServiceBook
-          </Link>
-        </div>
+    <div className="flex min-h-screen bg-white">
+      <AuthBrandPanel
+        headline="Get your business online in minutes."
+        description="Set up services, staff and availability, then start taking bookings."
+      />
 
-        <Card className="p-8">
-          <h1 className="text-xl font-semibold text-stone-900">Create your account</h1>
+      <div className="flex flex-1 items-center justify-center px-4 py-16">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center lg:hidden">
+            <Link to="/" className="text-xl font-semibold tracking-tight text-stone-900">
+              ServiceBook
+            </Link>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Create your account</h1>
           <p className="mt-1 text-sm text-stone-500">Start managing your bookings with ServiceBook.</p>
 
           <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
@@ -128,14 +133,14 @@ export function RegisterPage() {
               {isSubmitting ? "Creating account…" : "Create account"}
             </Button>
           </form>
-        </Card>
 
-        <p className="mt-6 text-center text-sm text-stone-500">
-          Already have an account?{" "}
-          <Link to="/login" className="font-medium text-brand-700 hover:text-brand-800">
-            Log in
-          </Link>
-        </p>
+          <p className="mt-6 text-center text-sm text-stone-500">
+            Already have an account?{" "}
+            <Link to="/login" className="font-medium text-brand-700 hover:text-brand-800">
+              Log in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
