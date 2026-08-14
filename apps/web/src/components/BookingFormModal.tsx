@@ -20,6 +20,8 @@ interface BookingFormModalProps {
   serverError: string | null;
   /** Pre-fills the date field — e.g. when opened by clicking an empty calendar slot. */
   initialDate?: string;
+  /** Pre-fills the customer field — e.g. when opened from a customer's detail page. */
+  initialCustomerId?: string;
   onSubmit: (values: BookingFormSubmitValues) => void;
   onClose: () => void;
 }
@@ -27,13 +29,22 @@ interface BookingFormModalProps {
 const selectClassName =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100";
 
-export function BookingFormModal({ isSubmitting, serverError, initialDate, onSubmit, onClose }: BookingFormModalProps) {
+export function BookingFormModal({
+  isSubmitting,
+  serverError,
+  initialDate,
+  initialCustomerId,
+  onSubmit,
+  onClose,
+}: BookingFormModalProps) {
   useEscapeToClose(onClose);
 
   const { data: businessData } = useMyBusiness();
   const timezone = businessData?.business?.timezone ?? "UTC";
 
-  const { data: customersData } = useCustomers();
+  // limit=200: this dropdown lists every customer, not a paginated page —
+  // the highest limit the endpoint allows is a pragmatic ceiling for now.
+  const { data: customersData } = useCustomers({ limit: 200 });
   const { data: servicesData } = useServices();
   const { data: staffData } = useStaffList();
 
@@ -41,7 +52,7 @@ export function BookingFormModal({ isSubmitting, serverError, initialDate, onSub
   const activeServices = (servicesData?.services ?? []).filter((service) => service.isActive);
   const allStaff = staffData?.staff ?? [];
 
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState(initialCustomerId ?? "");
   const [serviceId, setServiceId] = useState("");
   const [staffId, setStaffId] = useState("");
   const [date, setDate] = useState(initialDate ?? "");

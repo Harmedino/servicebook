@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { CustomerListResponse, CustomerProfile, CustomerResponse } from "@servicebook/types";
 import { Customer, type CustomerDocument } from "../models/Customer";
+import { Booking } from "../models/Booking";
 import { ConflictError, NotFoundError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
@@ -30,9 +31,18 @@ const updateCustomerSchema = z
 
 const listQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(25),
+  sort: z.enum(["newest", "oldest", "name"]).default("name"),
+  filter: z.enum(["all", "upcoming", "past"]).default("all"),
 });
 
-function toCustomerProfile(customer: CustomerDocument): CustomerProfile {
+interface CustomerStats {
+  appointmentCount: number;
+  lastAppointmentAt: Date;
+}
+
+function toCustomerProfile(customer: CustomerDocument, stats?: CustomerStats): CustomerProfile {
   return {
     id: customer.id,
     businessId: customer.businessId.toString(),
@@ -42,6 +52,8 @@ function toCustomerProfile(customer: CustomerDocument): CustomerProfile {
     notes: customer.notes ?? undefined,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
+    appointmentCount: stats?.appointmentCount,
+    lastAppointmentAt: stats?.lastAppointmentAt?.toISOString(),
   };
 }
 
@@ -91,9 +103,54 @@ customersRouter.get(
       filter.$or = [{ name: pattern }, { email: pattern }, { phone: pattern }];
     }
 
-    const customers = await Customer.find(filter).sort({ name: 1 });
+    if (query.filter !== "all") {
+      // "Upcoming"/"past" are booking properties, not customer properties —
+      // resolve the matching customer ids from Bookings first (one indexed
+      // query), then narrow the customer filter. Cheaper than a $lookup
+      // across every customer, and avoids denormalizing anything onto Customer.
+      const now = new Date();
+      const bookingFilter: Record<string, unknown> =
+        query.filter === "upcoming"
+          ? { businessId: req.businessId, startTime: { $gte: now }, status: { $ne: "CANCELLED" } }
+          : { businessId: req.businessId, startTime: { $lt: now } };
+      const matchingCustomerIds = await Booking.distinct("customerId", bookingFilter);
+      filter._id = { $in: matchingCustomerIds };
+    }
 
-    const body: CustomerListResponse = { customers: customers.map(toCustomerProfile) };
+    const sortSpec: Record<string, 1 | -1> =
+      query.sort === "newest" ? { createdAt: -1 } : query.sort === "oldest" ? { createdAt: 1 } : { name: 1 };
+
+    const total = await Customer.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(total / query.limit));
+    const page = Math.min(query.page, totalPages);
+
+    const customers = await Customer.find(filter)
+      .sort(sortSpec)
+      .skip((page - 1) * query.limit)
+      .limit(query.limit);
+
+    // Appointment count + last appointment, computed on the fly for just the
+    // customers on this page (never stored) — bounded to page size, so this
+    // stays cheap regardless of how many customers or bookings exist overall.
+    const customerIds = customers.map((customer) => customer._id);
+    const stats = await Booking.aggregate<{ _id: unknown; count: number; lastAppointment: Date }>([
+      { $match: { customerId: { $in: customerIds } } },
+      { $group: { _id: "$customerId", count: { $sum: 1 }, lastAppointment: { $max: "$startTime" } } },
+    ]);
+    const statsByCustomerId = new Map(
+      stats.map((entry) => [(entry._id as { toString(): string }).toString(), entry]),
+    );
+
+    const body: CustomerListResponse = {
+      customers: customers.map((customer) => {
+        const stat = statsByCustomerId.get(customer.id);
+        return toCustomerProfile(
+          customer,
+          stat ? { appointmentCount: stat.count, lastAppointmentAt: stat.lastAppointment } : undefined,
+        );
+      }),
+      pagination: { page, limit: query.limit, total, totalPages },
+    };
     res.json(body);
   }),
 );

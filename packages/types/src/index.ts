@@ -131,14 +131,27 @@ export interface CustomerProfile {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  /** Only populated on list responses — total bookings ever made by this customer. */
+  appointmentCount?: number;
+  /** Only populated on list responses — ISO 8601 UTC instant of their most recent booking. */
+  lastAppointmentAt?: string;
 }
 
 export interface CustomerResponse {
   customer: CustomerProfile;
 }
 
+export type CustomerSort = "newest" | "oldest" | "name";
+export type CustomerAppointmentFilter = "all" | "upcoming" | "past";
+
 export interface CustomerListResponse {
   customers: CustomerProfile[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";

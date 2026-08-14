@@ -1,10 +1,26 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { CustomerProfile } from "@servicebook/types";
+import { formatInTimeZone } from "date-fns-tz";
+import type { CustomerAppointmentFilter, CustomerProfile, CustomerSort } from "@servicebook/types";
 import { useCreateCustomer, useCustomers, useUpdateCustomer } from "../lib/customers";
+import { useMyBusiness } from "../lib/business";
 import { ApiError } from "../lib/apiClient";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
+
+const PAGE_SIZE = 25;
+
+const FILTER_OPTIONS: { value: CustomerAppointmentFilter; label: string }[] = [
+  { value: "all", label: "All customers" },
+  { value: "upcoming", label: "Upcoming appointments" },
+  { value: "past", label: "Past appointments" },
+];
+
+const SORT_OPTIONS: { value: CustomerSort; label: string }[] = [
+  { value: "name", label: "Name (A–Z)" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+];
 
 function CustomersLoadingSkeleton() {
   return (
@@ -19,13 +35,30 @@ function CustomersLoadingSkeleton() {
 export function CustomersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState<CustomerSort>("name");
+  const [filter, setFilter] = useState<CustomerAppointmentFilter>("all");
+  const [page, setPage] = useState(1);
+
+  const { data: businessData } = useMyBusiness();
+  const timezone = businessData?.business?.timezone ?? "UTC";
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  const { data, isPending, isError } = useCustomers(debouncedSearch || undefined);
+  // Any change to what's being asked for invalidates the current page number.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, sort, filter]);
+
+  const { data, isPending, isError } = useCustomers({
+    q: debouncedSearch || undefined,
+    page,
+    limit: PAGE_SIZE,
+    sort,
+    filter,
+  });
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
 
@@ -34,7 +67,9 @@ export function CustomersPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const customers = data?.customers ?? [];
+  const pagination = data?.pagination;
   const isSearching = debouncedSearch.length > 0;
+  const hasActiveFilters = isSearching || filter !== "all";
 
   function openAddModal() {
     setFormError(null);
@@ -65,6 +100,10 @@ export function CustomersPage() {
     }
   }
 
+  function formatLastAppointment(iso?: string): string {
+    return iso ? formatInTimeZone(new Date(iso), timezone, "MMM d, yyyy") : "—";
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -81,7 +120,7 @@ export function CustomersPage() {
         </button>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <input
           type="search"
           value={searchInput}
@@ -89,6 +128,28 @@ export function CustomersPage() {
           placeholder="Search customers…"
           className="w-full max-w-sm rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         />
+        <select
+          value={filter}
+          onChange={(event) => setFilter(event.target.value as CustomerAppointmentFilter)}
+          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        >
+          {FILTER_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sort}
+          onChange={(event) => setSort(event.target.value as CustomerSort)}
+          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="mt-6">
@@ -100,7 +161,7 @@ export function CustomersPage() {
           </p>
         )}
 
-        {!isPending && !isError && customers.length === 0 && !isSearching && (
+        {!isPending && !isError && customers.length === 0 && !hasActiveFilters && (
           <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
             <h2 className="text-base font-semibold text-stone-900">No customers yet</h2>
             <p className="mt-1 text-sm text-stone-500">
@@ -116,9 +177,9 @@ export function CustomersPage() {
           </div>
         )}
 
-        {!isPending && !isError && customers.length === 0 && isSearching && (
+        {!isPending && !isError && customers.length === 0 && hasActiveFilters && (
           <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
-            No customers match &ldquo;{debouncedSearch}&rdquo;.
+            No customers match these filters.
           </p>
         )}
 
@@ -130,6 +191,8 @@ export function CustomersPage() {
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Phone</th>
                   <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Appointments</th>
+                  <th className="px-4 py-3">Last appointment</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -143,6 +206,8 @@ export function CustomersPage() {
                     </td>
                     <td className="px-4 py-3 text-stone-600">{customer.phone}</td>
                     <td className="px-4 py-3 text-stone-600">{customer.email ?? "—"}</td>
+                    <td className="px-4 py-3 text-stone-600">{customer.appointmentCount ?? 0}</td>
+                    <td className="px-4 py-3 text-stone-600">{formatLastAppointment(customer.lastAppointmentAt)}</td>
                     <td className="px-4 py-3 text-right">
                       <button
                         type="button"
@@ -165,6 +230,10 @@ export function CustomersPage() {
                   </Link>
                   <p className="mt-0.5 text-sm text-stone-500">{customer.phone}</p>
                   {customer.email && <p className="text-sm text-stone-500">{customer.email}</p>}
+                  <p className="mt-1 text-xs text-stone-500">
+                    {customer.appointmentCount ?? 0} appointment{customer.appointmentCount === 1 ? "" : "s"} · Last:{" "}
+                    {formatLastAppointment(customer.lastAppointmentAt)}
+                  </p>
                   <div className="mt-3">
                     <button
                       type="button"
@@ -177,6 +246,33 @@ export function CustomersPage() {
                 </li>
               ))}
             </ul>
+
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-stone-500">
+                  Page {pagination.page} of {pagination.totalPages} · {pagination.total} customer
+                  {pagination.total === 1 ? "" : "s"}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={pagination.page <= 1}
+                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+                    disabled={pagination.page >= pagination.totalPages}
+                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

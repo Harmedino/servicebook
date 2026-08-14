@@ -1,9 +1,22 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
-import type { CustomerListResponse, CustomerResponse } from "@servicebook/types";
+import type {
+  CustomerAppointmentFilter,
+  CustomerListResponse,
+  CustomerResponse,
+  CustomerSort,
+} from "@servicebook/types";
 import { apiRequest } from "./apiClient";
 
-function customersListQueryKey(search?: string) {
-  return ["customers", "list", search ?? ""] as const;
+export interface CustomerListParams {
+  q?: string;
+  page?: number;
+  limit?: number;
+  sort?: CustomerSort;
+  filter?: CustomerAppointmentFilter;
+}
+
+function customersListQueryKey(params: CustomerListParams) {
+  return ["customers", "list", params] as const;
 }
 
 function customerDetailQueryKey(id: string) {
@@ -25,12 +38,18 @@ export interface UpdateCustomerInput {
   notes?: string;
 }
 
-export function useCustomers(search?: string): UseQueryResult<CustomerListResponse> {
+export function useCustomers(params: CustomerListParams = {}): UseQueryResult<CustomerListResponse> {
   return useQuery({
-    queryKey: customersListQueryKey(search),
+    queryKey: customersListQueryKey(params),
     queryFn: () => {
-      const query = search ? `?q=${encodeURIComponent(search)}` : "";
-      return apiRequest<CustomerListResponse>(`/api/customers${query}`);
+      const search = new URLSearchParams();
+      if (params.q) search.set("q", params.q);
+      if (params.page) search.set("page", String(params.page));
+      if (params.limit) search.set("limit", String(params.limit));
+      if (params.sort) search.set("sort", params.sort);
+      if (params.filter) search.set("filter", params.filter);
+      const query = search.toString();
+      return apiRequest<CustomerListResponse>(`/api/customers${query ? `?${query}` : ""}`);
     },
   });
 }
