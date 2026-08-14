@@ -5,6 +5,7 @@ import { Customer, type CustomerDocument } from "../models/Customer";
 import { ConflictError, NotFoundError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
+import { escapeRegExp } from "../lib/validation";
 
 const nameField = z.string().trim().min(1, "Customer name is required").max(120, "Name is too long");
 const phoneField = z.string().trim().min(1, "Phone number is required").max(30, "Phone number is too long");
@@ -30,10 +31,6 @@ const updateCustomerSchema = z
 const listQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
 });
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function toCustomerProfile(customer: CustomerDocument): CustomerProfile {
   return {

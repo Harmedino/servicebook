@@ -9,16 +9,19 @@ import { Staff, type StaffDocument } from "../models/Staff";
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
-import { objectIdField } from "../lib/validation";
+import { escapeRegExp, objectIdField } from "../lib/validation";
 import {
   computeAvailableSlots,
   createValidatedBooking,
   findConflictMessage,
   localDayStartUtc,
   nextDateKey,
+  resolveBookableServiceAndStaff,
   validateBookingWindow,
 } from "../lib/bookingEngine";
 import { notifyBookingCancelled, notifyBookingRescheduled } from "../services/notifications";
+
+const FINAL_STATUSES = new Set(["CANCELLED", "COMPLETED"]);
 
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"] as const;
 const dateKeyField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
@@ -48,6 +51,7 @@ const listQuerySchema = z.object({
   status: z.enum(BOOKING_STATUSES).optional(),
   staffId: objectIdField.optional(),
   customerId: objectIdField.optional(),
+  q: z.string().trim().max(200).optional(),
 });
 
 const availableSlotsQuerySchema = z.object({
@@ -175,7 +179,17 @@ bookingsRouter.get(
     if (query.staffId) {
       filter.staffId = query.staffId;
     }
-    if (query.customerId) {
+    if (query.q) {
+      // Search by customer name/phone/email: resolve matching customers first
+      // (business-scoped, indexed), then filter bookings by their ids — no
+      // client-side scan over every booking.
+      const pattern = new RegExp(escapeRegExp(query.q), "i");
+      const matchingCustomers = await Customer.find({
+        businessId: req.businessId,
+        $or: [{ name: pattern }, { phone: pattern }, { email: pattern }],
+      }).select("_id");
+      filter.customerId = { $in: matchingCustomers.map((customer) => customer._id) };
+    } else if (query.customerId) {
       filter.customerId = query.customerId;
     }
     if (query.startDate || query.endDate) {
@@ -236,6 +250,15 @@ bookingsRouter.patch(
 
     const isRescheduling = updates.staffId !== undefined || updates.serviceId !== undefined || updates.startTime !== undefined;
 
+    // A cancelled or completed booking is history, not an active appointment
+    // — normal editing must not be able to move it or reopen it. Notes are
+    // still editable (harmless), but nothing else.
+    if (FINAL_STATUSES.has(previousStatus) && (isRescheduling || (updates.status !== undefined && updates.status !== previousStatus))) {
+      throw new BadRequestError(
+        `This booking is already ${previousStatus.toLowerCase()} and can't be ${isRescheduling ? "rescheduled" : "changed"}`,
+      );
+    }
+
     const staffId = updates.staffId ?? existingBooking.staffId.toString();
     const serviceId = updates.serviceId ?? existingBooking.serviceId.toString();
     const startTime = updates.startTime ? new Date(updates.startTime) : existingBooking.startTime;
@@ -245,24 +268,9 @@ bookingsRouter.patch(
     let rescheduledStaff: StaffDocument | null = null;
 
     if (isRescheduling) {
-      rescheduledService = await Service.findOne({ _id: serviceId, businessId });
-      if (!rescheduledService) {
-        throw new BadRequestError("Service not found");
-      }
-      if (!rescheduledService.isActive) {
-        throw new BadRequestError("This service is no longer offered");
-      }
-
-      rescheduledStaff = await Staff.findOne({ _id: staffId, businessId });
-      if (!rescheduledStaff) {
-        throw new BadRequestError("Staff member not found");
-      }
-      if (!rescheduledStaff.isActive) {
-        throw new BadRequestError("This staff member is no longer active");
-      }
-      if (!rescheduledStaff.serviceIds.some((id) => id.toString() === serviceId)) {
-        throw new BadRequestError("This staff member doesn't provide the selected service");
-      }
+      const resolved = await resolveBookableServiceAndStaff({ businessId, serviceId, staffId });
+      rescheduledService = resolved.service;
+      rescheduledStaff = resolved.staff;
 
       endTime = new Date(startTime.getTime() + rescheduledService.durationMinutes * 60_000);
 

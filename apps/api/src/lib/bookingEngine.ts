@@ -224,24 +224,18 @@ export async function computeAvailableSlots(params: {
 // ---- public booking APIs use, so neither can bypass the other's rules)  --
 
 /**
- * Resolves and validates service/staff ownership, computes the service-duration
- * end time server-side, validates the window (hours/availability/past-date),
- * and — inside a transaction — re-checks for conflicts and inserts the
- * booking. This is the single source of truth for "is this booking allowed,"
- * called by both POST /api/bookings (internal) and the public booking route,
- * so the public flow can never bypass a rule the internal flow enforces.
+ * Verifies a service and staff member both belong to the business, are
+ * active, and that the staff member actually provides that service. Shared
+ * by booking creation and rescheduling — the ownership/eligibility rules are
+ * identical in both cases, only what happens afterward (insert vs. update)
+ * differs.
  */
-export async function createValidatedBooking(params: {
+export async function resolveBookableServiceAndStaff(params: {
   businessId: string;
-  business: BusinessDocument;
   serviceId: string;
   staffId: string;
-  customer: CustomerDocument;
-  startTime: Date;
-  notes?: string;
-}): Promise<{ booking: BookingDocument; service: ServiceDocument; staff: StaffDocument }> {
-  const { businessId, business, serviceId, staffId, customer, startTime, notes } = params;
-  const customerId = customer.id;
+}): Promise<{ service: ServiceDocument; staff: StaffDocument }> {
+  const { businessId, serviceId, staffId } = params;
 
   const service = await Service.findOne({ _id: serviceId, businessId });
   if (!service) {
@@ -261,6 +255,31 @@ export async function createValidatedBooking(params: {
   if (!staff.serviceIds.some((id) => id.toString() === serviceId)) {
     throw new BadRequestError("This staff member doesn't provide the selected service");
   }
+
+  return { service, staff };
+}
+
+/**
+ * Resolves and validates service/staff ownership, computes the service-duration
+ * end time server-side, validates the window (hours/availability/past-date),
+ * and — inside a transaction — re-checks for conflicts and inserts the
+ * booking. This is the single source of truth for "is this booking allowed,"
+ * called by both POST /api/bookings (internal) and the public booking route,
+ * so the public flow can never bypass a rule the internal flow enforces.
+ */
+export async function createValidatedBooking(params: {
+  businessId: string;
+  business: BusinessDocument;
+  serviceId: string;
+  staffId: string;
+  customer: CustomerDocument;
+  startTime: Date;
+  notes?: string;
+}): Promise<{ booking: BookingDocument; service: ServiceDocument; staff: StaffDocument }> {
+  const { businessId, business, serviceId, staffId, customer, startTime, notes } = params;
+  const customerId = customer.id;
+
+  const { service, staff } = await resolveBookableServiceAndStaff({ businessId, serviceId, staffId });
 
   const endTime = new Date(startTime.getTime() + service.durationMinutes * 60_000);
 

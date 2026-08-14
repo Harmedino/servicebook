@@ -9,6 +9,8 @@ export interface BookingFilters {
   status?: BookingStatus;
   staffId?: string;
   customerId?: string;
+  /** Search by customer name, phone, or email — resolved server-side. */
+  q?: string;
 }
 
 export interface CreateBookingInput {

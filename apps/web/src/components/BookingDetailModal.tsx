@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import type { BookingProfile } from "@servicebook/types";
+import type { BookingProfile, BookingStatus } from "@servicebook/types";
 import { useUpdateBooking } from "../lib/bookings";
 import { ApiError } from "../lib/apiClient";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
 import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { RescheduleModal } from "./RescheduleModal";
 
 interface BookingDetailModalProps {
   booking: BookingProfile;
@@ -12,33 +14,44 @@ interface BookingDetailModalProps {
   onClose: () => void;
 }
 
+const STATUS_SUCCESS_MESSAGES: Partial<Record<BookingStatus, string>> = {
+  CONFIRMED: "Appointment confirmed.",
+  COMPLETED: "Appointment marked as completed.",
+  CANCELLED: "Appointment cancelled.",
+};
+
 export function BookingDetailModal({ booking, timezone, onClose }: BookingDetailModalProps) {
   useEscapeToClose(onClose);
   const updateBooking = useUpdateBooking();
 
   const [notes, setNotes] = useState(booking.notes ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
 
-  const isFinal = booking.status === "CANCELLED" || booking.status === "COMPLETED";
+  const isFinal = booking.status === "CANCELLED" || booking.status === "COMPLETED" || booking.status === "NO_SHOW";
   const notesChanged = notes !== (booking.notes ?? "");
 
-  async function handleStatusChange(status: "COMPLETED" | "CANCELLED") {
-    if (status === "CANCELLED" && !window.confirm(`Cancel the booking for ${booking.customerName}?`)) {
-      return;
-    }
+  async function handleStatusChange(status: "CONFIRMED" | "COMPLETED" | "CANCELLED") {
     setError(null);
+    setSuccessMessage(null);
     try {
       await updateBooking.mutateAsync({ id: booking.id, status });
-      if (status === "CANCELLED") {
-        onClose();
-      }
+      setSuccessMessage(STATUS_SUCCESS_MESSAGES[status] ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     }
   }
 
+  async function handleConfirmCancel() {
+    await handleStatusChange("CANCELLED");
+    setShowCancelConfirm(false);
+  }
+
   async function handleSaveNotes() {
     setError(null);
+    setSuccessMessage(null);
     try {
       await updateBooking.mutateAsync({ id: booking.id, notes });
     } catch (err) {
@@ -97,8 +110,13 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
         )}
 
         {error && (
-          <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="animate-fade-in-up mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
+          </p>
+        )}
+        {successMessage && (
+          <p role="status" className="animate-fade-in-up mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+            {successMessage}
           </p>
         )}
 
@@ -114,12 +132,30 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
             <>
               <button
                 type="button"
-                onClick={() => handleStatusChange("CANCELLED")}
+                onClick={() => setIsRescheduleOpen(true)}
+                disabled={updateBooking.isPending}
+                className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed"
+              >
+                Reschedule
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(true)}
                 disabled={updateBooking.isPending}
                 className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed"
               >
                 Cancel booking
               </button>
+              {booking.status === "PENDING" && (
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("CONFIRMED")}
+                  disabled={updateBooking.isPending}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed"
+                >
+                  Confirm booking
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleStatusChange("COMPLETED")}
@@ -132,6 +168,37 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
           )}
         </div>
       </div>
+
+      {showCancelConfirm && (
+        <ConfirmDialog
+          title="Cancel appointment?"
+          confirmLabel="Cancel appointment"
+          cancelLabel="Keep appointment"
+          destructive
+          isConfirming={updateBooking.isPending}
+          onConfirm={handleConfirmCancel}
+          onCancel={() => setShowCancelConfirm(false)}
+        >
+          <p>{booking.customerName}</p>
+          <p>{booking.serviceName}</p>
+          <p>
+            {dateLabel}, {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
+          </p>
+        </ConfirmDialog>
+      )}
+
+      {isRescheduleOpen && (
+        <RescheduleModal
+          booking={booking}
+          timezone={timezone}
+          onClose={() => setIsRescheduleOpen(false)}
+          onSuccess={() => {
+            setIsRescheduleOpen(false);
+            setError(null);
+            setSuccessMessage("Appointment rescheduled.");
+          }}
+        />
+      )}
     </div>
   );
 }
