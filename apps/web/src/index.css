@@ -17,8 +17,10 @@
   --color-brand-800: var(--color-indigo-800);
   --color-brand-900: var(--color-indigo-900);
 
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
-  --shadow-card-hover: 0 2px 4px 0 rgb(15 23 42 / 0.06), 0 4px 8px -2px rgb(15 23 42 / 0.08);
+  /* Reserved for genuinely elevated surfaces (modals, popovers, dropdowns) —
+     ordinary panels use a border, not a shadow. See the "no card-itis"
+     principle: hierarchy comes from typography/spacing/dividers first. */
+  --shadow-elevated: 0 4px 6px -2px rgb(15 23 42 / 0.05), 0 12px 24px -8px rgb(15 23 42 / 0.12);
 }
 
 @layer base {
@@ -31,6 +33,10 @@
   :focus-visible {
     @apply outline-none ring-2 ring-brand-500/50 ring-offset-1 ring-offset-white;
   }
+}
+
+@utility section-label {
+  @apply text-xs font-semibold uppercase tracking-wider text-stone-400;
 }
 
 @keyframes fade-in-up {

@@ -3,16 +3,15 @@ import { Link } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   CalendarClock,
-  CheckCircle2,
-  Circle,
-  Clock,
   Copy,
   ExternalLink,
   Plus,
   Scissors,
+  UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { BookingStatus } from "@servicebook/types";
 import { useDashboardSummary } from "../lib/dashboard";
 import { useAuth } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
@@ -31,11 +30,17 @@ import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffF
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { PageHeader } from "../components/ui/PageHeader";
-import { StatCard } from "../components/ui/StatCard";
 import { Skeleton } from "../components/ui/Skeleton";
 import { addDaysToKey, dayOfWeekFromKey } from "../lib/calendarDates";
 import { DAY_LABELS } from "../lib/weekDays";
+
+const STATUS_ACCENT: Record<BookingStatus, string> = {
+  PENDING: "bg-amber-400",
+  CONFIRMED: "bg-green-500",
+  CANCELLED: "bg-stone-300",
+  COMPLETED: "bg-blue-400",
+  NO_SHOW: "bg-red-400",
+};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -47,13 +52,11 @@ function getGreeting(): string {
 function DashboardSkeleton() {
   return (
     <div className="mt-6 space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-2xl" />
-        ))}
+      <Skeleton className="h-16 rounded-xl" />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <Skeleton className="h-96 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
-      <Skeleton className="h-64 rounded-2xl" />
-      <Skeleton className="h-40 rounded-2xl" />
     </div>
   );
 }
@@ -150,16 +153,17 @@ export function DashboardPage() {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
     } catch {
-      // Clipboard access can be denied by the browser — the link is still visible/selectable.
+      // Clipboard access can be denied by the browser — the link stays visible/selectable.
     }
   }
 
-  const todayHours = (() => {
+  const todayLabel = formatInTimeZone(new Date(), timezone, "EEEE, MMMM d");
+
+  const todayHoursLabel = (() => {
     const hours = businessHoursData?.hours ?? [];
-    const todayDow = new Date().getDay();
-    const entry = hours.find((h) => h.dayOfWeek === todayDow);
+    const entry = hours.find((h) => h.dayOfWeek === new Date().getDay());
     if (!entry || entry.isClosed) return "Closed today";
-    return `${entry.openTime} – ${entry.closeTime}`;
+    return `Open · ${entry.openTime} – ${entry.closeTime}`;
   })();
 
   if (isError) {
@@ -184,7 +188,9 @@ export function DashboardPage() {
         { done: summary.setupStatus.publicBookingEnabled, label: "Share your booking page" },
       ]
     : [];
-  const setupIncomplete = setupItems.some((item) => !item.done);
+  const setupDoneCount = setupItems.filter((item) => item.done).length;
+  const setupIncomplete = setupDoneCount < setupItems.length;
+  const setupPercent = setupItems.length > 0 ? Math.round((setupDoneCount / setupItems.length) * 100) : 0;
 
   const alerts: { message: string; to: string; linkLabel: string }[] = [];
   if (summary) {
@@ -210,8 +216,6 @@ export function DashboardPage() {
     }
   }
 
-  // A brand-new business with nothing happening yet: show one clear
-  // onboarding card instead of a wall of empty metric cards.
   const isBrandNewBusiness = Boolean(
     summary &&
       summary.todayAppointmentCount === 0 &&
@@ -220,197 +224,256 @@ export function DashboardPage() {
       setupIncomplete,
   );
 
+  const todayConfirmed = summary?.todayAppointments.filter((b) => b.status === "CONFIRMED").length ?? 0;
+  const todayPending = summary?.todayAppointments.filter((b) => b.status === "PENDING").length ?? 0;
+  const todayCancelled = summary?.todayAppointments.filter((b) => b.status === "CANCELLED").length ?? 0;
+
+  const QUICK_ACTIONS: { key: "booking" | "customer" | "service" | "staff"; label: string; icon: LucideIcon }[] = [
+    { key: "booking", label: "New booking", icon: CalendarClock },
+    { key: "customer", label: "Add customer", icon: UserPlus },
+    { key: "service", label: "Add service", icon: Scissors },
+    { key: "staff", label: "Add staff", icon: Users },
+  ];
+
   return (
     <DashboardLayout>
-      <PageHeader
-        title={`${getGreeting()}${user ? `, ${user.name.split(" ")[0]}` : ""}`}
-        description={summary ? `Here's what's happening with ${summary.businessName} today.` : "Loading your business…"}
-        actions={
-          summary && (
-            <Button onClick={() => setOpenModal("booking")}>
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Book appointment
-            </Button>
-          )
-        }
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">
+            {getGreeting()}
+            {user ? `, ${user.name.split(" ")[0]}` : ""}
+          </h1>
+          <p className="mt-1 text-sm text-stone-500">
+            Here&apos;s what&apos;s happening with {summary?.businessName ?? "your business"} today.
+          </p>
+          <p className="mt-1 text-xs font-medium text-stone-400">{todayLabel}</p>
+        </div>
+        {summary && (
+          <Button onClick={() => setOpenModal("booking")}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New booking
+          </Button>
+        )}
+      </div>
 
       {isPending && <DashboardSkeleton />}
 
       {!isPending && summary && isBrandNewBusiness && (
-        <Card className="animate-fade-in-up mt-6 p-8">
-          <h2 className="text-lg font-semibold text-stone-900">Your business is ready to get started</h2>
-          <p className="mt-1 text-sm text-stone-500">Complete these steps to start taking bookings.</p>
-          <ul className="mt-4 space-y-2.5">
+        <div className="mt-10 max-w-lg">
+          <p className="section-label">Get your business ready</p>
+          <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">
+            Complete your setup to start accepting bookings.
+          </h2>
+          <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-stone-200">
+            <div
+              className="h-full rounded-full bg-brand-600 transition-all duration-500"
+              style={{ width: `${setupPercent}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-stone-500">
+            {setupDoneCount} of {setupItems.length} steps complete
+          </p>
+          <ul className="mt-6 space-y-3">
             {setupItems.map((item) => (
-              <li key={item.label} className="flex items-center gap-2.5 text-sm">
-                {item.done ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
-                ) : (
-                  <Circle className="h-4 w-4 shrink-0 text-stone-300" aria-hidden="true" />
-                )}
-                <span className={item.done ? "text-stone-500 line-through" : "text-stone-700"}>{item.label}</span>
+              <li key={item.label} className="flex items-center gap-3 text-sm">
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                    item.done ? "bg-green-600 text-white" : "border border-stone-300 text-transparent"
+                  }`}
+                >
+                  {item.done ? "✓" : ""}
+                </span>
+                <span className={item.done ? "text-stone-400 line-through" : "text-stone-700"}>{item.label}</span>
               </li>
             ))}
           </ul>
-          <Button className="mt-5" onClick={() => setOpenModal("service")}>
-            Complete setup
+          <Button className="mt-7" onClick={() => setOpenModal("service")}>
+            Continue setup
           </Button>
-        </Card>
+        </div>
       )}
 
       {!isPending && summary && !isBrandNewBusiness && (
         <div className="mt-6 space-y-6">
           {(setupIncomplete || alerts.length > 0) && (
-            <Card className="border-amber-200 bg-amber-50 p-5">
-              <h2 className="text-sm font-semibold text-stone-900">Needs attention</h2>
-              <div className="mt-3 space-y-3">
-                {setupIncomplete && (
-                  <ul className="space-y-1.5 text-sm text-stone-700">
-                    {setupItems.map((item) => (
-                      <li key={item.label} className="flex items-center gap-2">
-                        {item.done ? (
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
-                        ) : (
-                          <Circle className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
-                        )}
-                        <span className={item.done ? "text-stone-500 line-through" : ""}>{item.label}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {alerts.map((alert) => (
-                  <div key={alert.message} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span className="text-stone-700">{alert.message}</span>
-                    <Link to={alert.to} className="font-medium text-brand-700 hover:text-brand-800">
-                      {alert.linkLabel}
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <div className="space-y-2">
+              {setupIncomplete && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-r-lg border-l-2 border-brand-400 bg-brand-50/70 px-4 py-2.5 text-sm">
+                  <span className="text-stone-700">
+                    Your setup is {setupPercent}% complete — {setupItems.length - setupDoneCount} step
+                    {setupItems.length - setupDoneCount === 1 ? "" : "s"} left.
+                  </span>
+                  <Link to="/settings" className="font-medium text-brand-700 hover:text-brand-800">
+                    Finish setup
+                  </Link>
+                </div>
+              )}
+              {alerts.map((alert) => (
+                <div
+                  key={alert.message}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-r-lg border-l-2 border-amber-400 bg-amber-50/70 px-4 py-2.5 text-sm"
+                >
+                  <span className="text-stone-700">{alert.message}</span>
+                  <Link to={alert.to} className="font-medium text-brand-700 hover:text-brand-800">
+                    {alert.linkLabel}
+                  </Link>
+                </div>
+              ))}
+            </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Today's appointments" value={summary.todayAppointmentCount} icon={Clock} />
-            <StatCard label="Upcoming" value={summary.upcomingAppointmentCount} icon={CalendarClock} />
-            <StatCard label="Customers" value={summary.customerCount} icon={Users} />
-            <StatCard label="Active services" value={summary.activeServiceCount} icon={Scissors} />
+          {/* Today summary strip */}
+          <div className="border-y border-stone-200 py-4">
+            <p className="section-label">Today</p>
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-8 gap-y-2">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-semibold tracking-tight text-stone-900">
+                  {summary.todayAppointmentCount}
+                </span>
+                <span className="text-sm text-stone-500">appointment{summary.todayAppointmentCount === 1 ? "" : "s"}</span>
+              </div>
+              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
+                {todayConfirmed} confirmed
+              </div>
+              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+                {todayPending} pending
+              </div>
+              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-stone-300" aria-hidden="true" />
+                {todayCancelled} cancelled
+              </div>
+              <div className="flex items-baseline gap-1.5 text-sm text-stone-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+                {summary.upcomingAppointmentCount} upcoming
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <Card className="p-5 lg:order-1 lg:col-span-2">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+            {/* Left: today's schedule timeline */}
+            <div>
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-stone-900">Today&apos;s appointments</h2>
+                <h2 className="text-lg font-semibold text-stone-900">Today&apos;s schedule</h2>
                 <Link to="/calendar" className="text-sm font-medium text-brand-700 hover:text-brand-800">
-                  View all bookings
+                  View calendar
                 </Link>
               </div>
+
               {summary.todayAppointments.length === 0 ? (
-                <p className="mt-3 text-sm text-stone-500">No appointments scheduled for today.</p>
+                <div className="mt-4 rounded-xl border border-dashed border-stone-300 px-6 py-14 text-center">
+                  <p className="text-sm font-semibold text-stone-900">Your schedule is clear</p>
+                  <p className="mt-1 text-sm text-stone-500">
+                    Create an appointment or share your booking page with customers.
+                  </p>
+                  <Button size="sm" className="mt-4" onClick={() => setOpenModal("booking")}>
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    New booking
+                  </Button>
+                </div>
               ) : (
-                <ul className="mt-3 divide-y divide-stone-100">
+                <ol className="mt-2">
                   {summary.todayAppointments.map((booking) => (
-                    <li key={booking.id}>
+                    <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
+                      <div className="w-16 shrink-0 pt-3 text-sm font-medium text-stone-500">
+                        {formatTime(booking.startTime)}
+                      </div>
+                      <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                       <button
                         type="button"
                         onClick={() => setSelectedBookingId(booking.id)}
-                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left transition-colors hover:bg-stone-50"
+                        className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="w-20 shrink-0 text-sm font-medium text-stone-700">{formatTime(booking.startTime)}</span>
-                          <div>
-                            <p className="text-sm font-medium text-stone-900">{booking.customerName}</p>
-                            <p className="text-xs text-stone-500">
-                              {booking.serviceName} · {booking.staffName}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
+                          <p className="text-xs text-stone-500">
+                            {booking.serviceName} · {booking.staffName}
+                          </p>
                         </div>
                         <BookingStatusBadge status={booking.status} />
                       </button>
                     </li>
                   ))}
-                </ul>
+                </ol>
               )}
-            </Card>
 
-            <Card className="p-5 lg:order-2">
-              <h2 className="text-sm font-semibold text-stone-900">Quick actions</h2>
-              <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
-                {(
-                  [
-                    { key: "booking", label: "New booking", icon: CalendarClock },
-                    { key: "customer", label: "Add customer", icon: Users },
-                    { key: "service", label: "Add service", icon: Scissors },
-                    { key: "staff", label: "Add staff", icon: Users },
-                  ] as { key: "booking" | "customer" | "service" | "staff"; label: string; icon: LucideIcon }[]
-                ).map((action) => (
-                  <button
-                    key={action.key}
-                    type="button"
-                    onClick={() => setOpenModal(action.key)}
-                    className="flex items-center gap-2 rounded-lg border border-stone-300 px-3 py-2 text-left text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
-                  >
-                    <action.icon className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            <Card className="p-5 lg:order-3 lg:col-span-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-stone-900">Upcoming</h2>
-                <Link to="/bookings" className="text-sm font-medium text-brand-700 hover:text-brand-800">
-                  View all appointments
-                </Link>
-              </div>
-              {summary.upcomingAppointments.length === 0 ? (
-                <p className="mt-3 text-sm text-stone-500">Nothing else on the schedule yet.</p>
-              ) : (
-                <ul className="mt-3 divide-y divide-stone-100">
-                  {summary.upcomingAppointments.map((booking) => (
-                    <li key={booking.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBookingId(booking.id)}
-                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left transition-colors hover:bg-stone-50"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-stone-900">
-                            {relativeDayLabel(booking.startTime)}, {formatTime(booking.startTime)} — {booking.customerName}
+              {summary.upcomingAppointments.length > 0 && (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-stone-900">Upcoming</h2>
+                    <Link to="/bookings" className="text-sm font-medium text-brand-700 hover:text-brand-800">
+                      View all
+                    </Link>
+                  </div>
+                  <ul className="mt-2">
+                    {summary.upcomingAppointments.map((booking) => (
+                      <li key={booking.id} className="border-t border-stone-100 first:border-t-0">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBookingId(booking.id)}
+                          className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
+                        >
+                          <p className="text-sm text-stone-700">
+                            <span className="font-medium text-stone-900">{relativeDayLabel(booking.startTime)}</span>,{" "}
+                            {formatTime(booking.startTime)} — {booking.customerName}
                           </p>
-                          <p className="text-xs text-stone-500">{booking.serviceName}</p>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-
-            <Card className="p-5 lg:order-4">
-              <h2 className="text-sm font-semibold text-stone-900">Business hours today</h2>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">{todayHours}</p>
-              <div className="mt-4 border-t border-stone-100 pt-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Your booking page</p>
-                <p className="mt-1 truncate text-xs text-stone-500">{bookingUrl}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    className={buttonClassName("secondary", "sm")}
-                  >
-                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                    {copyFeedback ? "Copied!" : "Copy link"}
-                  </button>
-                  <a href={bookingUrl} target="_blank" rel="noreferrer" className={buttonClassName("primary", "sm")}>
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    Open page
-                  </a>
+                          <span className="shrink-0 text-xs text-stone-400">{booking.serviceName}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            </Card>
+              )}
+            </div>
+
+            {/* Right: business snapshot */}
+            <div className="lg:sticky lg:top-8 lg:self-start">
+              <Card className="divide-y divide-stone-200">
+                <div className="p-5">
+                  <p className="section-label">Business today</p>
+                  <p className="mt-2 text-sm font-medium text-stone-900">{todayHoursLabel}</p>
+                  <p className="mt-1 text-sm text-stone-500">
+                    {summary.customerCount} customer{summary.customerCount === 1 ? "" : "s"} ·{" "}
+                    {summary.activeServiceCount} active service{summary.activeServiceCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+
+                <div className="p-5">
+                  <p className="section-label">Quick actions</p>
+                  <div className="mt-3 space-y-0.5">
+                    {QUICK_ACTIONS.map((action) => (
+                      <button
+                        key={action.key}
+                        type="button"
+                        onClick={() => setOpenModal(action.key)}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
+                      >
+                        <action.icon className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  <p className="section-label">Booking page</p>
+                  <p className="mt-2 text-sm text-stone-600">
+                    {summary.isPublicBookingEnabled ? "Your booking page is live." : "Online booking is disabled."}
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <a href={bookingUrl} target="_blank" rel="noreferrer" className={buttonClassName("secondary", "sm", "justify-center")}>
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      Open booking page
+                    </a>
+                    <button type="button" onClick={handleCopyLink} className={buttonClassName("ghost", "sm", "justify-center")}>
+                      <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                      {copyFeedback ? "Copied!" : "Copy link"}
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       )}

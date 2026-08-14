@@ -1,6 +1,6 @@
 import { useMemo, type MouseEvent } from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import type { BookingProfile } from "@servicebook/types";
+import type { BookingProfile, BookingStatus } from "@servicebook/types";
 import { minutesToTime, timeToMinutes } from "../lib/timeMath";
 
 export interface GridColumn {
@@ -17,6 +17,14 @@ interface PositionedBooking {
   column: number;
   columnCount: number;
 }
+
+const STATUS_BLOCK_STYLES: Record<BookingStatus, string> = {
+  PENDING: "border-l-amber-400 bg-amber-50 text-amber-900",
+  CONFIRMED: "border-l-green-500 bg-green-50 text-green-900",
+  CANCELLED: "border-l-stone-300 bg-stone-100 text-stone-400 line-through",
+  COMPLETED: "border-l-blue-400 bg-blue-50 text-blue-900",
+  NO_SHOW: "border-l-red-400 bg-red-50 text-red-900",
+};
 
 /** Assigns each booking a sub-column so overlapping bookings render side by side instead of on top of each other. */
 function layoutColumnBookings(bookings: BookingProfile[], timezone: string): PositionedBooking[] {
@@ -71,6 +79,16 @@ export function TimeGridView({
     return marks;
   }, [windowStartMinutes, windowEndMinutes]);
 
+  // A static snapshot is fine here — this isn't a live-ticking clock, just a
+  // "roughly where are we right now" reference line.
+  const now = useMemo(() => {
+    const instant = new Date();
+    return {
+      dateKey: formatInTimeZone(instant, timezone, "yyyy-MM-dd"),
+      minutes: timeToMinutes(formatInTimeZone(instant, timezone, "HH:mm")),
+    };
+  }, [timezone]);
+
   function handleColumnClick(event: MouseEvent<HTMLDivElement>, column: GridColumn) {
     if ((event.target as HTMLElement).closest("[data-booking-card]")) {
       return;
@@ -83,11 +101,16 @@ export function TimeGridView({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
       <div className="flex border-b border-stone-200 text-xs font-medium uppercase tracking-wide text-stone-500">
         <div className="w-14 shrink-0 py-2" />
         {columns.map((column) => (
-          <div key={column.key} className="flex-1 border-l border-stone-100 px-2 py-2 text-center">
+          <div
+            key={column.key}
+            className={`flex-1 border-l border-stone-100 px-2 py-2 text-center ${
+              column.dateKey === now.dateKey ? "text-brand-700" : ""
+            }`}
+          >
             {column.label}
           </div>
         ))}
@@ -108,6 +131,9 @@ export function TimeGridView({
 
         {columns.map((column) => {
           const positioned = layoutColumnBookings(column.bookings, timezone);
+          const showNowLine =
+            column.dateKey === now.dateKey && now.minutes >= windowStartMinutes && now.minutes <= windowEndMinutes;
+
           return (
             <div
               key={column.key}
@@ -122,12 +148,22 @@ export function TimeGridView({
                 />
               ))}
 
+              {showNowLine && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-10 flex items-center"
+                  style={{ top: `${((now.minutes - windowStartMinutes) / windowRange) * 100}%` }}
+                  aria-hidden="true"
+                >
+                  <span className="-ml-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                  <span className="h-px flex-1 bg-red-400" />
+                </div>
+              )}
+
               {positioned.map(({ booking, startMinutes, endMinutes, column: col, columnCount }) => {
                 const clampedStart = Math.max(startMinutes, windowStartMinutes);
                 const clampedEnd = Math.min(endMinutes, windowEndMinutes);
                 const top = ((clampedStart - windowStartMinutes) / windowRange) * 100;
                 const height = Math.max(3, ((clampedEnd - clampedStart) / windowRange) * 100);
-                const isCancelled = booking.status === "CANCELLED";
 
                 return (
                   <button
@@ -138,11 +174,7 @@ export function TimeGridView({
                       event.stopPropagation();
                       onBookingClick(booking);
                     }}
-                    className={`absolute overflow-hidden rounded-md border px-1.5 py-1 text-left text-xs leading-tight shadow-sm transition-opacity hover:opacity-90 ${
-                      isCancelled
-                        ? "border-stone-200 bg-stone-100 text-stone-400 line-through"
-                        : "border-brand-200 bg-brand-50 text-brand-900"
-                    }`}
+                    className={`absolute overflow-hidden rounded-r-md border-l-2 px-1.5 py-1 text-left text-xs leading-tight transition-opacity hover:opacity-80 ${STATUS_BLOCK_STYLES[booking.status]}`}
                     style={{
                       top: `${top}%`,
                       height: `${height}%`,
@@ -151,7 +183,7 @@ export function TimeGridView({
                     }}
                   >
                     <span className="block truncate font-medium">{booking.customerName}</span>
-                    <span className="block truncate">{booking.serviceName}</span>
+                    <span className="block truncate opacity-80">{booking.serviceName}</span>
                   </button>
                 );
               })}

@@ -21,8 +21,22 @@ import {
 } from "../lib/calendarDates";
 import { timeToMinutes } from "../lib/timeMath";
 import { STATUS_LABELS } from "../lib/bookingStatus";
+import { Plus } from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { BookingStatusBadge } from "../components/ui/Badge";
+import { PageHeader } from "../components/ui/PageHeader";
+import { EmptyState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
 
 type ViewMode = "day" | "week" | "month";
+
+const STATUS_ACCENT: Record<string, string> = {
+  PENDING: "bg-amber-400",
+  CONFIRMED: "bg-green-500",
+  CANCELLED: "bg-stone-300",
+  COMPLETED: "bg-blue-400",
+  NO_SHOW: "bg-red-400",
+};
 
 const DEFAULT_WINDOW_START = 9 * 60;
 const DEFAULT_WINDOW_END = 17 * 60;
@@ -197,19 +211,16 @@ export function CalendarPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-900">Calendar</h1>
-          <p className="mt-1 text-sm text-stone-500">Your appointment schedule.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openBlankForm}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          + New booking
-        </button>
-      </div>
+      <PageHeader
+        title="Calendar"
+        description="Your appointment schedule."
+        actions={
+          <Button onClick={openBlankForm}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New booking
+          </Button>
+        }
+      />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -284,33 +295,28 @@ export function CalendarPage() {
       </div>
 
       <div className="mt-6">
-        {isPending && <div className="h-96 animate-pulse rounded-2xl border border-stone-200 bg-white" />}
+        {isPending && <Skeleton className="h-96 rounded-xl" />}
 
         {isError && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-8 text-center">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center">
             <p className="text-sm text-red-700">We couldn&apos;t load your appointments.</p>
-            <button
-              type="button"
-              onClick={() => refetch()}
-              className="mt-3 rounded-lg border border-red-300 px-4 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
-            >
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => refetch()}>
               Try again
-            </button>
+            </Button>
           </div>
         )}
 
         {!isPending && !isError && bookings.length === 0 && (
-          <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
-            <h2 className="text-base font-semibold text-stone-900">No appointments</h2>
-            <p className="mt-1 text-sm text-stone-500">There are no bookings scheduled for this period.</p>
-            <button
-              type="button"
-              onClick={openBlankForm}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              + New booking
-            </button>
-          </div>
+          <EmptyState
+            title="No appointments"
+            description="There are no bookings scheduled for this period."
+            action={
+              <Button onClick={openBlankForm}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New booking
+              </Button>
+            }
+          />
         )}
 
         {!isPending && !isError && bookings.length > 0 && (
@@ -342,39 +348,39 @@ export function CalendarPage() {
             )}
 
             {/* Mobile: a stacked agenda list regardless of the selected view — a 7-column grid doesn't fit a phone. */}
-            <div className="space-y-4 md:hidden">
+            <div className="space-y-6 md:hidden">
               {[...bookingsByLocalDate.entries()]
                 .sort(([a], [b]) => (a < b ? -1 : 1))
                 .map(([dateKey, dayBookings]) => (
                   <div key={dateKey}>
-                    <h3 className="text-sm font-semibold text-stone-900">{formatDateKey(dateKey, "EEEE, MMMM d")}</h3>
-                    <ul className="mt-2 space-y-2">
+                    <p className="section-label">{formatDateKey(dateKey, "EEEE, MMMM d")}</p>
+                    <ol className="mt-1">
                       {[...dayBookings]
                         .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
                         .map((booking) => (
-                          <li key={booking.id}>
+                          <li key={booking.id} className="flex gap-3 border-t border-stone-100 py-1 first:border-t-0">
+                            <div className="w-16 shrink-0 pt-3 text-sm font-medium text-stone-500">
+                              {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
+                            </div>
+                            <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                             <button
                               type="button"
                               onClick={() => setSelectedBookingId(booking.id)}
-                              className={`w-full rounded-2xl border p-3 text-left shadow-sm transition-colors ${
-                                booking.status === "CANCELLED"
-                                  ? "border-stone-200 bg-stone-50 text-stone-400"
-                                  : "border-stone-200 bg-white hover:border-brand-300"
-                              }`}
+                              className="flex flex-1 items-center justify-between gap-2 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                             >
-                              <p className="text-sm font-medium">
-                                {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
-                              </p>
-                              <p className={`text-sm ${booking.status === "CANCELLED" ? "line-through" : "text-stone-900"}`}>
-                                {booking.customerName}
-                              </p>
-                              <p className="text-xs text-stone-500">
-                                {booking.serviceName} · {booking.staffName}
-                              </p>
+                              <div>
+                                <p className={`text-sm font-semibold ${booking.status === "CANCELLED" ? "text-stone-400 line-through" : "text-stone-900"}`}>
+                                  {booking.customerName}
+                                </p>
+                                <p className="text-xs text-stone-500">
+                                  {booking.serviceName} · {booking.staffName}
+                                </p>
+                              </div>
+                              <BookingStatusBadge status={booking.status} />
                             </button>
                           </li>
                         ))}
-                    </ul>
+                    </ol>
                   </div>
                 ))}
             </div>
