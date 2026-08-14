@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import type { ServiceProfile } from "@servicebook/types";
+import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
+import { formatDuration } from "../lib/format";
 
 export interface ServiceFormSubmitValues {
   name: string;
@@ -9,11 +10,14 @@ export interface ServiceFormSubmitValues {
   price: number;
   durationMinutes: number;
   isActive: boolean;
+  staffIds: string[];
 }
 
 interface ServiceFormModalProps {
   /** null = creating a new service, a ServiceProfile = editing an existing one */
   service: ServiceProfile | null;
+  /** Active staff plus anyone already assigned to this service, so an existing assignment is never silently dropped on save. */
+  availableStaff: StaffProfile[];
   isSubmitting: boolean;
   serverError: string | null;
   onSubmit: (values: ServiceFormSubmitValues) => void;
@@ -26,15 +30,45 @@ interface FieldErrors {
   durationMinutes?: string;
 }
 
-export function ServiceFormModal({ service, isSubmitting, serverError, onSubmit, onClose }: ServiceFormModalProps) {
+const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
+const PRICE_PATTERN = /^\d+(\.\d{1,2})?$/;
+
+const selectClassName =
+  "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100";
+
+export function ServiceFormModal({
+  service,
+  availableStaff,
+  isSubmitting,
+  serverError,
+  onSubmit,
+  onClose,
+}: ServiceFormModalProps) {
   const [name, setName] = useState(service?.name ?? "");
   const [description, setDescription] = useState(service?.description ?? "");
   const [price, setPrice] = useState(service ? String(service.price) : "");
-  const [durationMinutes, setDurationMinutes] = useState(service ? String(service.durationMinutes) : "");
+  const [durationMode, setDurationMode] = useState<"preset" | "custom">(
+    service && !DURATION_PRESETS.includes(service.durationMinutes) ? "custom" : "preset",
+  );
+  const [durationMinutes, setDurationMinutes] = useState(service ? String(service.durationMinutes) : "30");
   const [isActive, setIsActive] = useState(service?.isActive ?? true);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(service?.staffIds ?? []);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   useEscapeToClose(onClose);
+
+  function toggleStaff(id: string) {
+    setSelectedStaffIds((current) => (current.includes(id) ? current.filter((staffId) => staffId !== id) : [...current, id]));
+  }
+
+  function handleDurationSelect(value: string) {
+    if (value === "custom") {
+      setDurationMode("custom");
+      return;
+    }
+    setDurationMode("preset");
+    setDurationMinutes(value);
+  }
 
   function validate(): boolean {
     const errors: FieldErrors = {};
@@ -45,11 +79,17 @@ export function ServiceFormModal({ service, isSubmitting, serverError, onSubmit,
     const priceValue = Number(price);
     if (price.trim() === "" || Number.isNaN(priceValue) || priceValue < 0) {
       errors.price = "Enter a valid price";
+    } else if (!PRICE_PATTERN.test(price.trim())) {
+      errors.price = "Price can have at most 2 decimal places";
+    } else if (priceValue > 100_000) {
+      errors.price = "Price is unreasonably large";
     }
 
     const durationValue = Number(durationMinutes);
     if (durationMinutes.trim() === "" || !Number.isInteger(durationValue) || durationValue < 1) {
       errors.durationMinutes = "Enter a duration in whole minutes";
+    } else if (durationValue > 1440) {
+      errors.durationMinutes = "Duration must be less than 24 hours";
     }
 
     setFieldErrors(errors);
@@ -68,11 +108,12 @@ export function ServiceFormModal({ service, isSubmitting, serverError, onSubmit,
       price: Number(price),
       durationMinutes: Number(durationMinutes),
       isActive,
+      staffIds: selectedStaffIds,
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
       <div className="animate-fade-in-up w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
         <h2 className="text-lg font-semibold text-stone-900">{service ? "Edit service" : "Add service"}</h2>
 
@@ -106,14 +147,56 @@ export function ServiceFormModal({ service, isSubmitting, serverError, onSubmit,
               error={fieldErrors.price}
               disabled={isSubmitting}
             />
-            <FormField
-              label="Duration (min)"
-              type="number"
-              value={durationMinutes}
-              onChange={setDurationMinutes}
-              error={fieldErrors.durationMinutes}
-              disabled={isSubmitting}
-            />
+            <label className="block">
+              <span className="text-sm font-medium text-stone-700">Duration</span>
+              <select
+                value={durationMode === "custom" ? "custom" : durationMinutes}
+                onChange={(event) => handleDurationSelect(event.target.value)}
+                disabled={isSubmitting}
+                className={selectClassName}
+              >
+                {DURATION_PRESETS.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {formatDuration(minutes)}
+                  </option>
+                ))}
+                <option value="custom">Custom…</option>
+              </select>
+              {durationMode === "custom" && (
+                <input
+                  type="number"
+                  value={durationMinutes}
+                  onChange={(event) => setDurationMinutes(event.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Minutes"
+                  className={`${selectClassName} mt-2`}
+                />
+              )}
+              {fieldErrors.durationMinutes && <p className="mt-1 text-xs text-red-600">{fieldErrors.durationMinutes}</p>}
+            </label>
+          </div>
+
+          <div>
+            <span className="text-sm font-medium text-stone-700">Performed by</span>
+            {availableStaff.length === 0 ? (
+              <p className="mt-1 text-sm text-stone-500">Add a staff member first so you can assign them here.</p>
+            ) : (
+              <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-stone-200 p-3">
+                {availableStaff.map((staff) => (
+                  <label key={staff.id} className="flex items-center gap-2 text-sm text-stone-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedStaffIds.includes(staff.id)}
+                      onChange={() => toggleStaff(staff.id)}
+                      disabled={isSubmitting}
+                      className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500/40"
+                    />
+                    {staff.name}
+                    {!staff.isActive && <span className="text-xs text-stone-400">(inactive)</span>}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-sm text-stone-700">

@@ -65,6 +65,8 @@ export interface ServiceProfile {
   durationMinutes: number;
   price: number;
   isActive: boolean;
+  /** Staff ids assigned to perform this service — derived from Staff.serviceIds, the single source of truth for this relationship. */
+  staffIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -171,6 +173,8 @@ export interface BookingProfile {
   endTime: string;
   status: BookingStatus;
   notes?: string;
+  /** The service's price at the moment this booking was created (or last rescheduled onto a different service) — never re-read live from the service, so later price changes don't rewrite history. Undefined on bookings created before this field existed. */
+  price?: number;
   createdAt: string;
   updatedAt: string;
 }

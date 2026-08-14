@@ -89,6 +89,7 @@ async function toBookingProfiles(bookings: BookingDocument[]): Promise<BookingPr
     endTime: booking.endTime.toISOString(),
     status: booking.status,
     notes: booking.notes ?? undefined,
+    price: booking.price ?? undefined,
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
   }));
@@ -314,6 +315,13 @@ bookingsRouter.patch(
           setFields.serviceId = serviceId;
           setFields.startTime = startTime;
           setFields.endTime = endTime;
+          // Mirrors endTime above: a reschedule re-derives the booking's
+          // operational details from the service's current state, same as
+          // duration does. A service edit alone (PATCH /api/services/:id)
+          // never touches any Booking document, so untouched bookings keep
+          // their original price snapshot regardless of later service edits —
+          // only an explicit reschedule of *this* booking re-syncs it.
+          setFields.price = rescheduledService!.price;
         }
 
         updatedBooking = await Booking.findByIdAndUpdate(

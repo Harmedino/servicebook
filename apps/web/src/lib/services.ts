@@ -10,6 +10,7 @@ export interface CreateServiceInput {
   price: number;
   durationMinutes: number;
   isActive?: boolean;
+  staffIds?: string[];
 }
 
 export interface UpdateServiceInput {
@@ -19,6 +20,7 @@ export interface UpdateServiceInput {
   price?: number;
   durationMinutes?: number;
   isActive?: boolean;
+  staffIds?: string[];
 }
 
 export function useServices(): UseQueryResult<ServiceListResponse> {

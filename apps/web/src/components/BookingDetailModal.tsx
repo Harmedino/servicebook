@@ -5,6 +5,7 @@ import { useUpdateBooking } from "../lib/bookings";
 import { ApiError } from "../lib/apiClient";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
 import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
+import { formatPrice } from "../lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RescheduleModal } from "./RescheduleModal";
 
@@ -86,6 +87,7 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
         <div className="mt-4 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
           <p>{dateLabel}</p>
           <p>{timeLabel}</p>
+          {booking.price !== undefined && <p>{formatPrice(booking.price)}</p>}
         </div>
 
         <label className="mt-4 block">
