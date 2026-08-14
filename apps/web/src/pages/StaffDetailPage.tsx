@@ -12,6 +12,8 @@ import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 
+const RECENT_APPOINTMENTS_LIMIT = 10;
+
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
     <span
@@ -53,6 +55,14 @@ export function StaffDetailPage() {
     return allBookings
       .filter((booking) => new Date(booking.startTime).getTime() >= now && booking.status !== "CANCELLED")
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  }, [allBookings]);
+
+  const recent = useMemo(() => {
+    const now = Date.now();
+    return allBookings
+      .filter((booking) => new Date(booking.startTime).getTime() < now)
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+      .slice(0, RECENT_APPOINTMENTS_LIMIT);
   }, [allBookings]);
 
   function formatDateTime(iso: string): string {
@@ -199,6 +209,46 @@ export function StaffDetailPage() {
           {!isBookingsPending && !isBookingsError && upcoming.length > 0 && (
             <ul className="space-y-3">
               {upcoming.map((booking) => (
+                <li key={booking.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBookingId(booking.id)}
+                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-stone-900">
+                          {booking.customerName} · {booking.serviceName}
+                        </p>
+                        <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
+                      </div>
+                      <span
+                        className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[booking.status]}`}
+                      >
+                        {STATUS_LABELS[booking.status]}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-base font-semibold text-stone-900">Recent appointments</h2>
+
+        <div className="mt-3">
+          {!isBookingsPending && !isBookingsError && recent.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+              No past appointments yet.
+            </p>
+          )}
+
+          {!isBookingsPending && !isBookingsError && recent.length > 0 && (
+            <ul className="space-y-3">
+              {recent.map((booking) => (
                 <li key={booking.id}>
                   <button
                     type="button"

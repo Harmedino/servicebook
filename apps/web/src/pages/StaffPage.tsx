@@ -221,6 +221,7 @@ export function StaffPage() {
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Contact</th>
                   <th className="px-4 py-3">Services</th>
+                  <th className="px-4 py-3">Today</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -240,6 +241,9 @@ export function StaffPage() {
                     </td>
                     <td className="max-w-xs px-4 py-3 text-stone-600">
                       {resolveServiceNames(staff.serviceIds, allServices)}
+                    </td>
+                    <td className="px-4 py-3 text-stone-600">
+                      {staff.todayAppointmentCount ?? 0} appointment{staff.todayAppointmentCount === 1 ? "" : "s"}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge isActive={staff.isActive} />
@@ -288,6 +292,9 @@ export function StaffPage() {
                       {staff.email && <p className="mt-0.5 text-sm text-stone-500">{staff.email}</p>}
                       {staff.phone && <p className="text-sm text-stone-500">{staff.phone}</p>}
                       <p className="mt-1 text-sm text-stone-500">{resolveServiceNames(staff.serviceIds, allServices)}</p>
+                      <p className="text-xs text-stone-500">
+                        {staff.todayAppointmentCount ?? 0} appointment{staff.todayAppointmentCount === 1 ? "" : "s"} today
+                      </p>
                     </div>
                     <StatusBadge isActive={staff.isActive} />
                   </div>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type { BusinessResponse, MyBusinessResponse } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
+import { DASHBOARD_QUERY_KEY } from "./dashboard";
 
 const BUSINESS_QUERY_KEY = ["business", "me"] as const;
 
@@ -53,6 +54,8 @@ export function useUpdateBusiness(): UseMutationResult<BusinessResponse, unknown
       apiRequest<BusinessResponse>("/api/business", { method: "PATCH", body: input }),
     onSuccess: (data) => {
       queryClient.setQueryData<MyBusinessResponse>(BUSINESS_QUERY_KEY, { business: data.business });
+      // Name/timezone/public-booking-enabled all surface on the dashboard summary too.
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { formatInTimeZone } from "date-fns-tz";
 import type {
   StaffAvailabilityEntry,
   StaffAvailabilityResponse,
@@ -9,12 +10,14 @@ import type {
 } from "@servicebook/types";
 import { Staff, type StaffDocument } from "../models/Staff";
 import { Service } from "../models/Service";
+import { Booking } from "../models/Booking";
 import { StaffAvailability, type StaffAvailabilityDocument } from "../models/StaffAvailability";
-import { BadRequestError, NotFoundError } from "../lib/errors";
+import { BadRequestError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { ensureBusinessHours } from "../lib/businessHours";
 import { ensureStaffAvailability } from "../lib/staffAvailability";
+import { localDayStartUtc, nextDateKey } from "../lib/bookingEngine";
 import { objectIdField } from "../lib/validation";
 
 const nameField = z.string().trim().min(1, "Staff name is required").max(120, "Name is too long");
@@ -64,7 +67,7 @@ async function assertServiceIdsBelongToBusiness(serviceIds: string[], businessId
   }
 }
 
-function toStaffProfile(staff: StaffDocument): StaffProfile {
+function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number): StaffProfile {
   return {
     id: staff.id,
     businessId: staff.businessId.toString(),
@@ -74,6 +77,7 @@ function toStaffProfile(staff: StaffDocument): StaffProfile {
     avatarUrl: staff.avatarUrl ?? undefined,
     isActive: staff.isActive ?? true,
     serviceIds: staff.serviceIds.map((id) => id.toString()),
+    todayAppointmentCount,
     createdAt: staff.createdAt.toISOString(),
     updatedAt: staff.updatedAt.toISOString(),
   };
@@ -146,6 +150,10 @@ staffRouter.post(
 staffRouter.get(
   "/",
   asyncHandler(async (req, res) => {
+    if (!req.business) {
+      throw new UnauthorizedError();
+    }
+
     const query = listQuerySchema.parse(req.query);
 
     const filter: Record<string, unknown> = { businessId: req.businessId };
@@ -155,7 +163,29 @@ staffRouter.get(
 
     const staff = await Staff.find(filter).sort({ name: 1 });
 
-    const body: StaffListResponse = { staff: staff.map(toStaffProfile) };
+    // One aggregation for every staff member's today count, instead of a
+    // query per row — bounded to this business, uses the business's own
+    // timezone so "today" lines up with the owner's actual calendar day.
+    const todayKey = formatInTimeZone(new Date(), req.business.timezone, "yyyy-MM-dd");
+    const todayStart = localDayStartUtc(todayKey, req.business.timezone);
+    const todayEnd = localDayStartUtc(nextDateKey(todayKey), req.business.timezone);
+    const todayCounts = await Booking.aggregate<{ _id: unknown; count: number }>([
+      {
+        $match: {
+          businessId: req.business._id,
+          startTime: { $gte: todayStart, $lt: todayEnd },
+          status: { $ne: "CANCELLED" },
+        },
+      },
+      { $group: { _id: "$staffId", count: { $sum: 1 } } },
+    ]);
+    const todayCountByStaffId = new Map(
+      todayCounts.map((entry) => [(entry._id as { toString(): string }).toString(), entry.count]),
+    );
+
+    const body: StaffListResponse = {
+      staff: staff.map((member) => toStaffProfile(member, todayCountByStaffId.get(member.id) ?? 0)),
+    };
     res.json(body);
   }),
 );

@@ -88,6 +88,8 @@ export interface StaffProfile {
   avatarUrl?: string;
   isActive: boolean;
   serviceIds: string[];
+  /** Only populated on list responses — today's non-cancelled appointment count, in the business's timezone. */
+  todayAppointmentCount?: number;
   createdAt: string;
   updatedAt: string;
 }
