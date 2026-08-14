@@ -1,15 +1,5 @@
 import { Link } from "react-router-dom";
-import {
-  CalendarClock,
-  CalendarDays,
-  Clock,
-  LayoutDashboard,
-  Menu,
-  Scissors,
-  Users,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarClock, CalendarDays, Clock, LayoutDashboard, Menu, Users, X, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { buttonClassName } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";

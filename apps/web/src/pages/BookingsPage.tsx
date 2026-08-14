@@ -13,7 +13,6 @@ import { STATUS_LABELS } from "../lib/bookingStatus";
 import { addDaysToKey, startOfWeekKey } from "../lib/calendarDates";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { BookingStatusBadge } from "../components/ui/Badge";
-import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
