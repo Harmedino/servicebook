@@ -63,6 +63,13 @@ async function resolveBusinessBySlug(slug: string) {
   return business;
 }
 
+/** Rejects staff/availability/booking-creation requests while the owner has public booking turned off — hiding the service list on the info page isn't enough, the API must actually refuse these too. */
+function assertPublicBookingEnabled(business: { isPublicBookingEnabled: boolean }): void {
+  if (!business.isPublicBookingEnabled) {
+    throw new ForbiddenError("Online booking is currently unavailable");
+  }
+}
+
 /** Finds an existing customer for this business by phone, or creates one — never a global customer. */
 async function findOrCreateCustomer(
   businessId: string,
@@ -97,7 +104,12 @@ publicBookingRouter.get(
   "/businesses/:slug",
   asyncHandler(async (req, res) => {
     const business = await resolveBusinessBySlug(req.params.slug);
-    const services = await Service.find({ businessId: business.id, isActive: true }).sort({ name: 1 });
+    const bookingEnabled = business.isPublicBookingEnabled;
+    // Booking is still off even if this list were non-empty — don't bother
+    // fetching services the customer won't be able to book anyway.
+    const services = bookingEnabled
+      ? await Service.find({ businessId: business.id, isActive: true }).sort({ name: 1 })
+      : [];
 
     const body: PublicBusinessResponse = {
       business: {
@@ -109,6 +121,7 @@ publicBookingRouter.get(
         phone: business.phone ?? undefined,
         email: business.email ?? undefined,
         address: business.address ?? undefined,
+        website: business.website ?? undefined,
       },
       services: services.map((service) => ({
         id: service.id,
@@ -117,6 +130,7 @@ publicBookingRouter.get(
         durationMinutes: service.durationMinutes,
         price: service.price,
       })),
+      bookingEnabled,
     };
     res.json(body);
   }),
