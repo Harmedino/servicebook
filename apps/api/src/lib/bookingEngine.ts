@@ -295,7 +295,20 @@ export async function createValidatedBooking(params: {
       }
 
       const [created] = await Booking.create(
-        [{ businessId, staffId, serviceId, customerId, startTime, endTime, notes, price: service.price }],
+        [
+          {
+            businessId,
+            staffId,
+            serviceId,
+            customerId,
+            startTime,
+            endTime,
+            notes,
+            price: service.price,
+            serviceName: service.name,
+            staffName: staff.name,
+          },
+        ],
         { session },
       );
       booking = created;

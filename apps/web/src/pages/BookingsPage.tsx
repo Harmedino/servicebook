@@ -9,8 +9,19 @@ import { BookingFormModal, type BookingFormSubmitValues } from "../components/Bo
 import { BookingDetailModal } from "../components/BookingDetailModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
+import { addDaysToKey, startOfWeekKey } from "../lib/calendarDates";
 
-type Tab = "today" | "upcoming" | "all";
+type DateScope = "today" | "tomorrow" | "week" | "upcoming" | "past" | "all" | "custom";
+
+const DATE_SCOPE_OPTIONS: { value: DateScope; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "tomorrow", label: "Tomorrow" },
+  { value: "week", label: "This week" },
+  { value: "upcoming", label: "Upcoming" },
+  { value: "past", label: "Past" },
+  { value: "all", label: "All" },
+  { value: "custom", label: "Custom date…" },
+];
 
 function StatusBadge({ status }: { status: BookingStatus }) {
   return (
@@ -33,11 +44,14 @@ function BookingsLoadingSkeleton() {
 export function BookingsPage() {
   const { data: businessData } = useMyBusiness();
   const timezone = businessData?.business?.timezone ?? "UTC";
+  const bookingUrl = businessData?.business ? `${window.location.origin}/book/${businessData.business.slug}` : "";
 
   const { data: staffData } = useStaffList();
   const activeStaff = staffData?.staff ?? [];
 
-  const [tab, setTab] = useState<Tab>("upcoming");
+  const [dateScope, setDateScope] = useState<DateScope>("upcoming");
+  const todayKey = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+  const [customDate, setCustomDate] = useState(todayKey);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [staffFilter, setStaffFilter] = useState<string>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -48,7 +62,35 @@ export function BookingsPage() {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
+  // Maps the selected scope to a server-side date range — bookings are
+  // always fetched pre-scoped, never downloaded in bulk and filtered here.
+  const { startDate, endDate } = useMemo(() => {
+    switch (dateScope) {
+      case "today":
+        return { startDate: todayKey, endDate: todayKey };
+      case "tomorrow": {
+        const tomorrow = addDaysToKey(todayKey, 1);
+        return { startDate: tomorrow, endDate: tomorrow };
+      }
+      case "week": {
+        const start = startOfWeekKey(todayKey);
+        return { startDate: start, endDate: addDaysToKey(start, 6) };
+      }
+      case "upcoming":
+        return { startDate: todayKey, endDate: undefined };
+      case "past":
+        return { startDate: undefined, endDate: addDaysToKey(todayKey, -1) };
+      case "custom":
+        return { startDate: customDate, endDate: customDate };
+      case "all":
+      default:
+        return { startDate: undefined, endDate: undefined };
+    }
+  }, [dateScope, todayKey, customDate]);
+
   const { data, isPending, isError } = useBookings({
+    startDate,
+    endDate,
     status: statusFilter !== "all" ? (statusFilter as BookingStatus) : undefined,
     staffId: staffFilter !== "all" ? staffFilter : undefined,
     q: debouncedSearch || undefined,
@@ -59,25 +101,8 @@ export function BookingsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
-  const allBookings = useMemo(() => data?.bookings ?? [], [data?.bookings]);
-  const selectedBooking = allBookings.find((booking) => booking.id === selectedBookingId) ?? null;
-
-  const todayKey = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
-  const now = Date.now();
-
-  const filteredBookings = useMemo(() => {
-    if (tab === "today") {
-      return allBookings.filter(
-        (booking) => formatInTimeZone(new Date(booking.startTime), timezone, "yyyy-MM-dd") === todayKey,
-      );
-    }
-    if (tab === "upcoming") {
-      return allBookings.filter(
-        (booking) => new Date(booking.startTime).getTime() >= now && booking.status !== "CANCELLED",
-      );
-    }
-    return allBookings;
-  }, [allBookings, tab, timezone, todayKey, now]);
+  const bookings = useMemo(() => data?.bookings ?? [], [data?.bookings]);
+  const selectedBooking = bookings.find((booking) => booking.id === selectedBookingId) ?? null;
 
   function openForm() {
     setFormError(null);
@@ -98,7 +123,14 @@ export function BookingsPage() {
     return formatInTimeZone(new Date(iso), timezone, "MMM d, h:mm a");
   }
 
-  const hasActiveFilters = statusFilter !== "all" || staffFilter !== "all" || debouncedSearch.length > 0;
+  // "Upcoming" and "All" are the two neutral/default views — narrowing to
+  // any other scope, or adding a status/staff/search filter, is what makes
+  // an empty result read as "no matches" rather than "no bookings yet."
+  const hasActiveFilters =
+    (dateScope !== "all" && dateScope !== "upcoming") ||
+    statusFilter !== "all" ||
+    staffFilter !== "all" ||
+    debouncedSearch.length > 0;
 
   return (
     <DashboardLayout>
@@ -116,21 +148,6 @@ export function BookingsPage() {
         </button>
       </div>
 
-      <div className="mt-4 flex gap-2">
-        {(["today", "upcoming", "all"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setTab(value)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === value ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-            }`}
-          >
-            {value.charAt(0).toUpperCase() + value.slice(1)}
-          </button>
-        ))}
-      </div>
-
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <input
           type="search"
@@ -139,6 +156,25 @@ export function BookingsPage() {
           placeholder="Search customer name, phone, or email…"
           className="w-full max-w-xs rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         />
+        <select
+          value={dateScope}
+          onChange={(event) => setDateScope(event.target.value as DateScope)}
+          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        >
+          {DATE_SCOPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {dateScope === "custom" && (
+          <input
+            type="date"
+            value={customDate}
+            onChange={(event) => setCustomDate(event.target.value)}
+            className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          />
+        )}
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
@@ -174,33 +210,41 @@ export function BookingsPage() {
           </p>
         )}
 
-        {!isPending && !isError && allBookings.length === 0 && !hasActiveFilters && (
+        {!isPending && !isError && bookings.length === 0 && !hasActiveFilters && (
           <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
             <h2 className="text-base font-semibold text-stone-900">No bookings yet</h2>
-            <p className="mt-1 text-sm text-stone-500">Create your first appointment to start managing your schedule.</p>
-            <button
-              type="button"
-              onClick={openForm}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              + New booking
-            </button>
+            <p className="mt-1 text-sm text-stone-500">
+              Create a booking manually or share your public booking page with customers.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={openForm}
+                className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+              >
+                + New booking
+              </button>
+              {bookingUrl && (
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
+                >
+                  Open booking page
+                </a>
+              )}
+            </div>
           </div>
         )}
 
-        {!isPending && !isError && allBookings.length === 0 && hasActiveFilters && (
+        {!isPending && !isError && bookings.length === 0 && hasActiveFilters && (
           <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
-            No bookings match these filters.
+            No bookings match this view.
           </p>
         )}
 
-        {!isPending && !isError && allBookings.length > 0 && filteredBookings.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
-            No bookings in this view.
-          </p>
-        )}
-
-        {!isPending && !isError && filteredBookings.length > 0 && (
+        {!isPending && !isError && bookings.length > 0 && (
           <>
             <table className="hidden w-full overflow-hidden rounded-2xl border border-stone-200 bg-white text-sm shadow-sm md:table">
               <thead className="bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-500">
@@ -213,7 +257,7 @@ export function BookingsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {filteredBookings.map((booking) => (
+                {bookings.map((booking) => (
                   <tr
                     key={booking.id}
                     onClick={() => setSelectedBookingId(booking.id)}
@@ -232,7 +276,7 @@ export function BookingsPage() {
             </table>
 
             <ul className="space-y-3 md:hidden">
-              {filteredBookings.map((booking) => (
+              {bookings.map((booking) => (
                 <li key={booking.id}>
                   <button
                     type="button"

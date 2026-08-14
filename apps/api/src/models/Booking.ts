@@ -41,6 +41,9 @@ const bookingSchema = new Schema(
     notes: { type: String, trim: true },
     /** Snapshot of the service's price when this booking was created/rescheduled onto a new service — never re-derived from the (mutable) Service document, so later price edits can't rewrite history. Absent on bookings created before this field existed. */
     price: { type: Number, min: 0 },
+    /** Snapshots of the service/staff names at booking time — protects history from later renames. Absent on bookings created before this field existed; toBookingProfiles falls back to a live lookup in that case. */
+    serviceName: { type: String, trim: true },
+    staffName: { type: String, trim: true },
     /** Set once the 24-hour reminder email has been sent — the claim that makes the reminder scheduler idempotent. */
     reminder24hSentAt: { type: Date, default: null },
   },

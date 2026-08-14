@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import type { BookingProfile, BookingStatus } from "@servicebook/types";
 import { useUpdateBooking } from "../lib/bookings";
@@ -66,6 +67,7 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
     timezone,
     "h:mm a",
   )}`;
+  const durationMinutes = Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / 60_000);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
@@ -86,8 +88,26 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
 
         <div className="mt-4 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
           <p>{dateLabel}</p>
-          <p>{timeLabel}</p>
+          <p>
+            {timeLabel} · {durationMinutes} min
+          </p>
           {booking.price !== undefined && <p>{formatPrice(booking.price)}</p>}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-stone-600">
+          {booking.customerPhone && (
+            <a href={`tel:${booking.customerPhone}`} className="text-brand-700 hover:text-brand-800">
+              {booking.customerPhone}
+            </a>
+          )}
+          {booking.customerEmail && (
+            <a href={`mailto:${booking.customerEmail}`} className="text-brand-700 hover:text-brand-800">
+              {booking.customerEmail}
+            </a>
+          )}
+          <Link to={`/customers/${booking.customerId}`} className="font-medium text-brand-700 hover:text-brand-800">
+            View customer
+          </Link>
         </div>
 
         <label className="mt-4 block">

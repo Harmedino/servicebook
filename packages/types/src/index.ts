@@ -163,6 +163,8 @@ export interface BookingProfile {
   businessId: string;
   customerId: string;
   customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
   serviceId: string;
   serviceName: string;
   staffId: string;

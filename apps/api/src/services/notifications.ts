@@ -82,6 +82,18 @@ export async function notifyBookingCreated(ctx: BookingNotificationContext): Pro
   await Promise.all(tasks);
 }
 
+/** Owner confirmed a previously-pending booking. Reuses the same "your appointment is confirmed" template sent at creation — it's the same message, just triggered by a different event. */
+export async function notifyBookingConfirmed(ctx: BookingNotificationContext): Promise<void> {
+  if (!ctx.business.emailNotificationsEnabled || !ctx.business.notifyCustomerOnBooking) {
+    return;
+  }
+  const data = toBookingEmailData(ctx);
+  if (!data) {
+    return;
+  }
+  await deliver("booking confirmation", ctx.booking.id, bookingConfirmationEmail(data));
+}
+
 export async function notifyBookingCancelled(ctx: BookingNotificationContext): Promise<void> {
   if (!ctx.business.emailNotificationsEnabled || !ctx.business.notifyCustomerOnBooking) {
     return;

@@ -19,11 +19,24 @@ import {
   resolveBookableServiceAndStaff,
   validateBookingWindow,
 } from "../lib/bookingEngine";
-import { notifyBookingCancelled, notifyBookingRescheduled } from "../services/notifications";
-
-const FINAL_STATUSES = new Set(["CANCELLED", "COMPLETED"]);
+import { notifyBookingCancelled, notifyBookingConfirmed, notifyBookingRescheduled } from "../services/notifications";
 
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"] as const;
+type BookingStatusValue = (typeof BOOKING_STATUSES)[number];
+
+// Cancelled/completed/no-show are terminal: the appointment slot is history,
+// not an active booking, so it can no longer move or change status further.
+const FINAL_STATUSES = new Set<BookingStatusValue>(["CANCELLED", "COMPLETED", "NO_SHOW"]);
+
+// A small, explicit rule set rather than allowing any status to jump to any
+// other — e.g. a confirmed booking can't silently go back to pending.
+const ALLOWED_STATUS_TRANSITIONS: Record<BookingStatusValue, BookingStatusValue[]> = {
+  PENDING: ["CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"],
+  CONFIRMED: ["COMPLETED", "CANCELLED", "NO_SHOW"],
+  COMPLETED: [],
+  CANCELLED: [],
+  NO_SHOW: [],
+};
 const dateKeyField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
 const createBookingSchema = z.object({
@@ -72,19 +85,26 @@ export async function toBookingProfiles(bookings: BookingDocument[]): Promise<Bo
     Staff.find({ _id: { $in: staffIds } }),
   ]);
 
-  const customerNameById = new Map(customers.map((customer) => [customer.id, customer.name]));
+  const customerById = new Map(customers.map((customer) => [customer.id, customer]));
   const serviceNameById = new Map(services.map((service) => [service.id, service.name]));
   const staffNameById = new Map(staffMembers.map((staff) => [staff.id, staff.name]));
 
-  return bookings.map((booking) => ({
+  return bookings.map((booking) => {
+    const customer = customerById.get(booking.customerId.toString());
+    return {
     id: booking.id,
     businessId: booking.businessId.toString(),
     customerId: booking.customerId.toString(),
-    customerName: customerNameById.get(booking.customerId.toString()) ?? "Unknown customer",
+    customerName: customer?.name ?? "Unknown customer",
+    customerPhone: customer?.phone ?? undefined,
+    customerEmail: customer?.email ?? undefined,
     serviceId: booking.serviceId.toString(),
-    serviceName: serviceNameById.get(booking.serviceId.toString()) ?? "Unknown service",
+    // Prefer the snapshot taken at booking time (protects history from later
+    // renames); fall back to a live lookup for bookings created before these
+    // fields existed.
+    serviceName: booking.serviceName ?? serviceNameById.get(booking.serviceId.toString()) ?? "Unknown service",
     staffId: booking.staffId.toString(),
-    staffName: staffNameById.get(booking.staffId.toString()) ?? "Unknown staff",
+    staffName: booking.staffName ?? staffNameById.get(booking.staffId.toString()) ?? "Unknown staff",
     startTime: booking.startTime.toISOString(),
     endTime: booking.endTime.toISOString(),
     status: booking.status,
@@ -92,7 +112,8 @@ export async function toBookingProfiles(bookings: BookingDocument[]): Promise<Bo
     price: booking.price ?? undefined,
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
-  }));
+    };
+  });
 }
 
 export const bookingsRouter = Router();
@@ -193,16 +214,18 @@ bookingsRouter.get(
     } else if (query.customerId) {
       filter.customerId = query.customerId;
     }
-    if (query.startDate || query.endDate) {
-      // Calendar range fetch: only download the days actually being displayed.
-      const startKey = query.startDate ?? query.endDate ?? query.date;
-      const endKey = query.endDate ?? query.startDate ?? query.date;
-      if (startKey && endKey) {
-        filter.startTime = {
-          $gte: localDayStartUtc(startKey, req.business.timezone),
-          $lt: localDayStartUtc(nextDateKey(endKey), req.business.timezone),
-        };
-      }
+    if (query.startDate && query.endDate) {
+      // Closed range (e.g. calendar week/month view): only the days actually displayed.
+      filter.startTime = {
+        $gte: localDayStartUtc(query.startDate, req.business.timezone),
+        $lt: localDayStartUtc(nextDateKey(query.endDate), req.business.timezone),
+      };
+    } else if (query.startDate) {
+      // Open-ended "from this date onward" (e.g. Upcoming/This week start).
+      filter.startTime = { $gte: localDayStartUtc(query.startDate, req.business.timezone) };
+    } else if (query.endDate) {
+      // Open-ended "up to this date" (e.g. Past).
+      filter.startTime = { $lt: localDayStartUtc(nextDateKey(query.endDate), req.business.timezone) };
     } else if (query.date) {
       filter.startTime = {
         $gte: localDayStartUtc(query.date, req.business.timezone),
@@ -210,7 +233,16 @@ bookingsRouter.get(
       };
     }
 
-    const bookings = await Booking.find(filter).sort({ startTime: 1 });
+    // A safety cap, not pagination — the date filters above already bound
+    // most queries to a handful of days; this just protects an unbounded
+    // query from pulling a business's entire booking history. Queries with
+    // no lower bound (Past/All) sort newest-first so the cap keeps the most
+    // relevant 500 rather than the 500 oldest.
+    const sortDirection = query.startDate ? 1 : -1;
+    const bookings = await Booking.find(filter).sort({ startTime: sortDirection }).limit(500);
+    if (sortDirection === -1) {
+      bookings.reverse();
+    }
     const body: BookingListResponse = { bookings: await toBookingProfiles(bookings) };
     res.json(body);
   }),
@@ -258,6 +290,16 @@ bookingsRouter.patch(
       throw new BadRequestError(
         `This booking is already ${previousStatus.toLowerCase()} and can't be ${isRescheduling ? "rescheduled" : "changed"}`,
       );
+    }
+
+    // A small explicit rule set for everything else — e.g. a confirmed
+    // booking can't be silently moved back to pending.
+    if (
+      updates.status !== undefined &&
+      updates.status !== previousStatus &&
+      !ALLOWED_STATUS_TRANSITIONS[previousStatus].includes(updates.status)
+    ) {
+      throw new BadRequestError(`Can't change status from ${previousStatus.toLowerCase()} to ${updates.status.toLowerCase()}`);
     }
 
     const staffId = updates.staffId ?? existingBooking.staffId.toString();
@@ -322,6 +364,8 @@ bookingsRouter.patch(
           // their original price snapshot regardless of later service edits —
           // only an explicit reschedule of *this* booking re-syncs it.
           setFields.price = rescheduledService!.price;
+          setFields.serviceName = rescheduledService!.name;
+          setFields.staffName = rescheduledStaff!.name;
         }
 
         updatedBooking = await Booking.findByIdAndUpdate(
@@ -340,11 +384,15 @@ bookingsRouter.patch(
     const confirmedBooking: BookingDocument = updatedBooking;
 
     const isNewlyCancelled = previousStatus !== "CANCELLED" && confirmedBooking.status === "CANCELLED";
+    // Only a plain status change PENDING -> CONFIRMED triggers this — a
+    // reschedule that happens to also confirm the booking is covered by the
+    // reschedule notification instead, so the customer gets one email, not two.
+    const isNewlyConfirmed = !isRescheduling && previousStatus === "PENDING" && confirmedBooking.status === "CONFIRMED";
 
     // Fire-and-forget, after the transaction — same reasoning as booking
     // creation: email I/O must never block the response or affect the
     // already-committed update.
-    if (isNewlyCancelled || isRescheduling) {
+    if (isNewlyCancelled || isRescheduling || isNewlyConfirmed) {
       void (async () => {
         try {
           const customer = await Customer.findById(confirmedBooking.customerId);
@@ -362,6 +410,8 @@ bookingsRouter.patch(
             await notifyBookingCancelled(ctx);
           } else if (isRescheduling) {
             await notifyBookingRescheduled(ctx, { startTime: previousStartTime, endTime: previousEndTime });
+          } else if (isNewlyConfirmed) {
+            await notifyBookingConfirmed(ctx);
           }
         } catch (error) {
           console.error(`Booking-update notification failed for booking ${confirmedBooking.id}:`, error);
