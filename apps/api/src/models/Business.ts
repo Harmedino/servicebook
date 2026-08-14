@@ -42,6 +42,12 @@ const businessSchema = new Schema(
       required: true,
       default: true,
     },
+    // Notification settings. emailNotificationsEnabled is the master switch —
+    // when off, the others are irrelevant regardless of their own value.
+    emailNotificationsEnabled: { type: Boolean, required: true, default: true },
+    notifyCustomerOnBooking: { type: Boolean, required: true, default: true },
+    notifyCustomerReminder: { type: Boolean, required: true, default: true },
+    notifyOwnerOnBooking: { type: Boolean, required: true, default: true },
   },
   { timestamps: true },
 );

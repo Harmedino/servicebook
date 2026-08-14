@@ -112,7 +112,7 @@ bookingsRouter.post(
       business: req.business,
       serviceId: payload.serviceId,
       staffId: payload.staffId,
-      customerId: payload.customerId,
+      customer,
       startTime: new Date(payload.startTime),
       notes: payload.notes,
     });

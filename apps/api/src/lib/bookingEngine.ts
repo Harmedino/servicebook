@@ -4,9 +4,11 @@ import { Booking, type BookingDocument } from "../models/Booking";
 import { Service, type ServiceDocument } from "../models/Service";
 import { Staff, type StaffDocument } from "../models/Staff";
 import type { BusinessDocument } from "../models/Business";
+import type { CustomerDocument } from "../models/Customer";
 import { BadRequestError, ConflictError } from "./errors";
 import { ensureBusinessHours } from "./businessHours";
 import { ensureStaffAvailability } from "./staffAvailability";
+import { notifyBookingCreated } from "../services/notifications";
 
 // The interval at which candidate slots are offered. Not the same as service
 // duration — a 60-minute service can still start on any 30-minute boundary.
@@ -234,11 +236,12 @@ export async function createValidatedBooking(params: {
   business: BusinessDocument;
   serviceId: string;
   staffId: string;
-  customerId: string;
+  customer: CustomerDocument;
   startTime: Date;
   notes?: string;
 }): Promise<{ booking: BookingDocument; service: ServiceDocument; staff: StaffDocument }> {
-  const { businessId, business, serviceId, staffId, customerId, startTime, notes } = params;
+  const { businessId, business, serviceId, staffId, customer, startTime, notes } = params;
+  const customerId = customer.id;
 
   const service = await Service.findOne({ _id: serviceId, businessId });
   if (!service) {
@@ -282,5 +285,16 @@ export async function createValidatedBooking(params: {
     await session.endSession();
   }
 
-  return { booking: booking as BookingDocument, service, staff };
+  const createdBooking = booking as BookingDocument;
+
+  // Fire-and-forget, and deliberately outside the transaction: email I/O is
+  // slow and unreliable compared to a DB write, and a failed/slow send must
+  // never delay the booking response or cause the transaction to retry (which
+  // could otherwise resend the same email). The booking is already durably
+  // committed by this point regardless of what happens here.
+  void notifyBookingCreated({ business, customer, service, staff, booking: createdBooking }).catch((error: unknown) => {
+    console.error(`Booking-created notification failed for booking ${createdBooking.id}:`, error);
+  });
+
+  return { booking: createdBooking, service, staff };
 }

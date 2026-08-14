@@ -39,6 +39,8 @@ const bookingSchema = new Schema(
       default: "PENDING",
     },
     notes: { type: String, trim: true },
+    /** Set once the 24-hour reminder email has been sent — the claim that makes the reminder scheduler idempotent. */
+    reminder24hSentAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
