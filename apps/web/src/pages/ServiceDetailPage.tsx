@@ -7,22 +7,10 @@ import { useBookings } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
-import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
 import { formatDuration, formatPrice } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
-
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-600"
-      }`}
-    >
-      {isActive ? "Active" : "Inactive"}
-    </span>
-  );
-}
+import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
 
 export function ServiceDetailPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -113,7 +101,7 @@ export function ServiceDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-stone-900">{service.name}</h1>
-            <StatusBadge isActive={service.isActive} />
+            <ActiveBadge isActive={service.isActive} />
           </div>
           <p className="mt-1 text-sm text-stone-500">
             {formatDuration(service.durationMinutes)} · {formatPrice(service.price)}
@@ -212,11 +200,7 @@ export function ServiceDetailPage() {
                         </p>
                         <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
                       </div>
-                      <span
-                        className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[booking.status]}`}
-                      >
-                        {STATUS_LABELS[booking.status]}
-                      </span>
+                      <BookingStatusBadge status={booking.status} />
                     </div>
                   </button>
                 </li>

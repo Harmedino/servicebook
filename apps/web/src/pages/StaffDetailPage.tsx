@@ -8,23 +8,11 @@ import { useMyBusiness } from "../lib/business";
 import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { StaffAvailabilityEditor } from "../components/StaffAvailabilityEditor";
 import { BookingDetailModal } from "../components/BookingDetailModal";
-import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
 
 const RECENT_APPOINTMENTS_LIMIT = 10;
-
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-600"
-      }`}
-    >
-      {isActive ? "Active" : "Inactive"}
-    </span>
-  );
-}
 
 export function StaffDetailPage() {
   const { staffId } = useParams<{ staffId: string }>();

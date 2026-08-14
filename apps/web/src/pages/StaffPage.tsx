@@ -226,7 +226,7 @@ export function StaffPage() {
                       {staff.todayAppointmentCount ?? 0} appointment{staff.todayAppointmentCount === 1 ? "" : "s"}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge isActive={staff.isActive} />
+                      <ActiveBadge isActive={staff.isActive} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -276,7 +276,7 @@ export function StaffPage() {
                         {staff.todayAppointmentCount ?? 0} appointment{staff.todayAppointmentCount === 1 ? "" : "s"} today
                       </p>
                     </div>
-                    <StatusBadge isActive={staff.isActive} />
+                    <ActiveBadge isActive={staff.isActive} />
                   </div>
                   <div className="mt-3 flex gap-4 text-sm">
                     <button

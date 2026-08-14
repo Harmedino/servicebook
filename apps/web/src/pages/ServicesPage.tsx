@@ -255,7 +255,7 @@ export function ServicesPage() {
                       </p>
                       <p className="mt-0.5 text-xs text-stone-500">{staffNames(service)}</p>
                     </div>
-                    <StatusBadge isActive={service.isActive} />
+                    <ActiveBadge isActive={service.isActive} />
                   </div>
                   <div className="mt-3 flex gap-4 text-sm">
                     <button
