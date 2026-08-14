@@ -160,13 +160,9 @@ export function BusinessInfoSection() {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={updateBusiness.isPending}
-        className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" isLoading={updateBusiness.isPending}>
         {updateBusiness.isPending ? "Saving…" : "Save changes"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -42,11 +42,7 @@ export function BusinessHoursEditor() {
   }
 
   if (isPending || !draft) {
-    return (
-      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-stone-500">Loading business hours…</p>
-      </div>
-    );
+    return <p className="text-sm text-stone-500">Loading business hours…</p>;
   }
 
   if (isError) {
@@ -58,11 +54,8 @@ export function BusinessHoursEditor() {
   }
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-stone-900">Business hours</h2>
-      <p className="mt-1 text-sm text-stone-500">When customers can book appointments with your business.</p>
-
-      <div className="mt-4 divide-y divide-stone-100">
+    <Card className="max-w-lg p-5">
+      <div className="divide-y divide-stone-100">
         {WEEK_DISPLAY_ORDER.map((dayOfWeek) => {
           const entry = draft.find((day) => day.dayOfWeek === dayOfWeek);
           if (!entry) {
@@ -111,14 +104,9 @@ export function BusinessHoursEditor() {
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={updateHours.isPending}
-        className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button className="mt-4" isLoading={updateHours.isPending} onClick={handleSave}>
         {updateHours.isPending ? "Saving…" : "Save changes"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }
