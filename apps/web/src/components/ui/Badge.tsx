@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { BookingStatus } from "@servicebook/types";
+import { STATUS_LABELS } from "../../lib/bookingStatus";
 
 export type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info" | "brand";
 
@@ -24,14 +25,6 @@ export function ActiveBadge({ isActive }: { isActive: boolean }) {
   return <Badge tone={isActive ? "success" : "neutral"}>{isActive ? "Active" : "Inactive"}</Badge>;
 }
 
-const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  CANCELLED: "Cancelled",
-  COMPLETED: "Completed",
-  NO_SHOW: "No-show",
-};
-
 const BOOKING_STATUS_TONES: Record<BookingStatus, BadgeTone> = {
   PENDING: "warning",
   CONFIRMED: "success",
@@ -41,5 +34,5 @@ const BOOKING_STATUS_TONES: Record<BookingStatus, BadgeTone> = {
 };
 
 export function BookingStatusBadge({ status }: { status: BookingStatus }) {
-  return <Badge tone={BOOKING_STATUS_TONES[status]}>{BOOKING_STATUS_LABELS[status]}</Badge>;
+  return <Badge tone={BOOKING_STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>;
 }

@@ -113,7 +113,7 @@ export function StaffDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-stone-900">{staff.name}</h1>
-            <StatusBadge isActive={staff.isActive} />
+            <ActiveBadge isActive={staff.isActive} />
           </div>
           <p className="mt-1 text-sm text-stone-500">
             {staff.email ?? "No email"} · {staff.phone ?? "No phone"}
@@ -210,11 +210,7 @@ export function StaffDetailPage() {
                         </p>
                         <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
                       </div>
-                      <span
-                        className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[booking.status]}`}
-                      >
-                        {STATUS_LABELS[booking.status]}
-                      </span>
+                      <BookingStatusBadge status={booking.status} />
                     </div>
                   </button>
                 </li>
@@ -250,11 +246,7 @@ export function StaffDetailPage() {
                         </p>
                         <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
                       </div>
-                      <span
-                        className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[booking.status]}`}
-                      >
-                        {STATUS_LABELS[booking.status]}
-                      </span>
+                      <BookingStatusBadge status={booking.status} />
                     </div>
                   </button>
                 </li>

@@ -7,9 +7,9 @@ import { useMyBusiness } from "../lib/business";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
 import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
-import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { BookingStatusBadge } from "../components/ui/Badge";
 
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -290,11 +290,7 @@ export function CustomerDetailPage() {
                         </p>
                         <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
                       </div>
-                      <span
-                        className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[booking.status]}`}
-                      >
-                        {STATUS_LABELS[booking.status]}
-                      </span>
+                      <BookingStatusBadge status={booking.status} />
                     </div>
                   </button>
                 </li>

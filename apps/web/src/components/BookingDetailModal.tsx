@@ -5,7 +5,7 @@ import type { BookingProfile, BookingStatus } from "@servicebook/types";
 import { useUpdateBooking } from "../lib/bookings";
 import { ApiError } from "../lib/apiClient";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
-import { STATUS_BADGE_STYLES, STATUS_LABELS } from "../lib/bookingStatus";
+import { BookingStatusBadge } from "./ui/Badge";
 import { formatPrice } from "../lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RescheduleModal } from "./RescheduleModal";
@@ -79,11 +79,7 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
               {booking.serviceName} · {booking.staffName}
             </p>
           </div>
-          <span
-            className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_STYLES[booking.status]}`}
-          >
-            {STATUS_LABELS[booking.status]}
-          </span>
+          <BookingStatusBadge status={booking.status} />
         </div>
 
         <div className="mt-4 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
