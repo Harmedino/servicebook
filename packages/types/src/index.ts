@@ -37,8 +37,10 @@ export interface BusinessProfile {
   phone?: string;
   email?: string;
   address?: string;
+  website?: string;
   timezone: string;
   logoUrl?: string;
+  isPublicBookingEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -180,6 +182,7 @@ export interface PublicBusinessProfile {
   phone?: string;
   email?: string;
   address?: string;
+  website?: string;
 }
 
 export interface PublicServiceProfile {
@@ -198,6 +201,7 @@ export interface PublicStaffProfile {
 export interface PublicBusinessResponse {
   business: PublicBusinessProfile;
   services: PublicServiceProfile[];
+  bookingEnabled: boolean;
 }
 
 export interface PublicStaffListResponse {

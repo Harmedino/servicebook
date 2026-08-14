@@ -13,7 +13,7 @@ import { Business } from "../models/Business";
 import { Service } from "../models/Service";
 import { Staff } from "../models/Staff";
 import { Customer, type CustomerDocument } from "../models/Customer";
-import { BadRequestError, NotFoundError, isDuplicateKeyError } from "../lib/errors";
+import { BadRequestError, ForbiddenError, NotFoundError, isDuplicateKeyError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { objectIdField } from "../lib/validation";
 import { computeAvailableSlots, createValidatedBooking } from "../lib/bookingEngine";

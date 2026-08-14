@@ -30,12 +30,18 @@ const businessSchema = new Schema(
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"],
     },
     address: { type: String, trim: true },
+    website: { type: String, trim: true },
     timezone: {
       type: String,
       required: true,
       default: "UTC",
     },
     logoUrl: { type: String, trim: true },
+    isPublicBookingEnabled: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
   },
   { timestamps: true },
 );

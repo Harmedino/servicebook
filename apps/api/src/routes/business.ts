@@ -24,6 +24,7 @@ const emailField = z.string().trim().toLowerCase().email("Enter a valid email ad
 const phoneField = z.string().trim().max(30, "Phone number is too long");
 const descriptionField = z.string().trim().max(1000, "Description is too long");
 const addressField = z.string().trim().max(300, "Address is too long");
+const websiteField = z.string().trim().url("Enter a valid website URL");
 const logoUrlField = z.string().trim().url("Enter a valid URL");
 const timezoneField = z
   .string()
@@ -45,8 +46,10 @@ const updateBusinessSchema = z
     phone: phoneField.optional(),
     description: descriptionField.optional(),
     address: addressField.optional(),
+    website: websiteField.optional(),
     timezone: timezoneField.optional(),
     logoUrl: logoUrlField.optional(),
+    isPublicBookingEnabled: z.boolean().optional(),
   })
   .strict();
 
@@ -109,8 +112,10 @@ function toBusinessProfile(business: BusinessDocument): BusinessProfile {
     phone: business.phone ?? undefined,
     email: business.email ?? undefined,
     address: business.address ?? undefined,
+    website: business.website ?? undefined,
     timezone: business.timezone,
     logoUrl: business.logoUrl ?? undefined,
+    isPublicBookingEnabled: business.isPublicBookingEnabled ?? true,
     createdAt: business.createdAt.toISOString(),
     updatedAt: business.updatedAt.toISOString(),
   };
