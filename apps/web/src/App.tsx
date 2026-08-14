@@ -6,6 +6,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { BusinessOnboardingPage } from "./pages/BusinessOnboardingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ServicesPage } from "./pages/ServicesPage";
+import { ServiceDetailPage } from "./pages/ServiceDetailPage";
 import { StaffPage } from "./pages/StaffPage";
 import { StaffDetailPage } from "./pages/StaffDetailPage";
 import { CustomersPage } from "./pages/CustomersPage";
@@ -63,6 +64,14 @@ export function App() {
         element={
           <OwnerRoute>
             <ServicesPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/services/:serviceId"
+        element={
+          <OwnerRoute>
+            <ServiceDetailPage />
           </OwnerRoute>
         }
       />

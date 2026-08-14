@@ -10,6 +10,7 @@ export interface BookingFilters {
   status?: BookingStatus;
   staffId?: string;
   customerId?: string;
+  serviceId?: string;
   /** Search by customer name, phone, or email — resolved server-side. */
   q?: string;
 }

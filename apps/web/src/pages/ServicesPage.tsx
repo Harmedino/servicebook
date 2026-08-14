@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { ServiceProfile } from "@servicebook/types";
 import { useCreateService, useDeactivateService, useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
@@ -217,7 +218,11 @@ export function ServicesPage() {
               <tbody className="divide-y divide-stone-100">
                 {services.map((service) => (
                   <tr key={service.id}>
-                    <td className="px-4 py-3 font-medium text-stone-900">{service.name}</td>
+                    <td className="px-4 py-3 font-medium text-stone-900">
+                      <Link to={`/services/${service.id}`} className="hover:text-brand-700">
+                        {service.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-stone-600">{formatDuration(service.durationMinutes)}</td>
                     <td className="px-4 py-3 text-stone-600">{formatPrice(service.price)}</td>
                     <td className="px-4 py-3 text-stone-600">{staffNames(service)}</td>
@@ -262,7 +267,9 @@ export function ServicesPage() {
                 <li key={service.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-stone-900">{service.name}</p>
+                      <Link to={`/services/${service.id}`} className="font-medium text-stone-900 hover:text-brand-700">
+                        {service.name}
+                      </Link>
                       <p className="mt-0.5 text-sm text-stone-500">
                         {formatDuration(service.durationMinutes)} · {formatPrice(service.price)}
                       </p>

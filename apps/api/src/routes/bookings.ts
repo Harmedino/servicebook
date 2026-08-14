@@ -64,6 +64,7 @@ const listQuerySchema = z.object({
   status: z.enum(BOOKING_STATUSES).optional(),
   staffId: objectIdField.optional(),
   customerId: objectIdField.optional(),
+  serviceId: objectIdField.optional(),
   q: z.string().trim().max(200).optional(),
 });
 
@@ -200,6 +201,9 @@ bookingsRouter.get(
     }
     if (query.staffId) {
       filter.staffId = query.staffId;
+    }
+    if (query.serviceId) {
+      filter.serviceId = query.serviceId;
     }
     if (query.q) {
       // Search by customer name/phone/email: resolve matching customers first
