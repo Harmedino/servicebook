@@ -321,7 +321,7 @@ bookingsRouter.patch(
     if (!updatedBooking) {
       throw new NotFoundError("Booking not found");
     }
-    const confirmedBooking = updatedBooking;
+    const confirmedBooking: BookingDocument = updatedBooking;
 
     const isNewlyCancelled = previousStatus !== "CANCELLED" && confirmedBooking.status === "CANCELLED";
 

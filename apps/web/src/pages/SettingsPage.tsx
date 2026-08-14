@@ -3,13 +3,15 @@ import { DashboardLayout } from "../components/DashboardLayout";
 import { BusinessInfoSection } from "../components/BusinessInfoSection";
 import { BookingPageSection } from "../components/BookingPageSection";
 import { BusinessHoursEditor } from "../components/BusinessHoursEditor";
+import { NotificationSettingsSection } from "../components/NotificationSettingsSection";
 
-type Tab = "business" | "booking-page" | "booking-settings";
+type Tab = "business" | "booking-page" | "booking-settings" | "notifications";
 
 const TABS: { key: Tab; label: string; description: string }[] = [
   { key: "business", label: "Business", description: "Business information and contact details." },
   { key: "booking-page", label: "Booking page", description: "Manage what customers see." },
   { key: "booking-settings", label: "Booking settings", description: "Manage booking behavior." },
+  { key: "notifications", label: "Notifications", description: "Manage automatic booking emails." },
 ];
 
 export function SettingsPage() {
@@ -40,6 +42,7 @@ export function SettingsPage() {
         {tab === "business" && <BusinessInfoSection />}
         {tab === "booking-page" && <BookingPageSection />}
         {tab === "booking-settings" && <BusinessHoursEditor />}
+        {tab === "notifications" && <NotificationSettingsSection />}
       </div>
     </DashboardLayout>
   );
