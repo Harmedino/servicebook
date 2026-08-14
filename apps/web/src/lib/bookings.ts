@@ -69,6 +69,7 @@ export function useCreateBooking(): UseMutationResult<BookingResponse, unknown, 
       apiRequest<BookingResponse>("/api/bookings", { method: "POST", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
@@ -80,6 +81,7 @@ export function useUpdateBooking(): UseMutationResult<BookingResponse, unknown, 
       apiRequest<BookingResponse>(`/api/bookings/${id}`, { method: "PATCH", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }

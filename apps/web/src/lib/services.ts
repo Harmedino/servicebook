@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type { ServiceListResponse, ServiceResponse } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
+import { DASHBOARD_QUERY_KEY } from "./dashboard";
 
 const SERVICES_QUERY_KEY = ["services"] as const;
 
@@ -37,6 +38,7 @@ export function useCreateService(): UseMutationResult<ServiceResponse, unknown, 
       apiRequest<ServiceResponse>("/api/services", { method: "POST", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SERVICES_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
@@ -48,6 +50,7 @@ export function useUpdateService(): UseMutationResult<ServiceResponse, unknown, 
       apiRequest<ServiceResponse>(`/api/services/${id}`, { method: "PATCH", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SERVICES_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
@@ -58,6 +61,7 @@ export function useDeactivateService(): UseMutationResult<ServiceResponse, unkno
     mutationFn: (id: string) => apiRequest<ServiceResponse>(`/api/services/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SERVICES_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type { StaffListResponse, StaffResponse } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
+import { DASHBOARD_QUERY_KEY } from "./dashboard";
 
 const STAFF_QUERY_KEY = ["staff"] as const;
 
@@ -34,6 +35,7 @@ export function useCreateStaff(): UseMutationResult<StaffResponse, unknown, Crea
     mutationFn: (input: CreateStaffInput) => apiRequest<StaffResponse>("/api/staff", { method: "POST", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: STAFF_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
@@ -47,6 +49,7 @@ export function useUpdateStaff(): UseMutationResult<StaffResponse, unknown, Upda
       apiRequest<StaffResponse>(`/api/staff/${id}`, { method: "PATCH", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: STAFF_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }

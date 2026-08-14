@@ -1,10 +1,21 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "../lib/auth-context";
+
+const NAV_ITEMS = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/calendar", label: "Calendar" },
+  { to: "/bookings", label: "Bookings" },
+  { to: "/customers", label: "Customers" },
+  { to: "/services", label: "Services" },
+  { to: "/staff", label: "Staff" },
+  { to: "/settings", label: "Settings" },
+];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   function handleLogout() {
     logout();
@@ -17,27 +28,21 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-6">
           <span className="text-lg font-semibold text-stone-900">ServiceBook</span>
           <nav className="flex items-center gap-4 text-sm text-stone-600">
-            <Link to="/dashboard" className="hover:text-stone-900">
-              Dashboard
-            </Link>
-            <Link to="/services" className="hover:text-stone-900">
-              Services
-            </Link>
-            <Link to="/staff" className="hover:text-stone-900">
-              Staff
-            </Link>
-            <Link to="/customers" className="hover:text-stone-900">
-              Customers
-            </Link>
-            <Link to="/bookings" className="hover:text-stone-900">
-              Bookings
-            </Link>
-            <Link to="/calendar" className="hover:text-stone-900">
-              Calendar
-            </Link>
-            <Link to="/settings" className="hover:text-stone-900">
-              Settings
-            </Link>
+            {NAV_ITEMS.map((item) => {
+              const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-current={isActive ? "page" : undefined}
+                  className={
+                    isActive ? "font-medium text-brand-700" : "text-stone-600 transition-colors hover:text-stone-900"
+                  }
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
         <div className="flex items-center gap-4">

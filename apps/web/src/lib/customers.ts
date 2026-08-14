@@ -6,6 +6,7 @@ import type {
   CustomerSort,
 } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
+import { DASHBOARD_QUERY_KEY } from "./dashboard";
 
 export interface CustomerListParams {
   q?: string;
@@ -69,6 +70,7 @@ export function useCreateCustomer(): UseMutationResult<CustomerResponse, unknown
       apiRequest<CustomerResponse>("/api/customers", { method: "POST", body: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["customers"] });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
