@@ -18,8 +18,10 @@ export interface UpdateBusinessInput {
   phone?: string;
   description?: string;
   address?: string;
+  website?: string;
   timezone?: string;
   logoUrl?: string;
+  isPublicBookingEnabled?: boolean;
 }
 
 export function useMyBusiness(): UseQueryResult<MyBusinessResponse> {

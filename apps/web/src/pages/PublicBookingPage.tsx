@@ -64,6 +64,7 @@ export function PublicBookingPage() {
   const createBooking = useCreatePublicBooking(slug);
 
   const business = businessData?.business;
+  const bookingEnabled = businessData?.bookingEnabled ?? true;
   const services = businessData?.services ?? [];
   const staff = staffData?.staff ?? [];
   const slots = slotsData?.slots ?? [];
@@ -178,10 +179,22 @@ export function PublicBookingPage() {
       <div className="text-center">
         <h1 className="text-2xl font-semibold text-stone-900">{business.name}</h1>
         {business.description && <p className="mt-1 text-sm text-stone-500">{business.description}</p>}
-        <p className="mt-3 text-sm font-medium text-stone-700">Book an appointment</p>
+        {(business.phone || business.email || business.address || business.website) && (
+          <p className="mt-2 text-xs text-stone-400">
+            {[business.phone, business.email, business.address, business.website].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        {bookingEnabled && <p className="mt-3 text-sm font-medium text-stone-700">Book an appointment</p>}
       </div>
 
-      {step !== "confirmation" && (
+      {!bookingEnabled && (
+        <div className="animate-fade-in-up mt-6 rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-lg font-semibold text-stone-900">Online booking is currently unavailable</h2>
+          <p className="mt-2 text-sm text-stone-500">Please contact the business directly to schedule an appointment.</p>
+        </div>
+      )}
+
+      {bookingEnabled && step !== "confirmation" && (
         <div className="mt-6 flex items-center justify-center gap-1 overflow-x-auto text-xs font-medium text-stone-400 sm:gap-2 sm:text-sm">
           {STEPS.map((entry, index) => {
             const isActive = entry.key === step;
@@ -196,6 +209,7 @@ export function PublicBookingPage() {
         </div>
       )}
 
+      {bookingEnabled && (
       <div className="animate-fade-in-up mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
         {step === "service" && (
           <>
@@ -398,6 +412,7 @@ export function PublicBookingPage() {
           </div>
         )}
       </div>
+      )}
     </PublicLayout>
   );
 }

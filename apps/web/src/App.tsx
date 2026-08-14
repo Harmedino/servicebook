@@ -4,7 +4,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { BusinessOnboardingPage } from "./pages/BusinessOnboardingPage";
-import { BusinessSettingsPage } from "./pages/BusinessSettingsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { ServicesPage } from "./pages/ServicesPage";
 import { StaffPage } from "./pages/StaffPage";
 import { StaffDetailPage } from "./pages/StaffDetailPage";
@@ -51,10 +51,10 @@ export function App() {
         }
       />
       <Route
-        path="/dashboard/settings"
+        path="/settings"
         element={
           <OwnerRoute>
-            <BusinessSettingsPage />
+            <SettingsPage />
           </OwnerRoute>
         }
       />

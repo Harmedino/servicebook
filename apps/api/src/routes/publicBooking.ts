@@ -140,6 +140,7 @@ publicBookingRouter.get(
   "/businesses/:slug/staff",
   asyncHandler(async (req, res) => {
     const business = await resolveBusinessBySlug(req.params.slug);
+    assertPublicBookingEnabled(business);
     const query = staffQuerySchema.parse(req.query);
 
     const service = await Service.findOne({ _id: query.serviceId, businessId: business.id, isActive: true });
@@ -164,6 +165,7 @@ publicBookingRouter.get(
   "/businesses/:slug/availability",
   asyncHandler(async (req, res) => {
     const business = await resolveBusinessBySlug(req.params.slug);
+    assertPublicBookingEnabled(business);
     const query = availabilityQuerySchema.parse(req.query);
 
     const service = await Service.findOne({ _id: query.serviceId, businessId: business.id, isActive: true });
@@ -196,6 +198,7 @@ publicBookingRouter.post(
   "/businesses/:slug/bookings",
   asyncHandler(async (req, res) => {
     const business = await resolveBusinessBySlug(req.params.slug);
+    assertPublicBookingEnabled(business);
     const payload = publicCreateBookingSchema.parse(req.body);
 
     const customer = await findOrCreateCustomer(business.id, payload.customer);
