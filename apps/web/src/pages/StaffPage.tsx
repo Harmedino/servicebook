@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { useCreateStaff, useStaffList, useUpdateStaff } from "../lib/staff";
@@ -6,6 +6,8 @@ import { useServices } from "../lib/services";
 import { ApiError } from "../lib/apiClient";
 import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
+
+type StatusFilter = "all" | "active" | "inactive";
 
 function resolveServiceNames(serviceIds: string[], services: ServiceProfile[]): string {
   if (serviceIds.length === 0) {
@@ -43,13 +45,33 @@ export function StaffPage() {
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
 
+  const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
   // undefined = modal closed, null = adding, a StaffProfile = editing
   const [modalStaff, setModalStaff] = useState<StaffProfile | null | undefined>(undefined);
   const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const staffMembers = data?.staff ?? [];
+  const allStaffMembers = data?.staff ?? [];
   const allServices = servicesData?.services ?? [];
+
+  const search = searchInput.trim().toLowerCase();
+  const isFiltering = search.length > 0 || statusFilter !== "all";
+
+  const staffMembers = useMemo(() => {
+    return allStaffMembers.filter((staff) => {
+      if (statusFilter === "active" && !staff.isActive) return false;
+      if (statusFilter === "inactive" && staff.isActive) return false;
+      if (search) {
+        const matchesName = staff.name.toLowerCase().includes(search);
+        const matchesEmail = staff.email?.toLowerCase().includes(search) ?? false;
+        if (!matchesName && !matchesEmail) return false;
+      }
+      return true;
+    });
+  }, [allStaffMembers, search, statusFilter]);
 
   function openAddModal() {
     setFormError(null);
@@ -71,8 +93,10 @@ export function StaffPage() {
     try {
       if (modalStaff) {
         await updateStaff.mutateAsync({ id: modalStaff.id, ...values });
+        setSuccessMessage("Staff member updated.");
       } else {
         await createStaff.mutateAsync(values);
+        setSuccessMessage("Staff member added.");
       }
       closeModal();
     } catch (error) {
@@ -85,10 +109,23 @@ export function StaffPage() {
       return;
     }
     setActionError(null);
+    setSuccessMessage(null);
     try {
       await updateStaff.mutateAsync({ id: staff.id, isActive: false });
+      setSuccessMessage("Staff member deactivated.");
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : "Couldn't deactivate this staff member. Please try again.");
+    }
+  }
+
+  async function handleActivate(staff: StaffProfile) {
+    setActionError(null);
+    setSuccessMessage(null);
+    try {
+      await updateStaff.mutateAsync({ id: staff.id, isActive: true });
+      setSuccessMessage("Staff member activated.");
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : "Couldn't activate this staff member. Please try again.");
     }
   }
 
@@ -104,7 +141,7 @@ export function StaffPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-stone-900">Staff</h1>
-          <p className="mt-1 text-sm text-stone-500">Manage the people who provide your services.</p>
+          <p className="mt-1 text-sm text-stone-500">Manage your team and their availability.</p>
         </div>
         <button
           type="button"
@@ -115,7 +152,33 @@ export function StaffPage() {
         </button>
       </div>
 
+      {allStaffMembers.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search by name or email…"
+            className="w-full max-w-xs rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          />
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      )}
+
       <div className="mt-6">
+        {successMessage && (
+          <p role="status" className="animate-fade-in-up mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+            {successMessage}
+          </p>
+        )}
         {actionError && (
           <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {actionError}
@@ -130,12 +193,10 @@ export function StaffPage() {
           </p>
         )}
 
-        {!isPending && !isError && staffMembers.length === 0 && (
+        {!isPending && !isError && allStaffMembers.length === 0 && (
           <div className="animate-fade-in-up rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-12 text-center">
-            <h2 className="text-base font-semibold text-stone-900">No staff yet</h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Add your first staff member and assign the services they provide.
-            </p>
+            <h2 className="text-base font-semibold text-stone-900">You haven&apos;t added any team members yet</h2>
+            <p className="mt-1 text-sm text-stone-500">Add staff so customers can book appointments with them.</p>
             <button
               type="button"
               onClick={openAddModal}
@@ -144,6 +205,12 @@ export function StaffPage() {
               + Add staff
             </button>
           </div>
+        )}
+
+        {!isPending && !isError && allStaffMembers.length > 0 && staffMembers.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+            {isFiltering ? "No staff match these filters." : "No staff to show."}
+          </p>
         )}
 
         {!isPending && !isError && staffMembers.length > 0 && (
@@ -185,13 +252,23 @@ export function StaffPage() {
                       >
                         Edit
                       </button>
-                      {staff.isActive && (
+                      {staff.isActive ? (
                         <button
                           type="button"
                           onClick={() => handleDeactivate(staff)}
-                          className="ml-4 font-medium text-stone-500 hover:text-red-600"
+                          disabled={updateStaff.isPending}
+                          className="ml-4 font-medium text-stone-500 hover:text-red-600 disabled:cursor-not-allowed"
                         >
                           Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleActivate(staff)}
+                          disabled={updateStaff.isPending}
+                          className="ml-4 font-medium text-brand-700 hover:text-brand-800 disabled:cursor-not-allowed"
+                        >
+                          Activate
                         </button>
                       )}
                     </td>
@@ -222,13 +299,23 @@ export function StaffPage() {
                     >
                       Edit
                     </button>
-                    {staff.isActive && (
+                    {staff.isActive ? (
                       <button
                         type="button"
                         onClick={() => handleDeactivate(staff)}
-                        className="font-medium text-stone-500 hover:text-red-600"
+                        disabled={updateStaff.isPending}
+                        className="font-medium text-stone-500 hover:text-red-600 disabled:cursor-not-allowed"
                       >
                         Deactivate
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleActivate(staff)}
+                        disabled={updateStaff.isPending}
+                        className="font-medium text-brand-700 hover:text-brand-800 disabled:cursor-not-allowed"
+                      >
+                        Activate
                       </button>
                     )}
                   </div>
