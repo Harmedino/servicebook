@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
+import { motion } from "motion/react";
 import {
   CalendarClock,
   Copy,
@@ -310,9 +311,11 @@ export function DashboardPage() {
             Complete your setup to start accepting bookings.
           </h2>
           <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-stone-200">
-            <div
-              className="animate-grow-width h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
-              style={{ width: `${setupPercent}%` }}
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${setupPercent}%` }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
             />
           </div>
           <p className="mt-1.5 text-xs text-stone-500">
@@ -391,7 +394,13 @@ export function DashboardPage() {
               ) : (
                 <ol className="mt-3">
                   {summary.todayAppointments.map((booking, index) => (
-                    <li key={booking.id} className="flex gap-4">
+                    <motion.li
+                      key={booking.id}
+                      className="flex gap-4"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                    >
                       <div className="w-14 shrink-0 pt-2 text-sm font-medium text-stone-500">
                         {formatTime(booking.startTime)}
                       </div>
@@ -406,7 +415,7 @@ export function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedBookingId(booking.id)}
-                        className="mb-2 flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
+                        className="mb-2 flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:bg-stone-50 hover:shadow-sm"
                       >
                         <div className="flex items-center gap-3">
                           <Avatar name={booking.staffName} size="sm" />
@@ -419,7 +428,7 @@ export function DashboardPage() {
                         </div>
                         <BookingStatusBadge status={booking.status} />
                       </button>
-                    </li>
+                    </motion.li>
                   ))}
                 </ol>
               )}

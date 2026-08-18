@@ -12,6 +12,7 @@ import { ActiveBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
+import { Avatar } from "../components/ui/Avatar";
 
 type StatusFilter = "all" | "active" | "inactive";
 

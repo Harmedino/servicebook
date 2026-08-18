@@ -12,6 +12,7 @@ import { Button } from "../components/ui/Button";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
+import { Avatar } from "../components/ui/Avatar";
 
 const PAGE_SIZE = 25;
 
@@ -199,7 +200,8 @@ export function CustomersPage() {
                 {customers.map((customer) => (
                   <tr key={customer.id}>
                     <td className="px-4 py-3 font-medium text-stone-900">
-                      <Link to={`/customers/${customer.id}`} className="hover:text-brand-700">
+                      <Link to={`/customers/${customer.id}`} className="flex items-center gap-2.5 hover:text-brand-700">
+                        <Avatar name={customer.name} size="sm" />
                         {customer.name}
                       </Link>
                     </td>
@@ -223,11 +225,12 @@ export function CustomersPage() {
 
             <ul className="space-y-3 md:hidden">
               {customers.map((customer) => (
-                <li key={customer.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                  <Link to={`/customers/${customer.id}`} className="font-medium text-stone-900 hover:text-brand-700">
+                <li key={customer.id} className="rounded-xl border border-stone-200 bg-white p-4">
+                  <Link to={`/customers/${customer.id}`} className="flex items-center gap-2.5 font-medium text-stone-900 hover:text-brand-700">
+                    <Avatar name={customer.name} size="sm" />
                     {customer.name}
                   </Link>
-                  <p className="mt-0.5 text-sm text-stone-500">{customer.phone}</p>
+                  <p className="mt-0.5 pl-[calc(2rem+0.625rem)] text-sm text-stone-500">{customer.phone}</p>
                   {customer.email && <p className="text-sm text-stone-500">{customer.email}</p>}
                   <p className="mt-1 text-xs text-stone-500">
                     {customer.appointmentCount ?? 0} appointment{customer.appointmentCount === 1 ? "" : "s"} · Last:{" "}

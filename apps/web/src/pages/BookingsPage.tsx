@@ -16,6 +16,7 @@ import { BookingStatusBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
+import { Avatar } from "../components/ui/Avatar";
 
 type Tab = "today" | "upcoming" | "past" | "all";
 
@@ -246,11 +247,14 @@ export function BookingsPage() {
                       onClick={() => setSelectedBookingId(booking.id)}
                       className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                     >
-                      <div>
-                        <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
-                        <p className="text-xs text-stone-500">
-                          {booking.serviceName} <span className="text-stone-400">with</span> {booking.staffName}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={booking.customerName} size="sm" />
+                        <div>
+                          <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
+                          <p className="text-xs text-stone-500">
+                            {booking.serviceName} <span className="text-stone-400">with</span> {booking.staffName}
+                          </p>
+                        </div>
                       </div>
                       <BookingStatusBadge status={booking.status} />
                     </button>

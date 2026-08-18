@@ -367,7 +367,13 @@ export function LandingPage() {
           <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Everything your business needs. Nothing you don&apos;t.
           </h2>
-          <div className="mt-12 grid grid-cols-1 gap-10 sm:grid-cols-3">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="mt-12 grid grid-cols-1 gap-10 sm:grid-cols-3"
+          >
             {[
               { icon: CalendarDays, label: "One calendar", description: "Every appointment, every staff member, one view." },
               { icon: Users, label: "Organized customers", description: "Full history and contact details, always up to date." },
@@ -381,7 +387,7 @@ export function LandingPage() {
                 <p className="mt-1 text-sm text-indigo-100/70">{item.description}</p>
               </div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -394,15 +400,27 @@ export function LandingPage() {
             See your whole week at a glance, spot conflicts before they happen, and know exactly what&apos;s coming up.
           </p>
         </div>
-        <div className="mt-10">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5 }}
+          className="mt-10"
+        >
           <CalendarPreview />
-        </div>
+        </motion.div>
       </section>
 
       {/* Team preview */}
       <section className="border-t border-stone-100 bg-stone-50">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2"
+          >
             <div className="order-2 flex justify-center lg:order-1">
               <TeamPreview />
             </div>
@@ -416,7 +434,7 @@ export function LandingPage() {
                 they are — at a glance.
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
