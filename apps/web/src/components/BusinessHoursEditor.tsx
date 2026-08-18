@@ -2,9 +2,13 @@ import { useEffect, useState } from "react";
 import type { BusinessHoursEntry } from "@servicebook/types";
 import { useBusinessHours, useUpdateBusinessHours } from "../lib/businessHours";
 import { DAY_LABELS, WEEK_DISPLAY_ORDER } from "../lib/weekDays";
+import { timeToMinutes } from "../lib/timeMath";
 import { ApiError } from "../lib/apiClient";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
+import { Toggle } from "./Toggle";
+
+const MINUTES_PER_DAY = 24 * 60;
 
 export function BusinessHoursEditor() {
   const { data, isPending, isError } = useBusinessHours();
@@ -61,33 +65,52 @@ export function BusinessHoursEditor() {
           if (!entry) {
             return null;
           }
+          const openMinutes = timeToMinutes(entry.openTime);
+          const closeMinutes = timeToMinutes(entry.closeTime);
+          const barLeft = (Math.min(openMinutes, closeMinutes) / MINUTES_PER_DAY) * 100;
+          const barWidth = (Math.max(0, closeMinutes - openMinutes) / MINUTES_PER_DAY) * 100;
+
           return (
-            <div key={dayOfWeek} className="flex flex-wrap items-center gap-3 py-3">
-              <span className="w-28 text-sm font-medium text-stone-700">{DAY_LABELS[dayOfWeek]}</span>
-              <label className="flex items-center gap-2 text-sm text-stone-600">
-                <input
-                  type="checkbox"
+            <div key={dayOfWeek} className="py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${entry.isClosed ? "bg-stone-300" : "bg-green-500"}`} aria-hidden="true" />
+                  <span className="text-sm font-semibold text-stone-900">{DAY_LABELS[dayOfWeek]}</span>
+                </div>
+                <Toggle
                   checked={!entry.isClosed}
-                  onChange={(event) => updateDay(dayOfWeek, { isClosed: !event.target.checked })}
-                  className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500/40"
+                  onChange={(checked) => updateDay(dayOfWeek, { isClosed: !checked })}
+                  label={`${DAY_LABELS[dayOfWeek]} open`}
                 />
-                Open
-              </label>
-              <input
-                type="time"
-                value={entry.openTime}
-                onChange={(event) => updateDay(dayOfWeek, { openTime: event.target.value })}
-                disabled={entry.isClosed}
-                className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
-              />
-              <span className="text-stone-400">–</span>
-              <input
-                type="time"
-                value={entry.closeTime}
-                onChange={(event) => updateDay(dayOfWeek, { closeTime: event.target.value })}
-                disabled={entry.isClosed}
-                className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
-              />
+              </div>
+
+              {entry.isClosed ? (
+                <p className="mt-2 pl-[1.125rem] text-sm text-stone-400">Closed</p>
+              ) : (
+                <div className="mt-3 pl-[1.125rem]">
+                  <div className="relative h-1.5 rounded-full bg-stone-100">
+                    <div
+                      className="absolute h-1.5 rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
+                      style={{ left: `${barLeft}%`, width: `${barWidth}%` }}
+                    />
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={entry.openTime}
+                      onChange={(event) => updateDay(dayOfWeek, { openTime: event.target.value })}
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                    />
+                    <span className="text-stone-400">–</span>
+                    <input
+                      type="time"
+                      value={entry.closeTime}
+                      onChange={(event) => updateDay(dayOfWeek, { closeTime: event.target.value })}
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

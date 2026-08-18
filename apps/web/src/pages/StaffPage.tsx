@@ -211,7 +211,8 @@ export function StaffPage() {
                 {staffMembers.map((staff) => (
                   <tr key={staff.id}>
                     <td className="px-4 py-3 font-medium text-stone-900">
-                      <Link to={`/staff/${staff.id}`} className="hover:text-brand-700">
+                      <Link to={`/staff/${staff.id}`} className="flex items-center gap-2.5 hover:text-brand-700">
+                        <Avatar name={staff.name} size="sm" />
                         {staff.name}
                       </Link>
                     </td>
@@ -264,13 +265,14 @@ export function StaffPage() {
 
             <ul className="space-y-3 md:hidden">
               {staffMembers.map((staff) => (
-                <li key={staff.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                <li key={staff.id} className="rounded-xl border border-stone-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <Link to={`/staff/${staff.id}`} className="font-medium text-stone-900 hover:text-brand-700">
+                      <Link to={`/staff/${staff.id}`} className="flex items-center gap-2.5 font-medium text-stone-900 hover:text-brand-700">
+                        <Avatar name={staff.name} size="sm" />
                         {staff.name}
                       </Link>
-                      {staff.email && <p className="mt-0.5 text-sm text-stone-500">{staff.email}</p>}
+                      {staff.email && <p className="mt-0.5 pl-[calc(2rem+0.625rem)] text-sm text-stone-500">{staff.email}</p>}
                       {staff.phone && <p className="text-sm text-stone-500">{staff.phone}</p>}
                       <p className="mt-1 text-sm text-stone-500">{resolveServiceNames(staff.serviceIds, allServices)}</p>
                       <p className="text-xs text-stone-500">

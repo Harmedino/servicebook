@@ -1,10 +1,13 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
+import { motion } from "motion/react";
+import { Check } from "lucide-react";
 import { usePublicAvailableSlots, usePublicBusiness, usePublicStaff, useCreatePublicBooking } from "../lib/publicBooking";
 import { ApiError } from "../lib/apiClient";
 import { formatDuration, formatPrice } from "../lib/format";
 import { FormField } from "../components/FormField";
+import { Card } from "../components/ui/Card";
 
 type Step = "service" | "staff" | "datetime" | "details" | "confirmation";
 
@@ -195,22 +198,38 @@ export function PublicBookingPage() {
       )}
 
       {bookingEnabled && step !== "confirmation" && (
-        <div className="mt-6 flex items-center justify-center gap-1 overflow-x-auto text-xs font-medium text-stone-400 sm:gap-2 sm:text-sm">
+        <div className="mt-6 flex items-center justify-center overflow-x-auto">
           {STEPS.map((entry, index) => {
-            const isActive = entry.key === step;
-            const isPast = STEPS.findIndex((s) => s.key === step) > index;
+            const currentIndex = STEPS.findIndex((s) => s.key === step);
+            const isActive = index === currentIndex;
+            const isDone = index < currentIndex;
             return (
-              <span key={entry.key} className="flex shrink-0 items-center gap-1 sm:gap-2">
-                <span className={isActive ? "font-semibold text-brand-700" : isPast ? "text-stone-600" : ""}>{entry.label}</span>
-                {index < STEPS.length - 1 && <span className="text-stone-300">→</span>}
-              </span>
+              <div key={entry.key} className="flex shrink-0 items-center">
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+                      isDone
+                        ? "bg-brand-600 text-white"
+                        : isActive
+                          ? "border-2 border-brand-600 text-brand-700"
+                          : "border border-stone-300 text-stone-400"
+                    }`}
+                  >
+                    {isDone ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index + 1}
+                  </div>
+                  <span className={`text-[11px] font-medium ${isActive ? "text-brand-700" : "text-stone-400"}`}>{entry.label}</span>
+                </div>
+                {index < STEPS.length - 1 && (
+                  <div className={`mb-4 h-px w-6 shrink-0 sm:w-10 ${isDone ? "bg-brand-600" : "bg-stone-200"}`} />
+                )}
+              </div>
             );
           })}
         </div>
       )}
 
       {bookingEnabled && (
-      <div className="animate-fade-in-up mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+      <Card key={step} elevated className="animate-fade-in-up mt-6 p-6">
         {step === "service" && (
           <>
             <h2 className="text-lg font-semibold text-stone-900">Choose a service</h2>
@@ -383,25 +402,35 @@ export function PublicBookingPage() {
         )}
 
         {step === "confirmation" && createBooking.data && (
-          <div className="animate-fade-in-up text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-xl text-green-600">
-              ✓
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600"
+            >
+              <Check className="h-7 w-7" aria-hidden="true" />
+            </motion.div>
+            <h2 className="mt-4 text-xl font-semibold text-stone-900">Booking confirmed</h2>
+            <p className="mt-1 text-sm text-stone-600">Your appointment has been successfully booked.</p>
+
+            <div className="mt-5 space-y-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 text-left text-sm">
+              <p className="font-semibold text-stone-900">
+                {createBooking.data.confirmation.serviceName} <span className="font-normal text-stone-500">with</span>{" "}
+                {createBooking.data.confirmation.staffName}
+              </p>
+              <p className="text-stone-700">
+                {formatInTimeZone(new Date(createBooking.data.confirmation.startTime), timezone, "EEEE, MMMM d")}
+                <br />
+                {formatInTimeZone(new Date(createBooking.data.confirmation.startTime), timezone, "h:mm a")} –{" "}
+                {formatInTimeZone(new Date(createBooking.data.confirmation.endTime), timezone, "h:mm a")}
+              </p>
+              <div className="border-t border-stone-200 pt-2 text-stone-600">
+                <p>{createBooking.data.confirmation.customerName}</p>
+                {createBooking.data.confirmation.customerEmail && <p>{createBooking.data.confirmation.customerEmail}</p>}
+              </div>
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-stone-900">Booking confirmed</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              {createBooking.data.confirmation.serviceName} with {createBooking.data.confirmation.staffName}
-            </p>
-            <p className="mt-1 text-sm text-stone-600">
-              {formatInTimeZone(new Date(createBooking.data.confirmation.startTime), timezone, "EEEE, MMMM d")}
-              <br />
-              {formatInTimeZone(new Date(createBooking.data.confirmation.startTime), timezone, "h:mm a")} –{" "}
-              {formatInTimeZone(new Date(createBooking.data.confirmation.endTime), timezone, "h:mm a")}
-            </p>
-            <div className="mt-3 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
-              <p>{createBooking.data.confirmation.customerName}</p>
-              {createBooking.data.confirmation.customerEmail && <p>{createBooking.data.confirmation.customerEmail}</p>}
-            </div>
-            <p className="mt-4 text-sm text-stone-500">Your appointment has been successfully booked.</p>
+
             <button
               type="button"
               onClick={startOver}
@@ -411,7 +440,7 @@ export function PublicBookingPage() {
             </button>
           </div>
         )}
-      </div>
+      </Card>
       )}
     </PublicLayout>
   );
