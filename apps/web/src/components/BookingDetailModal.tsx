@@ -140,49 +140,25 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
         )}
 
         <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
-          >
+          <Button type="button" variant="secondary" onClick={onClose}>
             Close
-          </button>
+          </Button>
           {!isFinal && (
             <>
-              <button
-                type="button"
-                onClick={() => setIsRescheduleOpen(true)}
-                disabled={updateBooking.isPending}
-                className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed"
-              >
+              <Button type="button" variant="secondary" onClick={() => setIsRescheduleOpen(true)} disabled={updateBooking.isPending}>
                 Reschedule
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCancelConfirm(true)}
-                disabled={updateBooking.isPending}
-                className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed"
-              >
+              </Button>
+              <Button type="button" variant="danger" onClick={() => setShowCancelConfirm(true)} disabled={updateBooking.isPending}>
                 Cancel booking
-              </button>
+              </Button>
               {booking.status === "PENDING" && (
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange("CONFIRMED")}
-                  disabled={updateBooking.isPending}
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed"
-                >
+                <Button type="button" onClick={() => handleStatusChange("CONFIRMED")} disabled={updateBooking.isPending}>
                   Confirm booking
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
-                onClick={() => handleStatusChange("COMPLETED")}
-                disabled={updateBooking.isPending}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed"
-              >
+              <Button type="button" onClick={() => handleStatusChange("COMPLETED")} disabled={updateBooking.isPending}>
                 Mark completed
-              </button>
+              </Button>
             </>
           )}
         </div>

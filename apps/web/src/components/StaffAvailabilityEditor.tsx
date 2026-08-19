@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import type { StaffAvailabilityEntry } from "@servicebook/types";
 import { useStaffAvailability, useUpdateStaffAvailability } from "../lib/staffAvailability";
 import { DAY_LABELS, WEEK_DISPLAY_ORDER } from "../lib/weekDays";
+import { timeToMinutes } from "../lib/timeMath";
 import { ApiError } from "../lib/apiClient";
+import { Card } from "./ui/Card";
+import { Button } from "./ui/Button";
+import { Toggle } from "./Toggle";
+
+const MINUTES_PER_DAY = 24 * 60;
 
 export function StaffAvailabilityEditor({ staffId }: { staffId: string }) {
   const { data, isPending, isError } = useStaffAvailability(staffId);
@@ -40,11 +46,7 @@ export function StaffAvailabilityEditor({ staffId }: { staffId: string }) {
   }
 
   if (isPending || !draft) {
-    return (
-      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-stone-500">Loading availability…</p>
-      </div>
-    );
+    return <p className="text-sm text-stone-500">Loading availability…</p>;
   }
 
   if (isError) {
@@ -56,11 +58,9 @@ export function StaffAvailabilityEditor({ staffId }: { staffId: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-stone-900">Availability</h2>
-      <p className="mt-1 text-sm text-stone-500">
-        When this staff member can be booked. Must fall within your business hours.
-      </p>
+    <Card className="max-w-lg p-5">
+      <h2 className="text-base font-semibold text-stone-900">Availability</h2>
+      <p className="mt-1 text-sm text-stone-500">When this staff member can be booked. Must fall within business hours.</p>
 
       <div className="mt-4 divide-y divide-stone-100">
         {WEEK_DISPLAY_ORDER.map((dayOfWeek) => {
@@ -68,33 +68,52 @@ export function StaffAvailabilityEditor({ staffId }: { staffId: string }) {
           if (!entry) {
             return null;
           }
+          const startMinutes = timeToMinutes(entry.startTime);
+          const endMinutes = timeToMinutes(entry.endTime);
+          const barLeft = (Math.min(startMinutes, endMinutes) / MINUTES_PER_DAY) * 100;
+          const barWidth = (Math.max(0, endMinutes - startMinutes) / MINUTES_PER_DAY) * 100;
+
           return (
-            <div key={dayOfWeek} className="flex flex-wrap items-center gap-3 py-3">
-              <span className="w-28 text-sm font-medium text-stone-700">{DAY_LABELS[dayOfWeek]}</span>
-              <label className="flex items-center gap-2 text-sm text-stone-600">
-                <input
-                  type="checkbox"
+            <div key={dayOfWeek} className="py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${entry.isOff ? "bg-stone-300" : "bg-green-500"}`} aria-hidden="true" />
+                  <span className="text-sm font-semibold text-stone-900">{DAY_LABELS[dayOfWeek]}</span>
+                </div>
+                <Toggle
                   checked={!entry.isOff}
-                  onChange={(event) => updateDay(dayOfWeek, { isOff: !event.target.checked })}
-                  className="h-4 w-4 rounded border-stone-300 text-brand-600 focus:ring-brand-500/40"
+                  onChange={(checked) => updateDay(dayOfWeek, { isOff: !checked })}
+                  label={`${DAY_LABELS[dayOfWeek]} available`}
                 />
-                Available
-              </label>
-              <input
-                type="time"
-                value={entry.startTime}
-                onChange={(event) => updateDay(dayOfWeek, { startTime: event.target.value })}
-                disabled={entry.isOff}
-                className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
-              />
-              <span className="text-stone-400">–</span>
-              <input
-                type="time"
-                value={entry.endTime}
-                onChange={(event) => updateDay(dayOfWeek, { endTime: event.target.value })}
-                disabled={entry.isOff}
-                className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
-              />
+              </div>
+
+              {entry.isOff ? (
+                <p className="mt-2 pl-[1.125rem] text-sm text-stone-400">Unavailable</p>
+              ) : (
+                <div className="mt-3 pl-[1.125rem]">
+                  <div className="relative h-1.5 rounded-full bg-stone-100">
+                    <div
+                      className="absolute h-1.5 rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
+                      style={{ left: `${barLeft}%`, width: `${barWidth}%` }}
+                    />
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={entry.startTime}
+                      onChange={(event) => updateDay(dayOfWeek, { startTime: event.target.value })}
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                    />
+                    <span className="text-stone-400">–</span>
+                    <input
+                      type="time"
+                      value={entry.endTime}
+                      onChange={(event) => updateDay(dayOfWeek, { endTime: event.target.value })}
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -111,14 +130,9 @@ export function StaffAvailabilityEditor({ staffId }: { staffId: string }) {
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={updateAvailability.isPending}
-        className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button className="mt-4" isLoading={updateAvailability.isPending} onClick={handleSave}>
         {updateAvailability.isPending ? "Saving…" : "Save availability"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }
