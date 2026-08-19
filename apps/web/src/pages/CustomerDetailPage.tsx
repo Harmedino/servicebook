@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
+import { Plus } from "lucide-react";
+import type { BookingStatus } from "@servicebook/types";
 import { useCustomer, useUpdateCustomer } from "../lib/customers";
 import { useBookings, useCreateBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
@@ -10,6 +12,18 @@ import { BookingDetailModal } from "../components/BookingDetailModal";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BookingStatusBadge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Avatar } from "../components/ui/Avatar";
+import { Skeleton } from "../components/ui/Skeleton";
+
+const STATUS_ACCENT: Record<BookingStatus, string> = {
+  PENDING: "bg-amber-400",
+  CONFIRMED: "bg-green-500",
+  CANCELLED: "bg-stone-300",
+  COMPLETED: "bg-blue-400",
+  NO_SHOW: "bg-red-400",
+};
 
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -133,28 +147,29 @@ export function CustomerDetailPage() {
       </Link>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-stone-900">{customer.name}</h1>
+        <div className="flex items-center gap-3">
+          <Avatar name={customer.name} size="lg" />
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{customer.name}</h1>
+        </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => {
               setFormError(null);
               setIsEditOpen(true);
             }}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
           >
             Edit
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={() => {
               setBookingFormError(null);
               setIsBookingFormOpen(true);
             }}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
           >
-            + New booking
-          </button>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New booking
+          </Button>
         </div>
       </div>
 
@@ -164,7 +179,7 @@ export function CustomerDetailPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+      <Card className="mt-6 p-6">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Phone</dt>
@@ -191,24 +206,24 @@ export function CustomerDetailPage() {
             <dd className="mt-1 whitespace-pre-wrap text-sm text-stone-700">{customer.notes || "No notes yet."}</dd>
           </div>
         </dl>
-      </div>
+      </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+        <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total appointments</p>
-          <p className="mt-1 text-2xl font-semibold text-stone-900">{stats.totalCount}</p>
-        </div>
-        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{stats.totalCount}</p>
+        </Card>
+        <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Completed</p>
-          <p className="mt-1 text-2xl font-semibold text-stone-900">{stats.completedCount}</p>
-        </div>
-        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{stats.completedCount}</p>
+        </Card>
+        <Card className="p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Cancelled</p>
-          <p className="mt-1 text-2xl font-semibold text-stone-900">{stats.cancelledCount}</p>
-        </div>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{stats.cancelledCount}</p>
+        </Card>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-brand-200 bg-brand-50 p-5 shadow-sm">
+      <div className="mt-6 rounded-r-lg border-l-2 border-brand-400 bg-brand-50/70 p-5">
         <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Next appointment</p>
         {isBookingsPending ? (
           <p className="mt-2 text-sm text-stone-500">Loading…</p>
@@ -220,13 +235,9 @@ export function CustomerDetailPage() {
               </p>
               <p className="text-sm text-stone-600">{formatDateTime(stats.nextAppointment.startTime)}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedBookingId(stats.nextAppointment!.id)}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-            >
+            <Button size="sm" onClick={() => setSelectedBookingId(stats.nextAppointment!.id)}>
               View appointment
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="mt-2 text-sm text-stone-600">No upcoming appointments.</p>
@@ -238,7 +249,7 @@ export function CustomerDetailPage() {
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-stone-900">Appointment history</h2>
+          <h2 className="text-lg font-semibold text-stone-900">Appointment history</h2>
           <select
             value={historyFilter}
             onChange={(event) => setHistoryFilter(event.target.value as typeof historyFilter)}
@@ -251,11 +262,11 @@ export function CustomerDetailPage() {
           </select>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-2">
           {isBookingsPending && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[0, 1].map((i) => (
-                <div key={i} className="h-14 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+                <Skeleton key={i} className="h-14 rounded-lg" />
               ))}
             </div>
           )}
@@ -267,7 +278,7 @@ export function CustomerDetailPage() {
           )}
 
           {!isBookingsPending && !isBookingsError && history.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+            <p className="rounded-lg border border-dashed border-stone-300 px-6 py-8 text-center text-sm text-stone-500">
               {historyFilter === "all"
                 ? "No appointments yet for this customer."
                 : "No appointments match this filter."}
@@ -275,27 +286,28 @@ export function CustomerDetailPage() {
           )}
 
           {!isBookingsPending && !isBookingsError && history.length > 0 && (
-            <ul className="space-y-3">
+            <ol>
               {history.map((booking) => (
-                <li key={booking.id}>
+                <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
+                  <div className="w-24 shrink-0 pt-3 text-xs font-medium text-stone-500">
+                    {formatInTimeZone(new Date(booking.startTime), timezone, "MMM d")}
+                    <br />
+                    {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
+                  </div>
+                  <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                   <button
                     type="button"
                     onClick={() => setSelectedBookingId(booking.id)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300"
+                    className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-stone-900">
-                          {booking.serviceName} · {booking.staffName}
-                        </p>
-                        <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
-                      </div>
-                      <BookingStatusBadge status={booking.status} />
-                    </div>
+                    <p className="text-sm font-semibold text-stone-900">
+                      {booking.serviceName} <span className="font-normal text-stone-400">with</span> {booking.staffName}
+                    </p>
+                    <BookingStatusBadge status={booking.status} />
                   </button>
                 </li>
               ))}
-            </ul>
+            </ol>
           )}
         </div>
       </div>

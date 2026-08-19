@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
+import type { BookingStatus } from "@servicebook/types";
 import { useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
 import { useBookings } from "../lib/bookings";
@@ -11,8 +12,68 @@ import { BookingDetailModal } from "../components/BookingDetailModal";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Avatar } from "../components/ui/Avatar";
+import { Skeleton } from "../components/ui/Skeleton";
 
 const RECENT_APPOINTMENTS_LIMIT = 10;
+
+const STATUS_ACCENT: Record<BookingStatus, string> = {
+  PENDING: "bg-amber-400",
+  CONFIRMED: "bg-green-500",
+  CANCELLED: "bg-stone-300",
+  COMPLETED: "bg-blue-400",
+  NO_SHOW: "bg-red-400",
+};
+
+function AppointmentList({
+  bookings,
+  timezone,
+  onSelect,
+  emptyLabel,
+}: {
+  bookings: { id: string; customerName: string; serviceName: string; startTime: string; status: BookingStatus }[];
+  timezone: string;
+  onSelect: (id: string) => void;
+  emptyLabel: string;
+}) {
+  if (bookings.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed border-stone-300 px-6 py-8 text-center text-sm text-stone-500">
+        {emptyLabel}
+      </p>
+    );
+  }
+
+  return (
+    <ol>
+      {bookings.map((booking) => (
+        <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
+          <div className="w-24 shrink-0 pt-3 text-xs font-medium text-stone-500">
+            {formatInTimeZone(new Date(booking.startTime), timezone, "MMM d")}
+            <br />
+            {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
+          </div>
+          <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => onSelect(booking.id)}
+            className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
+          >
+            <div className="flex items-center gap-2.5">
+              <Avatar name={booking.customerName} size="xs" />
+              <p className="text-sm font-semibold text-stone-900">
+                {booking.customerName} <span className="font-normal text-stone-400">·</span> {booking.serviceName}
+              </p>
+            </div>
+            <BookingStatusBadge status={booking.status} />
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function StaffDetailPage() {
   const { staffId } = useParams<{ staffId: string }>();
@@ -52,10 +113,6 @@ export function StaffDetailPage() {
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
       .slice(0, RECENT_APPOINTMENTS_LIMIT);
   }, [allBookings]);
-
-  function formatDateTime(iso: string): string {
-    return formatInTimeZone(new Date(iso), timezone, "MMM d, yyyy · h:mm a");
-  }
 
   if (isPending) {
     return (
@@ -110,38 +167,31 @@ export function StaffDetailPage() {
       </Link>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-stone-900">{staff.name}</h1>
-            <ActiveBadge isActive={staff.isActive} />
+        <div className="flex items-center gap-3">
+          <Avatar name={staff.name} size="lg" />
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{staff.name}</h1>
+              <ActiveBadge isActive={staff.isActive} />
+            </div>
+            <p className="mt-1 text-sm text-stone-500">
+              {staff.email ?? "No email"} · {staff.phone ?? "No phone"}
+            </p>
           </div>
-          <p className="mt-1 text-sm text-stone-500">
-            {staff.email ?? "No email"} · {staff.phone ?? "No phone"}
-          </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => {
               setFormError(null);
               setIsEditOpen(true);
             }}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
           >
             Edit
-          </button>
-          <button
-            type="button"
-            onClick={handleToggleActive}
-            disabled={updateStaff.isPending}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-              staff.isActive
-                ? "border-stone-300 text-stone-500 hover:bg-stone-100 hover:text-red-600"
-                : "border-brand-200 text-brand-700 hover:bg-brand-50"
-            }`}
-          >
+          </Button>
+          <Button variant={staff.isActive ? "danger" : "primary"} onClick={handleToggleActive} isLoading={updateStaff.isPending}>
             {staff.isActive ? "Deactivate" : "Activate"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -151,7 +201,7 @@ export function StaffDetailPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+      <Card className="mt-6 p-6">
         <h2 className="text-lg font-semibold text-stone-900">Services</h2>
         {assignedServices.length === 0 ? (
           <p className="mt-1 text-sm text-stone-500">No services assigned yet.</p>
@@ -164,7 +214,7 @@ export function StaffDetailPage() {
             ))}
           </ul>
         )}
-      </div>
+      </Card>
 
       <div className="mt-6">
         <StaffAvailabilityEditor staffId={staff.id} />
@@ -172,86 +222,40 @@ export function StaffDetailPage() {
 
       <div className="mt-6">
         <h2 className="text-base font-semibold text-stone-900">Upcoming appointments</h2>
-
-        <div className="mt-3">
+        <div className="mt-2">
           {isBookingsPending && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[0, 1].map((i) => (
-                <div key={i} className="h-14 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+                <Skeleton key={i} className="h-14 rounded-lg" />
               ))}
             </div>
           )}
-
           {isBookingsError && (
             <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               Couldn&apos;t load appointments. Please refresh the page.
             </p>
           )}
-
-          {!isBookingsPending && !isBookingsError && upcoming.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
-              No upcoming appointments for this staff member.
-            </p>
-          )}
-
-          {!isBookingsPending && !isBookingsError && upcoming.length > 0 && (
-            <ul className="space-y-3">
-              {upcoming.map((booking) => (
-                <li key={booking.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBookingId(booking.id)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-stone-900">
-                          {booking.customerName} · {booking.serviceName}
-                        </p>
-                        <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
-                      </div>
-                      <BookingStatusBadge status={booking.status} />
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {!isBookingsPending && !isBookingsError && (
+            <AppointmentList
+              bookings={upcoming}
+              timezone={timezone}
+              onSelect={setSelectedBookingId}
+              emptyLabel="No upcoming appointments for this staff member."
+            />
           )}
         </div>
       </div>
 
       <div className="mt-6">
         <h2 className="text-base font-semibold text-stone-900">Recent appointments</h2>
-
-        <div className="mt-3">
-          {!isBookingsPending && !isBookingsError && recent.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
-              No past appointments yet.
-            </p>
-          )}
-
-          {!isBookingsPending && !isBookingsError && recent.length > 0 && (
-            <ul className="space-y-3">
-              {recent.map((booking) => (
-                <li key={booking.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBookingId(booking.id)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-stone-900">
-                          {booking.customerName} · {booking.serviceName}
-                        </p>
-                        <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
-                      </div>
-                      <BookingStatusBadge status={booking.status} />
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+        <div className="mt-2">
+          {!isBookingsPending && !isBookingsError && (
+            <AppointmentList
+              bookings={recent}
+              timezone={timezone}
+              onSelect={setSelectedBookingId}
+              emptyLabel="No past appointments yet."
+            />
           )}
         </div>
       </div>
