@@ -8,15 +8,28 @@ import { ApiError } from "../lib/apiClient";
 import { formatDuration, formatPrice } from "../lib/format";
 import { FormField } from "../components/FormField";
 import { Card } from "../components/ui/Card";
+import { Avatar } from "../components/ui/Avatar";
 
-type Step = "service" | "staff" | "datetime" | "details" | "confirmation";
+type Step = "service" | "staff" | "datetime" | "details" | "review" | "confirmation";
 
 const STEPS: { key: Exclude<Step, "confirmation">; label: string }[] = [
   { key: "service", label: "Service" },
   { key: "staff", label: "Staff" },
   { key: "datetime", label: "Date & Time" },
-  { key: "details", label: "Your Details" },
+  { key: "details", label: "Details" },
+  { key: "review", label: "Review" },
 ];
+
+function groupSlotsByPeriod(slots: string[], timezone: string): { label: string; slots: string[] }[] {
+  const groups: Record<"Morning" | "Afternoon" | "Evening", string[]> = { Morning: [], Afternoon: [], Evening: [] };
+  for (const slot of slots) {
+    const hour = Number(formatInTimeZone(new Date(slot), timezone, "H"));
+    if (hour < 12) groups.Morning.push(slot);
+    else if (hour < 17) groups.Afternoon.push(slot);
+    else groups.Evening.push(slot);
+  }
+  return (["Morning", "Afternoon", "Evening"] as const).filter((label) => groups[label].length > 0).map((label) => ({ label, slots: groups[label] }));
+}
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -58,12 +71,11 @@ export function PublicBookingPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { data: staffData, isPending: isStaffPending } = usePublicStaff(slug, serviceId ?? undefined);
-  const { data: slotsData, isFetching: isSlotsLoading } = usePublicAvailableSlots(
-    slug,
-    serviceId ?? undefined,
-    staffId ?? undefined,
-    date || undefined,
-  );
+  const {
+    data: slotsData,
+    isFetching: isSlotsLoading,
+    refetch: refetchSlots,
+  } = usePublicAvailableSlots(slug, serviceId ?? undefined, staffId ?? undefined, date || undefined);
   const createBooking = useCreatePublicBooking(slug);
 
   const business = businessData?.business;
@@ -104,6 +116,8 @@ export function PublicBookingPage() {
       setStep("staff");
     } else if (step === "details") {
       setStep("datetime");
+    } else if (step === "review") {
+      setStep("details");
     }
   }
 
@@ -122,10 +136,18 @@ export function PublicBookingPage() {
     return Object.keys(errors).length === 0;
   }
 
-  async function handleSubmit(event: FormEvent) {
+  function handleContinueToReview(event: FormEvent) {
     event.preventDefault();
     setSubmitError(null);
-    if (!validateDetails() || !serviceId || !staffId || !selectedSlot) {
+    if (!validateDetails()) {
+      return;
+    }
+    setStep("review");
+  }
+
+  async function handleConfirm() {
+    setSubmitError(null);
+    if (!serviceId || !staffId || !selectedSlot) {
       return;
     }
 
@@ -139,7 +161,14 @@ export function PublicBookingPage() {
       });
       setStep("confirmation");
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : "We couldn't complete your booking. Please try again.");
+      if (error instanceof ApiError && error.status === 409) {
+        setSubmitError("This time is no longer available. Please choose another time.");
+        setSelectedSlot(null);
+        setStep("datetime");
+        void refetchSlots();
+      } else {
+        setSubmitError(error instanceof ApiError ? error.message : "We couldn't complete your booking. Please try again.");
+      }
     }
   }
 
@@ -274,8 +303,9 @@ export function PublicBookingPage() {
                     key={member.id}
                     type="button"
                     onClick={() => selectStaff(member.id)}
-                    className="rounded-xl border border-stone-200 p-4 text-center font-medium text-stone-900 transition-colors hover:border-brand-400 hover:bg-brand-50/40"
+                    className="flex flex-col items-center gap-2 rounded-xl border border-stone-200 p-4 text-center font-medium text-stone-900 transition-colors hover:border-brand-400 hover:bg-brand-50/40"
                   >
+                    <Avatar name={member.name} />
                     {member.name}
                   </button>
                 ))}
@@ -314,16 +344,23 @@ export function PublicBookingPage() {
                     <p className="mt-0.5 text-stone-500">Please choose a different date.</p>
                   </div>
                 ) : (
-                  <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {slots.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => selectSlot(slot)}
-                        className="rounded-lg border border-stone-300 px-2 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:border-brand-500 hover:bg-brand-50"
-                      >
-                        {formatInTimeZone(new Date(slot), timezone, "h:mm a")}
-                      </button>
+                  <div className="mt-2 space-y-4">
+                    {groupSlotsByPeriod(slots, timezone).map((group) => (
+                      <div key={group.label}>
+                        <p className="text-xs font-medium uppercase tracking-wide text-stone-400">{group.label}</p>
+                        <div className="mt-1.5 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          {group.slots.map((slot) => (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => selectSlot(slot)}
+                              className="rounded-lg border border-stone-300 px-2 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:border-brand-500 hover:bg-brand-50"
+                            >
+                              {formatInTimeZone(new Date(slot), timezone, "h:mm a")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -344,60 +381,81 @@ export function PublicBookingPage() {
               <p>{formatInTimeZone(new Date(selectedSlot), timezone, "EEEE, MMMM d 'at' h:mm a")}</p>
             </div>
 
-            <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
-              <FormField
-                label="Full name"
-                type="text"
-                autoComplete="name"
-                value={name}
-                onChange={setName}
-                error={fieldErrors.name}
-                disabled={createBooking.isPending}
-              />
-              <FormField
-                label="Email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={setEmail}
-                error={fieldErrors.email}
-                disabled={createBooking.isPending}
-              />
-              <FormField
-                label="Phone"
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={setPhone}
-                error={fieldErrors.phone}
-                disabled={createBooking.isPending}
-              />
+            <form onSubmit={handleContinueToReview} noValidate className="mt-4 space-y-4">
+              <FormField label="Full name" type="text" autoComplete="name" value={name} onChange={setName} error={fieldErrors.name} />
+              <FormField label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={fieldErrors.email} />
+              <FormField label="Phone" type="tel" autoComplete="tel" value={phone} onChange={setPhone} error={fieldErrors.phone} />
 
               <label className="block">
                 <span className="text-sm font-medium text-stone-700">Notes (optional)</span>
                 <textarea
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  disabled={createBooking.isPending}
                   rows={3}
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                 />
               </label>
 
-              {submitError && (
-                <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {submitError}
-                </p>
-              )}
-
               <button
                 type="submit"
-                disabled={createBooking.isPending}
-                className="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
               >
-                {createBooking.isPending ? "Creating booking…" : "Confirm booking"}
+                Continue to review
               </button>
             </form>
+          </>
+        )}
+
+        {step === "review" && selectedService && selectedStaff && selectedSlot && (
+          <>
+            <BackButton onClick={goBack} />
+            <h2 className="mt-2 text-lg font-semibold text-stone-900">Review your booking</h2>
+            <p className="mt-0.5 text-sm text-stone-500">Make sure everything looks right before confirming.</p>
+
+            <div className="mt-4 divide-y divide-stone-100 rounded-xl border border-stone-200">
+              <div className="px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Service</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-900">{selectedService.name}</p>
+                <p className="text-sm text-stone-500">
+                  {formatDuration(selectedService.durationMinutes)} · {formatPrice(selectedService.price)}
+                </p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Staff</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-900">{selectedStaff.name}</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Date &amp; time</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-900">
+                  {formatInTimeZone(new Date(selectedSlot), timezone, "EEEE, MMMM d")}
+                </p>
+                <p className="text-sm text-stone-500">{formatInTimeZone(new Date(selectedSlot), timezone, "h:mm a")}</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Your details</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-900">{name}</p>
+                <p className="text-sm text-stone-500">
+                  {phone}
+                  {email ? ` · ${email}` : ""}
+                </p>
+                {notes && <p className="mt-1 text-sm text-stone-500">&ldquo;{notes}&rdquo;</p>}
+              </div>
+            </div>
+
+            {submitError && (
+              <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {submitError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={createBooking.isPending}
+              className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {createBooking.isPending ? "Confirming…" : "Confirm booking"}
+            </button>
           </>
         )}
 
