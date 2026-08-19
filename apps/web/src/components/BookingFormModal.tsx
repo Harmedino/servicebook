@@ -8,6 +8,7 @@ import { useMyBusiness } from "../lib/business";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
 import { ApiError } from "../lib/apiClient";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "./CustomerFormModal";
+import { Button } from "./ui/Button";
 
 export interface BookingFormSubmitValues {
   customerId: string;
@@ -262,21 +263,12 @@ export function BookingFormModal({
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" isLoading={isSubmitting}>
               {isSubmitting ? "Creating…" : "Create booking"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

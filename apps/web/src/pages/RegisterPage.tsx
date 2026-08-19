@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
+import { PasswordInput } from "../components/PasswordInput";
 import { Button } from "../components/ui/Button";
 import { AuthBrandPanel } from "../components/AuthBrandPanel";
 
@@ -104,18 +105,16 @@ export function RegisterPage() {
               error={fieldErrors.email}
               disabled={isSubmitting}
             />
-            <FormField
+            <PasswordInput
               label="Password"
-              type="password"
               autoComplete="new-password"
               value={password}
               onChange={setPassword}
               error={fieldErrors.password}
               disabled={isSubmitting}
             />
-            <FormField
+            <PasswordInput
               label="Confirm password"
-              type="password"
               autoComplete="new-password"
               value={confirmPassword}
               onChange={setConfirmPassword}

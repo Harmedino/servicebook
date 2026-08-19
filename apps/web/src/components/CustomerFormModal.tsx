@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { CustomerProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
+import { Button } from "./ui/Button";
 
 export interface CustomerFormSubmitValues {
   name: string;
@@ -114,21 +115,12 @@ export function CustomerFormModal({ customer, isSubmitting, serverError, onSubmi
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" isLoading={isSubmitting}>
               {isSubmitting ? "Saving…" : customer ? "Save changes" : "Add customer"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

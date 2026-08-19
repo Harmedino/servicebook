@@ -6,6 +6,7 @@ import { useAvailableSlots, useUpdateBooking } from "../lib/bookings";
 import { ApiError } from "../lib/apiClient";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Button } from "./ui/Button";
 
 interface RescheduleModalProps {
   booking: BookingProfile;
@@ -134,21 +135,12 @@ export function RescheduleModal({ booking, timezone, onClose, onSuccess }: Resch
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
-            >
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowConfirm(true)}
-              disabled={!selectedSlot}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button type="button" onClick={() => setShowConfirm(true)} disabled={!selectedSlot}>
               Review changes
-            </button>
+            </Button>
           </div>
         </div>
       </div>

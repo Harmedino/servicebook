@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
+import { PasswordInput } from "../components/PasswordInput";
 import { Button } from "../components/ui/Button";
 import { AuthBrandPanel } from "../components/AuthBrandPanel";
 
@@ -85,9 +86,8 @@ export function LoginPage() {
               error={fieldErrors.email}
               disabled={isSubmitting}
             />
-            <FormField
+            <PasswordInput
               label="Password"
-              type="password"
               autoComplete="current-password"
               value={password}
               onChange={setPassword}

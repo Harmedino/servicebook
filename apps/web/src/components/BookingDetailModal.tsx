@@ -9,6 +9,7 @@ import { BookingStatusBadge } from "./ui/Badge";
 import { formatPrice } from "../lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RescheduleModal } from "./RescheduleModal";
+import { Button } from "./ui/Button";
 
 interface BookingDetailModalProps {
   booking: BookingProfile;
