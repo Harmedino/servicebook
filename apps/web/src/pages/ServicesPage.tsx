@@ -177,14 +177,14 @@ export function ServicesPage() {
         )}
 
         {!isPending && !isError && allServices.length > 0 && services.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+          <p className="rounded-lg border border-dashed border-stone-300 px-6 py-8 text-center text-sm text-stone-500">
             {isFiltering ? "No services match these filters." : "No services to show."}
           </p>
         )}
 
         {!isPending && !isError && services.length > 0 && (
           <>
-            <table className="hidden w-full overflow-hidden rounded-2xl border border-stone-200 bg-white text-sm shadow-sm md:table">
+            <table className="hidden w-full overflow-hidden rounded-xl border border-stone-200 bg-white text-sm md:table">
               <thead className="bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-500">
                 <tr>
                   <th className="px-4 py-3">Service</th>
@@ -244,7 +244,7 @@ export function ServicesPage() {
 
             <ul className="space-y-3 md:hidden">
               {services.map((service) => (
-                <li key={service.id} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                <li key={service.id} className="rounded-xl border border-stone-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <Link to={`/services/${service.id}`} className="font-medium text-stone-900 hover:text-brand-700">

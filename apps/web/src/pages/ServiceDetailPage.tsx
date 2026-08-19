@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
+import type { BookingStatus } from "@servicebook/types";
 import { useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
 import { useBookings } from "../lib/bookings";
@@ -11,6 +12,18 @@ import { formatDuration, formatPrice } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Avatar } from "../components/ui/Avatar";
+import { Skeleton } from "../components/ui/Skeleton";
+
+const STATUS_ACCENT: Record<BookingStatus, string> = {
+  PENDING: "bg-amber-400",
+  CONFIRMED: "bg-green-500",
+  CANCELLED: "bg-stone-300",
+  COMPLETED: "bg-blue-400",
+  NO_SHOW: "bg-red-400",
+};
 
 export function ServiceDetailPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -43,10 +56,6 @@ export function ServiceDetailPage() {
       .filter((booking) => new Date(booking.startTime).getTime() >= now && booking.status !== "CANCELLED")
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   }, [allBookings]);
-
-  function formatDateTime(iso: string): string {
-    return formatInTimeZone(new Date(iso), timezone, "MMM d, yyyy · h:mm a");
-  }
 
   if (isPending) {
     return (
@@ -100,7 +109,7 @@ export function ServiceDetailPage() {
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-stone-900">{service.name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{service.name}</h1>
             <ActiveBadge isActive={service.isActive} />
           </div>
           <p className="mt-1 text-sm text-stone-500">
@@ -108,28 +117,18 @@ export function ServiceDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => {
               setFormError(null);
               setIsEditOpen(true);
             }}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
           >
             Edit
-          </button>
-          <button
-            type="button"
-            onClick={handleToggleActive}
-            disabled={updateService.isPending}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-              service.isActive
-                ? "border-stone-300 text-stone-500 hover:bg-stone-100 hover:text-red-600"
-                : "border-brand-200 text-brand-700 hover:bg-brand-50"
-            }`}
-          >
+          </Button>
+          <Button variant={service.isActive ? "danger" : "primary"} onClick={handleToggleActive} isLoading={updateService.isPending}>
             {service.isActive ? "Deactivate" : "Activate"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -139,12 +138,12 @@ export function ServiceDetailPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+      <Card className="mt-6 p-6">
         <h2 className="text-lg font-semibold text-stone-900">Description</h2>
         <p className="mt-1 whitespace-pre-wrap text-sm text-stone-700">{service.description || "No description yet."}</p>
-      </div>
+      </Card>
 
-      <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+      <Card className="mt-6 p-6">
         <h2 className="text-lg font-semibold text-stone-900">Assigned staff</h2>
         {assignedStaff.length === 0 ? (
           <p className="mt-1 text-sm text-stone-500">No staff assigned yet — edit this service to assign staff.</p>
@@ -158,16 +157,16 @@ export function ServiceDetailPage() {
             ))}
           </ul>
         )}
-      </div>
+      </Card>
 
       <div className="mt-6">
         <h2 className="text-base font-semibold text-stone-900">Upcoming appointments</h2>
 
-        <div className="mt-3">
+        <div className="mt-2">
           {isBookingsPending && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[0, 1].map((i) => (
-                <div key={i} className="h-14 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+                <Skeleton key={i} className="h-14 rounded-lg" />
               ))}
             </div>
           )}
@@ -179,33 +178,37 @@ export function ServiceDetailPage() {
           )}
 
           {!isBookingsPending && !isBookingsError && upcoming.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+            <p className="rounded-lg border border-dashed border-stone-300 px-6 py-8 text-center text-sm text-stone-500">
               No upcoming appointments use this service.
             </p>
           )}
 
           {!isBookingsPending && !isBookingsError && upcoming.length > 0 && (
-            <ul className="space-y-3">
+            <ol>
               {upcoming.map((booking) => (
-                <li key={booking.id}>
+                <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
+                  <div className="w-24 shrink-0 pt-3 text-xs font-medium text-stone-500">
+                    {formatInTimeZone(new Date(booking.startTime), timezone, "MMM d")}
+                    <br />
+                    {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
+                  </div>
+                  <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                   <button
                     type="button"
                     onClick={() => setSelectedBookingId(booking.id)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-300"
+                    className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-stone-900">
-                          {booking.customerName} · {booking.staffName}
-                        </p>
-                        <p className="mt-0.5 text-sm text-stone-500">{formatDateTime(booking.startTime)}</p>
-                      </div>
-                      <BookingStatusBadge status={booking.status} />
+                    <div className="flex items-center gap-2.5">
+                      <Avatar name={booking.customerName} size="xs" />
+                      <p className="text-sm font-semibold text-stone-900">
+                        {booking.customerName} <span className="font-normal text-stone-400">·</span> {booking.staffName}
+                      </p>
                     </div>
+                    <BookingStatusBadge status={booking.status} />
                   </button>
                 </li>
               ))}
-            </ul>
+            </ol>
           )}
         </div>
       </div>

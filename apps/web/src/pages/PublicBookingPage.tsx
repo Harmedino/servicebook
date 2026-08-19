@@ -198,10 +198,10 @@ export function PublicBookingPage() {
   if (isBusinessError || !business) {
     return (
       <PublicLayout>
-        <div className="rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm">
+        <Card className="p-8 text-center">
           <h1 className="text-lg font-semibold text-stone-900">Business not found</h1>
           <p className="mt-2 text-sm text-stone-500">This booking page doesn&apos;t exist or is no longer available.</p>
-        </div>
+        </Card>
       </PublicLayout>
     );
   }
@@ -220,10 +220,10 @@ export function PublicBookingPage() {
       </div>
 
       {!bookingEnabled && (
-        <div className="animate-fade-in-up mt-6 rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm">
+        <Card className="animate-fade-in-up mt-6 p-8 text-center">
           <h2 className="text-lg font-semibold text-stone-900">Online booking is currently unavailable</h2>
           <p className="mt-2 text-sm text-stone-500">Please contact the business directly to schedule an appointment.</p>
-        </div>
+        </Card>
       )}
 
       {bookingEnabled && step !== "confirmation" && (

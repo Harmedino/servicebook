@@ -189,14 +189,14 @@ export function StaffPage() {
         )}
 
         {!isPending && !isError && allStaffMembers.length > 0 && staffMembers.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-stone-300 bg-white px-6 py-8 text-center text-sm text-stone-500">
+          <p className="rounded-lg border border-dashed border-stone-300 px-6 py-8 text-center text-sm text-stone-500">
             {isFiltering ? "No staff match these filters." : "No staff to show."}
           </p>
         )}
 
         {!isPending && !isError && staffMembers.length > 0 && (
           <>
-            <table className="hidden w-full overflow-hidden rounded-2xl border border-stone-200 bg-white text-sm shadow-sm md:table">
+            <table className="hidden w-full overflow-hidden rounded-xl border border-stone-200 bg-white text-sm md:table">
               <thead className="bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-500">
                 <tr>
                   <th className="px-4 py-3">Name</th>
