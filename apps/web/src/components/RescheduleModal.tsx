@@ -66,7 +66,7 @@ export function RescheduleModal({ booking, timezone, onClose, onSuccess }: Resch
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
-        <div className="animate-fade-in-up w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+        <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-[var(--shadow-elevated)]">
           <h2 className="text-lg font-semibold text-stone-900">Reschedule appointment</h2>
           <p className="mt-1 text-sm text-stone-500">
             {booking.serviceName} for {booking.customerName}

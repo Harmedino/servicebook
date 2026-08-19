@@ -82,7 +82,7 @@ export function StaffFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 px-4">
-      <div className="animate-fade-in-up w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+      <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-[var(--shadow-elevated)]">
         <h2 className="text-lg font-semibold text-stone-900">{staff ? "Edit staff" : "Add staff"}</h2>
 
         <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">

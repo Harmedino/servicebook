@@ -9,6 +9,7 @@ import { formatDuration, formatPrice } from "../lib/format";
 import { FormField } from "../components/FormField";
 import { Card } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
+import { Button } from "../components/ui/Button";
 
 type Step = "service" | "staff" | "datetime" | "details" | "review" | "confirmation";
 
@@ -396,12 +397,9 @@ export function PublicBookingPage() {
                 />
               </label>
 
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-              >
+              <Button type="submit" size="lg" className="w-full">
                 Continue to review
-              </button>
+              </Button>
             </form>
           </>
         )}
@@ -448,14 +446,9 @@ export function PublicBookingPage() {
               </p>
             )}
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={createBooking.isPending}
-              className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="button" size="lg" className="mt-4 w-full" onClick={handleConfirm} isLoading={createBooking.isPending}>
               {createBooking.isPending ? "Confirming…" : "Confirm booking"}
-            </button>
+            </Button>
           </>
         )}
 
