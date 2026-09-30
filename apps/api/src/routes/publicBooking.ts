@@ -21,6 +21,8 @@ import { Booking } from "../models/Booking";
 import { Enquiry } from "../models/Enquiry";
 import { SOCIAL_CHANNELS, toSocialLinks } from "../lib/socials";
 import { ensureAccessToken, postWelcomeMessage } from "../lib/bookingChat";
+import { notify } from "../lib/notify";
+import { formatInTimeZone } from "date-fns-tz";
 import { asyncHandler } from "../utils/asyncHandler";
 import { objectIdField } from "../lib/validation";
 import { computeAvailableSlots, createValidatedBooking, getLocalDateAndTime, localDayStartUtc, nextDateKey } from "../lib/bookingEngine";
@@ -325,7 +327,17 @@ publicBookingRouter.post(
   asyncHandler(async (req, res) => {
     const business = await resolveBusinessBySlug(req.params.slug);
     const payload = customerSignupSchema.parse(req.body);
-    await findOrCreateCustomer(business.id, payload, "link");
+    const joined = await findOrCreateCustomer(business.id, payload, "link");
+    // Only a new record is news; re-joining with a known number isn't.
+    if (Date.now() - joined.createdAt.getTime() < 10_000) {
+      await notify({
+        businessId: business.id,
+        type: "signup",
+        title: `${joined.name} joined your client list`,
+        body: joined.phone,
+        link: `/customers/${joined.id}`,
+      });
+    }
     const body: PublicCustomerSignupResponse = { businessName: business.name, bookingEnabled: business.isPublicBookingEnabled };
     res.status(201).json(body);
   }),
@@ -366,6 +378,13 @@ publicBookingRouter.post(
           serviceId: serviceName ? payload.serviceId : undefined,
           serviceName,
           message: payload.message,
+        });
+        await notify({
+          businessId: business.id,
+          type: "enquiry",
+          title: `${payload.name} wants to chat on ${payload.channel === "x" ? "X" : payload.channel.charAt(0).toUpperCase() + payload.channel.slice(1)}`,
+          body: [serviceName, payload.message].filter(Boolean).join(" · ") || `Ref ${enquiry.reference}`,
+          link: "/inbox?tab=requests",
         });
         const body: PublicEnquiryResponse = { reference: enquiry.reference };
         res.status(201).json(body);
@@ -430,6 +449,13 @@ publicBookingRouter.post(
     }
     const { booking, service, staff } = result;
     const accessToken = await ensureAccessToken(booking);
+    await notify({
+      businessId: business.id,
+      type: "booking",
+      title: `New booking: ${service.name}`,
+      body: `${customer.name} · ${formatInTimeZone(booking.startTime, business.timezone, "EEE d MMM, h:mm a")} · ${staff.name}`,
+      link: "/bookings",
+    });
     // Start the booking's chat with a reply, so the customer isn't left with silence.
     await postWelcomeMessage({
       booking,

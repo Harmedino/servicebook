@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, type PanInfo } from "motion/react";
 import {
@@ -30,7 +31,8 @@ export function BottomSheet({ open, onClose, children, label }: { open: boolean;
   function handleDragEnd(_: unknown, info: PanInfo) {
     if (info.offset.y > 90 || info.velocity.y > 600) onClose();
   }
-  return (
+  // Rendered at the end of <body> so no parent's stacking (sticky headers, the tab bar) can sit on top of it.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={label}>
@@ -53,7 +55,8 @@ export function BottomSheet({ open, onClose, children, label }: { open: boolean;
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 

@@ -505,3 +505,23 @@ export interface IdeaResponse {
   item: IdeaProfile;
   voted?: boolean;
 }
+
+// ---- Notifications -----------------------------------------------------------
+
+export type NotificationType = "booking" | "cancellation" | "message" | "enquiry" | "signup";
+
+export interface NotificationProfile {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body?: string;
+  /** Dashboard path to open when tapped. */
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  notifications: NotificationProfile[];
+  unread: number;
+}

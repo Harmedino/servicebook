@@ -28,6 +28,7 @@ import { imageSrc } from "../lib/images";
 import { Logo, LogoMark } from "./Logo";
 import { InviteCustomersModal } from "./InviteCustomersModal";
 import { MoreSheet, QuickActionsSheet } from "./MobileSheets";
+import { NotificationBell, NotificationToasts } from "./Notifications";
 import { useEnquiries } from "../lib/enquiries";
 import { useConversations } from "../lib/bookingChat";
 import { useIsDemoAccount } from "../lib/demo";
@@ -263,10 +264,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-stone-50">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-ink lg:flex">
+      <aside className="sticky top-0 z-40 hidden h-screen w-64 shrink-0 flex-col bg-ink lg:flex">
         <div className="flex h-16 items-center justify-between px-5">
           <Logo to="/dashboard" tone="light" />
-          <ThemeButton />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <ThemeButton />
+          </div>
         </div>
         <SidebarNav pathname={location.pathname} badges={badges} />
         <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} businessName={business?.name} />
@@ -300,7 +304,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <LogoMark className="h-8 w-8 shrink-0" onDark />
             <span className="truncate font-display text-base font-bold text-white">{currentLabel}</span>
           </Link>
-          <ThemeButton />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <ThemeButton />
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:py-8">
@@ -314,6 +321,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </motion.div>
         </main>
       </div>
+
+      <NotificationToasts />
 
       {/* Mobile bottom tab bar */}
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-surface/95 backdrop-blur-xl lg:hidden">
