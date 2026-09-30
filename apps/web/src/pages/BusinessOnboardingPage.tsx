@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCreateBusiness } from "../lib/business";
 import { TIMEZONES, detectTimezone } from "../lib/timezones";
+import { CURRENCIES, currencyForTimezone } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/ui/Button";
@@ -23,6 +24,7 @@ export function BusinessOnboardingPage() {
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
   const [timezone, setTimezone] = useState(detectTimezone());
+  const [currency, setCurrency] = useState(() => currencyForTimezone(detectTimezone()));
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -52,6 +54,7 @@ export function BusinessOnboardingPage() {
         phone: phone.trim() || undefined,
         description: description.trim() || undefined,
         timezone,
+        currency,
       });
       navigate("/dashboard", { replace: true });
     } catch (error) {
@@ -117,7 +120,7 @@ export function BusinessOnboardingPage() {
                 value={timezone}
                 onChange={(event) => setTimezone(event.target.value)}
                 disabled={createBusiness.isPending}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
+                className="mt-1 w-full rounded-lg border border-stone-300 bg-surface px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
               >
                 {TIMEZONES.map((tz) => (
                   <option key={tz} value={tz}>
@@ -125,6 +128,22 @@ export function BusinessOnboardingPage() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-stone-700">Currency</span>
+              <select
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value)}
+                disabled={createBusiness.isPending}
+                className="mt-1 w-full rounded-lg border border-stone-300 bg-surface px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-stone-500">Prices on your booking page are shown in this currency.</span>
             </label>
 
             {serverError && (

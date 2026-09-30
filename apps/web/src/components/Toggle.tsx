@@ -17,7 +17,7 @@ export function Toggle({ checked, onChange, disabled, label }: ToggleProps) {
         className="peer sr-only"
       />
       <div className="h-6 w-11 rounded-full bg-stone-200 transition-colors peer-checked:bg-brand-600 peer-disabled:opacity-60" />
-      <div className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+      <div className="absolute left-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform peer-checked:translate-x-5" />
     </label>
   );
 }

@@ -65,8 +65,8 @@ export function RescheduleModal({ booking, timezone, onClose, onSuccess }: Resch
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
-        <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-[var(--shadow-elevated)]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-8">
+        <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-surface p-6 shadow-[var(--shadow-elevated)]">
           <h2 className="text-lg font-semibold text-stone-900">Reschedule appointment</h2>
           <p className="mt-1 text-sm text-stone-500">
             {booking.serviceName} for {booking.customerName}
@@ -78,7 +78,7 @@ export function RescheduleModal({ booking, timezone, onClose, onSuccess }: Resch
               <select
                 value={staffId}
                 onChange={(event) => handleStaffChange(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                className="mt-1 w-full rounded-lg border border-stone-300 bg-surface px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
               >
                 {eligibleStaff.map((staff) => (
                   <option key={staff.id} value={staff.id}>

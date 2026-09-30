@@ -253,7 +253,7 @@ export function CustomerDetailPage() {
           <select
             value={historyFilter}
             onChange={(event) => setHistoryFilter(event.target.value as typeof historyFilter)}
-            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            className="rounded-lg border border-stone-300 bg-surface px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
           >
             <option value="all">All</option>
             <option value="upcoming">Upcoming</option>

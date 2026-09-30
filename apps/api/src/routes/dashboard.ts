@@ -1,6 +1,8 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { formatInTimeZone } from "date-fns-tz";
-import type { DashboardSetupStatus, DashboardStaffToday, DashboardSummary, DashboardSummaryResponse } from "@servicebook/types";
+import type { DashboardInsights, DashboardSetupStatus, DashboardStaffToday, DashboardSummary, DashboardSummaryResponse } from "@servicebook/types";
+import type { Types } from "mongoose";
 import { Booking } from "../models/Booking";
 import { Customer } from "../models/Customer";
 import { Service } from "../models/Service";
@@ -98,8 +100,11 @@ dashboardRouter.get(
       publicBookingEnabled: business.isPublicBookingEnabled,
     };
 
+    const insights = await buildInsights(businessId, business.timezone, todayKey);
+
     const summary: DashboardSummary = {
       businessName: business.name,
+      currency: business.currency ?? "USD",
       businessSlug: business.slug,
       isPublicBookingEnabled: business.isPublicBookingEnabled,
       todayAppointmentCount: todayAppointments.length,
@@ -115,9 +120,93 @@ dashboardRouter.get(
       recentCustomers: recentCustomerDocs.map((customer) => toCustomerProfile(customer)),
       staffToday,
       setupStatus,
+      insights,
     };
 
     const body: DashboardSummaryResponse = { summary };
     res.json(body);
   }),
 );
+
+// ---- Insights (money + trends) -----------------------------------------
+
+const EARNING = { $nin: ["CANCELLED", "NO_SHOW"] };
+
+function shiftMonth(dateKey: string, months: number): string {
+  const [y, m] = dateKey.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + months, 1));
+  return d.toISOString().slice(0, 10);
+}
+
+function shiftDay(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+async function monthStats(businessId: string | Types.ObjectId, start: Date, end: Date, now: Date) {
+  const [earning, customers, pastTotal, pastNoShow] = await Promise.all([
+    Booking.aggregate<{ revenue: number; count: number }>([
+      { $match: { businessId: toObjectId(businessId), startTime: { $gte: start, $lt: end }, status: EARNING } },
+      { $group: { _id: null, revenue: { $sum: { $ifNull: ["$price", 0] } }, count: { $sum: 1 } } },
+    ]),
+    Customer.countDocuments({ businessId, createdAt: { $gte: start, $lt: end } }),
+    Booking.countDocuments({ businessId, startTime: { $gte: start, $lt: end < now ? end : now }, status: { $ne: "CANCELLED" } }),
+    Booking.countDocuments({ businessId, startTime: { $gte: start, $lt: end < now ? end : now }, status: "NO_SHOW" }),
+  ]);
+  return {
+    revenue: earning[0]?.revenue ?? 0,
+    bookings: earning[0]?.count ?? 0,
+    customers,
+    noShowRate: pastTotal ? Math.round((pastNoShow / pastTotal) * 1000) / 10 : 0,
+  };
+}
+
+function toObjectId(id: string | Types.ObjectId): Types.ObjectId {
+  return typeof id === "string" ? new mongoose.Types.ObjectId(id) : id;
+}
+
+async function buildInsights(businessId: string, timezone: string, todayKey: string): Promise<DashboardInsights> {
+  const now = new Date();
+  const thisMonthKey = `${todayKey.slice(0, 7)}-01`;
+  const thisMonthStart = localDayStartUtc(thisMonthKey, timezone);
+  const nextMonthStart = localDayStartUtc(shiftMonth(thisMonthKey, 1), timezone);
+  const lastMonthStart = localDayStartUtc(shiftMonth(thisMonthKey, -1), timezone);
+
+  const seriesStartKey = shiftDay(todayKey, -29);
+  const seriesStart = localDayStartUtc(seriesStartKey, timezone);
+  const seriesEnd = localDayStartUtc(nextDateKey(todayKey), timezone);
+
+  const [current, previous, daily] = await Promise.all([
+    monthStats(businessId, thisMonthStart, nextMonthStart, now),
+    monthStats(businessId, lastMonthStart, thisMonthStart, now),
+    Booking.aggregate<{ _id: string; revenue: number; bookings: number }>([
+      { $match: { businessId: toObjectId(businessId), startTime: { $gte: seriesStart, $lt: seriesEnd }, status: EARNING } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone } },
+          revenue: { $sum: { $ifNull: ["$price", 0] } },
+          bookings: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const byDay = new Map(daily.map((d) => [d._id, d]));
+  const revenueSeries = Array.from({ length: 30 }, (_, i) => {
+    const date = shiftDay(seriesStartKey, i);
+    const point = byDay.get(date);
+    return { date, revenue: point?.revenue ?? 0, bookings: point?.bookings ?? 0 };
+  });
+
+  return {
+    revenueThisMonth: current.revenue,
+    revenueLastMonth: previous.revenue,
+    bookingsThisMonth: current.bookings,
+    bookingsLastMonth: previous.bookings,
+    newCustomersThisMonth: current.customers,
+    newCustomersLastMonth: previous.customers,
+    noShowRateThisMonth: current.noShowRate,
+    noShowRateLastMonth: previous.noShowRate,
+    revenueSeries,
+  };
+}

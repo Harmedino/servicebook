@@ -23,6 +23,7 @@ import { useCreateBooking } from "../lib/bookings";
 import { useCreateCustomer } from "../lib/customers";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { InsightsSection } from "../components/InsightsSection";
 import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
@@ -303,6 +304,9 @@ export function DashboardPage() {
       </div>
 
       {isPending && <DashboardSkeleton />}
+
+      {/* insights is absent until the API is redeployed; skip the section rather than crash. */}
+      {!isPending && summary?.insights && !isBrandNewBusiness && <InsightsSection insights={summary.insights} />}
 
       {!isPending && summary && isBrandNewBusiness && (
         <div className="mt-8 max-w-lg">

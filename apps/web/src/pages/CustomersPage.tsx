@@ -128,7 +128,7 @@ export function CustomersPage() {
         <select
           value={filter}
           onChange={(event) => setFilter(event.target.value as CustomerAppointmentFilter)}
-          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          className="rounded-lg border border-stone-300 bg-surface px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         >
           {FILTER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -139,7 +139,7 @@ export function CustomersPage() {
         <select
           value={sort}
           onChange={(event) => setSort(event.target.value as CustomerSort)}
-          className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          className="rounded-lg border border-stone-300 bg-surface px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         >
           {SORT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -185,7 +185,7 @@ export function CustomersPage() {
 
         {!isPending && !isError && customers.length > 0 && (
           <>
-            <table className="hidden w-full overflow-hidden rounded-xl border border-stone-200 bg-white text-sm md:table">
+            <table className="hidden w-full overflow-hidden rounded-xl border border-stone-200 bg-surface text-sm md:table">
               <thead className="bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-500">
                 <tr>
                   <th className="px-4 py-3">Name</th>
@@ -225,7 +225,7 @@ export function CustomersPage() {
 
             <ul className="space-y-3 md:hidden">
               {customers.map((customer) => (
-                <li key={customer.id} className="rounded-xl border border-stone-200 bg-white p-4">
+                <li key={customer.id} className="rounded-xl border border-stone-200 bg-surface p-4">
                   <Link to={`/customers/${customer.id}`} className="flex items-center gap-2.5 font-medium text-stone-900 hover:text-brand-700">
                     <Avatar name={customer.name} size="sm" />
                     {customer.name}

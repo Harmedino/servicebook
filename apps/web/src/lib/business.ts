@@ -11,6 +11,7 @@ export interface CreateBusinessInput {
   phone?: string;
   description?: string;
   timezone?: string;
+  currency?: string;
 }
 
 export interface UpdateBusinessInput {
@@ -22,6 +23,7 @@ export interface UpdateBusinessInput {
   website?: string;
   timezone?: string;
   logoUrl?: string;
+  currency?: string;
   isPublicBookingEnabled?: boolean;
   emailNotificationsEnabled?: boolean;
   notifyCustomerOnBooking?: boolean;

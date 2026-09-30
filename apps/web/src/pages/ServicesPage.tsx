@@ -134,7 +134,7 @@ export function ServicesPage() {
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            className="rounded-lg border border-stone-300 bg-surface px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -184,7 +184,7 @@ export function ServicesPage() {
 
         {!isPending && !isError && services.length > 0 && (
           <>
-            <table className="hidden w-full overflow-hidden rounded-xl border border-stone-200 bg-white text-sm md:table">
+            <table className="hidden w-full overflow-hidden rounded-xl border border-stone-200 bg-surface text-sm md:table">
               <thead className="bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-500">
                 <tr>
                   <th className="px-4 py-3">Service</th>
@@ -244,7 +244,7 @@ export function ServicesPage() {
 
             <ul className="space-y-3 md:hidden">
               {services.map((service) => (
-                <li key={service.id} className="rounded-xl border border-stone-200 bg-white p-4">
+                <li key={service.id} className="rounded-xl border border-stone-200 bg-surface p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <Link to={`/services/${service.id}`} className="font-medium text-stone-900 hover:text-brand-700">

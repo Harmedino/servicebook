@@ -34,6 +34,8 @@ const descriptionField = z.string().trim().max(1000, "Description is too long");
 const addressField = z.string().trim().max(300, "Address is too long");
 const websiteField = z.string().trim().url("Enter a valid website URL");
 const logoUrlField = z.string().trim().url("Enter a valid URL");
+export const SUPPORTED_CURRENCIES = ["NGN", "USD", "GBP", "EUR", "GHS", "KES", "ZAR", "CAD"] as const;
+const currencyField = z.enum(SUPPORTED_CURRENCIES);
 const timezoneField = z
   .string()
   .trim()
@@ -45,6 +47,7 @@ const createBusinessSchema = z.object({
   phone: phoneField.optional(),
   description: descriptionField.optional(),
   timezone: timezoneField.optional(),
+  currency: currencyField.optional(),
 });
 
 const updateBusinessSchema = z
@@ -57,6 +60,7 @@ const updateBusinessSchema = z
     website: websiteField.optional(),
     timezone: timezoneField.optional(),
     logoUrl: logoUrlField.optional(),
+    currency: currencyField.optional(),
     isPublicBookingEnabled: z.boolean().optional(),
     emailNotificationsEnabled: z.boolean().optional(),
     notifyCustomerOnBooking: z.boolean().optional(),
@@ -127,6 +131,7 @@ function toBusinessProfile(business: BusinessDocument): BusinessProfile {
     website: business.website ?? undefined,
     timezone: business.timezone,
     logoUrl: business.logoUrl ?? undefined,
+    currency: business.currency ?? "USD",
     isPublicBookingEnabled: business.isPublicBookingEnabled ?? true,
     emailNotificationsEnabled: business.emailNotificationsEnabled ?? true,
     notifyCustomerOnBooking: business.notifyCustomerOnBooking ?? true,
@@ -164,6 +169,7 @@ businessRouter.post(
       phone: payload.phone,
       description: payload.description,
       timezone: payload.timezone ?? "UTC",
+      currency: payload.currency ?? "USD",
     });
 
     const body: BusinessResponse = { business: toBusinessProfile(business) };

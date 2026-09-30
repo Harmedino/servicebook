@@ -69,7 +69,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-surface">
       <AuthBrandPanel
         headline="Get your business online in minutes."
         description="Set up services, staff and availability, then start taking bookings."

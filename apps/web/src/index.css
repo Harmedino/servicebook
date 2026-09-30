@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Card/panel surface. White in light mode, raised charcoal in dark mode. */
+  --color-surface: #ffffff;
+  --color-surface-muted: var(--color-stone-50);
 
   /* Brand scale aliased onto indigo — a professional SaaS primary — so the
      accent color can be swapped from this one place. Used for primary
@@ -42,9 +49,16 @@
   }
   body {
     @apply bg-stone-50 text-stone-900 antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  h1,
+  h2,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500/50 ring-offset-1 ring-offset-white;
+    @apply outline-none ring-2 ring-brand-500/50 ring-offset-1 ring-offset-surface;
   }
 }
 
@@ -124,4 +138,112 @@
     auto,
     40px 40px,
     40px 40px;
+}
+
+/* ---- Dark mode ---------------------------------------------------------
+   The UI is built on Tailwind's stone scale plus a surface token, so dark mode
+   is one inversion of those values rather than a dark: variant on every class.
+   Tinted chip backgrounds (the -50/-100 shades) become translucent washes and
+   their -700 text shades lighten, so status badges stay readable. */
+.dark {
+  color-scheme: dark;
+  --color-surface: #16151a;
+  --color-surface-muted: #1c1b21;
+  --color-stone-50: #0e0d11;
+  --color-stone-100: #1f1e24;
+  --color-stone-200: #2a2930;
+  --color-stone-300: #3a3941;
+  --color-stone-400: #6f6d78;
+  --color-stone-500: #9b99a4;
+  --color-stone-600: #b9b7c0;
+  --color-stone-700: #d4d2da;
+  --color-stone-800: #e6e4ea;
+  --color-stone-900: #f4f3f7;
+  --color-stone-950: #fbfafc;
+
+  --color-brand-50: rgb(99 102 241 / 0.12);
+  --color-brand-100: rgb(99 102 241 / 0.2);
+  --color-brand-700: #a5b4fc;
+  --color-brand-800: #c7d2fe;
+
+  --color-emerald-50: rgb(16 185 129 / 0.12);
+  --color-emerald-100: rgb(16 185 129 / 0.18);
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-green-50: rgb(34 197 94 / 0.12);
+  --color-green-100: rgb(34 197 94 / 0.18);
+  --color-green-700: #86efac;
+  --color-amber-50: rgb(245 158 11 / 0.12);
+  --color-amber-100: rgb(245 158 11 / 0.18);
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-yellow-50: rgb(234 179 8 / 0.12);
+  --color-yellow-700: #fde047;
+  --color-orange-50: rgb(249 115 22 / 0.12);
+  --color-orange-700: #fdba74;
+  --color-red-50: rgb(239 68 68 / 0.12);
+  --color-red-100: rgb(239 68 68 / 0.18);
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-rose-50: rgb(244 63 94 / 0.12);
+  --color-rose-100: rgb(244 63 94 / 0.18);
+  --color-rose-700: #fda4af;
+  --color-sky-50: rgb(14 165 233 / 0.12);
+  --color-sky-100: rgb(14 165 233 / 0.18);
+  --color-sky-700: #7dd3fc;
+  --color-blue-50: rgb(59 130 246 / 0.12);
+  --color-blue-100: rgb(59 130 246 / 0.18);
+  --color-blue-700: #93c5fd;
+  --color-violet-50: rgb(139 92 246 / 0.12);
+  --color-violet-100: rgb(139 92 246 / 0.18);
+  --color-violet-700: #c4b5fd;
+  --color-teal-50: rgb(20 184 166 / 0.12);
+  --color-teal-700: #5eead4;
+  --color-pink-50: rgb(236 72 153 / 0.12);
+  --color-pink-700: #f9a8d4;
+  --color-purple-50: rgb(168 85 247 / 0.12);
+  --color-purple-700: #d8b4fe;
+}
+
+/* Shimmer skeleton, used alongside the existing pulse. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
+  animation: shimmer 1.6s infinite;
+}
+.dark .skeleton-shimmer::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

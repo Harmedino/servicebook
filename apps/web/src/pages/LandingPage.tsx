@@ -51,7 +51,7 @@ function FloatingNotification({
         scale: { duration: 0.4, delay: 0.6 + delay },
         y: { duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 + delay },
       }}
-      className={`hidden items-center gap-2.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 shadow-[var(--shadow-elevated)] sm:flex ${className}`}
+      className={`hidden items-center gap-2.5 rounded-xl border border-stone-200 bg-surface px-3.5 py-2.5 shadow-[var(--shadow-elevated)] sm:flex ${className}`}
     >
       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${toneClasses}`}>
         <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -221,7 +221,7 @@ export function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white text-stone-900">
+    <div className="min-h-screen bg-surface text-stone-900">
       <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <span className="text-lg font-semibold tracking-tight text-stone-900">ServiceBook</span>

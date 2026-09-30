@@ -40,6 +40,7 @@ export interface BusinessProfile {
   website?: string;
   timezone: string;
   logoUrl?: string;
+  currency: string;
   isPublicBookingEnabled: boolean;
   emailNotificationsEnabled: boolean;
   notifyCustomerOnBooking: boolean;
@@ -207,8 +208,24 @@ export interface DashboardStaffToday {
   todayAppointmentCount: number;
 }
 
+export interface DashboardInsights {
+  /** Value of non-cancelled, non-no-show bookings starting this calendar month (business timezone). */
+  revenueThisMonth: number;
+  revenueLastMonth: number;
+  bookingsThisMonth: number;
+  bookingsLastMonth: number;
+  newCustomersThisMonth: number;
+  newCustomersLastMonth: number;
+  /** Share of past appointments this month marked NO_SHOW, 0-100. */
+  noShowRateThisMonth: number;
+  noShowRateLastMonth: number;
+  /** One point per day for the last 30 days, oldest first. */
+  revenueSeries: Array<{ date: string; revenue: number; bookings: number }>;
+}
+
 export interface DashboardSummary {
   businessName: string;
+  currency: string;
   businessSlug: string;
   isPublicBookingEnabled: boolean;
   todayAppointmentCount: number;
@@ -225,6 +242,7 @@ export interface DashboardSummary {
   recentCustomers: CustomerProfile[];
   staffToday: DashboardStaffToday[];
   setupStatus: DashboardSetupStatus;
+  insights: DashboardInsights;
 }
 
 export interface DashboardSummaryResponse {
@@ -244,6 +262,7 @@ export interface PublicBusinessProfile {
   description?: string;
   timezone: string;
   logoUrl?: string;
+  currency: string;
   phone?: string;
   email?: string;
   address?: string;

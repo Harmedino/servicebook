@@ -118,6 +118,7 @@ publicBookingRouter.get(
         description: business.description ?? undefined,
         timezone: business.timezone,
         logoUrl: business.logoUrl ?? undefined,
+        currency: business.currency ?? "USD",
         phone: business.phone ?? undefined,
         email: business.email ?? undefined,
         address: business.address ?? undefined,
