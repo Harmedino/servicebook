@@ -5,17 +5,20 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(({ command, mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), "VITE_"), ...process.env };
 
-  // A production build without VITE_API_URL would quietly call localhost from
-  // users' browsers. Fail the build (e.g. on Vercel) with a clear message instead.
+  // Without VITE_API_URL the app would call localhost from users' browsers.
+  // Production deployments must set it, so fail those builds with a clear
+  // message. Vercel preview builds only warn, so they still deploy.
   if (command === "build" && mode === "production") {
     const apiUrl = env.VITE_API_URL?.trim();
     if (!apiUrl) {
-      throw new Error(
+      const message =
         "VITE_API_URL is not set. Add it in Vercel → Project → Settings → Environment Variables " +
-          "(e.g. https://your-api.onrender.com), then redeploy.",
-      );
-    }
-    if (!/^https?:\/\/[^\s]+$/.test(apiUrl)) {
+        "(e.g. https://your-api.onrender.com), then redeploy.";
+      if (env.VERCEL_ENV === "production" || !env.VERCEL) {
+        throw new Error(message);
+      }
+      console.warn(`\n⚠ ${message}\n`);
+    } else if (!/^https?:\/\/[^\s]+$/.test(apiUrl)) {
       throw new Error(`VITE_API_URL must be a full URL like https://your-api.onrender.com (got "${apiUrl}").`);
     }
   }
