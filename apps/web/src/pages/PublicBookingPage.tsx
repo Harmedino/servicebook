@@ -711,13 +711,13 @@ export function PublicBookingPage() {
                             <p className="flex-1 text-sm text-white/75">
                               <span className="font-semibold text-white">Now switch sides.</span> See this booking and your messages the way the salon owner sees them.
                             </p>
-                            <a
-                              href={ownerDemoPath("/inbox?tab=messages")}
+                            <Link
+                              to={ownerDemoPath("/inbox?tab=messages")}
                               target={embedded ? "_top" : undefined}
                               className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-highlight px-4 text-sm font-semibold text-ink"
                             >
                               Open the owner&apos;s inbox
-                            </a>
+                            </Link>
                           </div>
                         )}
                       </div>
@@ -767,9 +767,9 @@ export function PublicBookingPage() {
           {isChatOpen && <ChatSheet slug={slug} business={business} services={services} onClose={() => setIsChatOpen(false)} />}
         </AnimatePresence>
 
-        <a href="/" target={embedded ? "_top" : undefined} className="mx-auto mt-10 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition-colors hover:text-stone-600">
+        <Link to="/" target={embedded ? "_top" : undefined} className="mx-auto mt-10 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition-colors hover:text-stone-600">
           Powered by <LogoMark className="h-4 w-4" /> <span className="font-semibold text-stone-500">ServiceBook</span>
-        </a>
+        </Link>
       </div>
     </div>
   );
