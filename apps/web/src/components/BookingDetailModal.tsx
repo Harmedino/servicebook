@@ -10,6 +10,7 @@ import { formatPrice } from "../lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RescheduleModal } from "./RescheduleModal";
 import { Button } from "./ui/Button";
+import { OwnerThread } from "./chat/OwnerThread";
 
 interface BookingDetailModalProps {
   booking: BookingProfile;
@@ -72,7 +73,7 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-8">
-      <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-surface p-6 shadow-[var(--shadow-elevated)]">
+      <div className="animate-fade-in-up w-full max-w-lg rounded-xl border border-stone-200 bg-surface p-6 shadow-[var(--shadow-elevated)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-stone-900">{booking.customerName}</h2>
@@ -105,6 +106,11 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
           <Link to={`/customers/${booking.customerId}`} className="font-medium text-brand-700 hover:text-brand-800">
             View customer
           </Link>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-stone-200 p-3">
+          <p className="px-1 text-sm font-semibold text-stone-900">Messages</p>
+          <OwnerThread bookingId={booking.id} timezone={timezone} className="mt-1 h-[300px]" />
         </div>
 
         <label className="mt-4 block">
