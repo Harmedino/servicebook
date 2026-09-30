@@ -33,6 +33,9 @@ cp apps/api/.env.example apps/api/.env      # fill in MONGODB_URI and JWT_SECRET
 cp apps/web/.env.example apps/web/.env
 
 pnpm dev           # runs api (:4000) and web (:5173) together
+
+# Optional: a demo salon with staff, services, clients and two months of bookings
+pnpm --filter api seed   # log in as demo@servicebook.app / password123
 ```
 
 Mongoose schemas live in `apps/api/src/models/` — there's no separate generate/push step; models are applied the moment the API connects, and indexes are created (or synced) by Mongoose on first use of each model.

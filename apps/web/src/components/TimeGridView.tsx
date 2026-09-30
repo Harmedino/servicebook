@@ -101,7 +101,7 @@ export function TimeGridView({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+    <div className="overflow-hidden rounded-xl border border-stone-200 bg-surface">
       <div className="flex border-b border-stone-200 text-xs font-medium uppercase tracking-wide text-stone-500">
         <div className="w-14 shrink-0 py-2" />
         {columns.map((column) => (

@@ -71,8 +71,8 @@ export function BookingDetailModal({ booking, timezone, onClose }: BookingDetail
   const durationMinutes = Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / 60_000);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/40 px-4 py-8">
-      <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-[var(--shadow-elevated)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-8">
+      <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-surface p-6 shadow-[var(--shadow-elevated)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-stone-900">{booking.customerName}</h2>

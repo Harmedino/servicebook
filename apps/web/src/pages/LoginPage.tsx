@@ -59,7 +59,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-surface">
       <AuthBrandPanel
         headline="Run your booking business from one simple place."
         description="Manage appointments, staff and customers without the busywork."

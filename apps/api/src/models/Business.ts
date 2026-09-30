@@ -37,6 +37,8 @@ const businessSchema = new Schema(
       default: "UTC",
     },
     logoUrl: { type: String, trim: true },
+    /** ISO 4217 code used to display prices, e.g. "NGN". */
+    currency: { type: String, uppercase: true, trim: true, default: "USD" },
     isPublicBookingEnabled: {
       type: Boolean,
       required: true,

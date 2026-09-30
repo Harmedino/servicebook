@@ -258,7 +258,7 @@ export function CalendarPage() {
                 type="button"
                 onClick={() => setView(value)}
                 className={`rounded-md px-3 py-1 text-sm font-medium capitalize transition-colors ${
-                  view === value ? "bg-white text-stone-900 shadow-sm" : "text-stone-600 hover:text-stone-900"
+                  view === value ? "bg-surface text-stone-900 shadow-sm" : "text-stone-600 hover:text-stone-900"
                 }`}
               >
                 {value}
@@ -269,7 +269,7 @@ export function CalendarPage() {
           <select
             value={staffFilter}
             onChange={(event) => setStaffFilter(event.target.value)}
-            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            className="rounded-lg border border-stone-300 bg-surface px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
           >
             <option value="all">All staff</option>
             {activeStaff.map((staff) => (
@@ -282,7 +282,7 @@ export function CalendarPage() {
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            className="rounded-lg border border-stone-300 bg-surface px-2.5 py-1.5 text-sm text-stone-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
           >
             <option value="all">All statuses</option>
             {Object.entries(STATUS_LABELS).map(([value, label]) => (

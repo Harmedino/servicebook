@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { Plus, Search } from "lucide-react";
 import type { BookingStatus } from "@servicebook/types";
@@ -80,7 +81,15 @@ export function BookingsPage() {
   });
   const createBooking = useCreateBooking();
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // /bookings?new=1 (the mobile "+" button) opens the new-booking form straight away.
+  const [isFormOpen, setIsFormOpen] = useState(() => searchParams.get("new") === "1");
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setIsFormOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   const [formError, setFormError] = useState<string | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 

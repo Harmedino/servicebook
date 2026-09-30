@@ -29,7 +29,7 @@ export function MonthGridView({ monthStartKey, daysInMonth, bookingsByDate, toda
   const cells = Array.from({ length: totalCells }, (_, i) => addDaysToKey(gridStart, i));
 
   return (
-    <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+    <div className="overflow-hidden rounded-xl border border-stone-200 bg-surface">
       <div className="grid grid-cols-7 border-b border-stone-200 text-xs font-medium uppercase tracking-wide text-stone-500">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="px-2 py-2 text-center">

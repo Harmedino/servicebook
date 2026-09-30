@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMyBusiness, useUpdateBusiness } from "../lib/business";
 import { TIMEZONES } from "../lib/timezones";
+import { CURRENCIES } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "./FormField";
 import { Button } from "./ui/Button";
@@ -24,6 +25,7 @@ export function BusinessInfoSection() {
   const [address, setAddress] = useState("");
   const [website, setWebsite] = useState("");
   const [timezone, setTimezone] = useState("UTC");
+  const [currency, setCurrency] = useState("USD");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export function BusinessInfoSection() {
       setAddress(data.business.address ?? "");
       setWebsite(data.business.website ?? "");
       setTimezone(data.business.timezone);
+      setCurrency(data.business.currency ?? "USD");
     }
   }, [data?.business]);
 
@@ -76,6 +79,7 @@ export function BusinessInfoSection() {
         address: address.trim() || undefined,
         website: website.trim() || undefined,
         timezone,
+        currency,
       });
       setSuccessMessage("Business information updated.");
     } catch (error) {
@@ -137,7 +141,7 @@ export function BusinessInfoSection() {
           value={timezone}
           onChange={(event) => setTimezone(event.target.value)}
           disabled={updateBusiness.isPending}
-          className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
+          className="mt-1 w-full rounded-lg border border-stone-300 bg-surface px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
         >
           {TIMEZONES.map((tz) => (
             <option key={tz} value={tz}>
@@ -148,6 +152,23 @@ export function BusinessInfoSection() {
         <span className="mt-1 block text-xs text-stone-500">
           All appointment times are shown in this timezone. Changing it doesn&apos;t alter existing bookings.
         </span>
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium text-stone-700">Currency</span>
+        <select
+          value={currency}
+          onChange={(event) => setCurrency(event.target.value)}
+          disabled={updateBusiness.isPending}
+          className="mt-1 w-full rounded-lg border border-stone-300 bg-surface px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:bg-stone-100"
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-stone-500">Prices on your booking page are shown in this currency.</span>
       </label>
 
       {serverError && (
