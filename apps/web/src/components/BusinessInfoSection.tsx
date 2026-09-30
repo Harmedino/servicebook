@@ -4,6 +4,7 @@ import { TIMEZONES } from "../lib/timezones";
 import { CURRENCIES } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "./FormField";
+import { ImageUpload } from "./ImageUpload";
 import { Button } from "./ui/Button";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -87,6 +88,17 @@ export function BusinessInfoSection() {
     }
   }
 
+  async function saveImage(field: "logoUrl" | "coverImageUrl", value: string) {
+    setServerError(null);
+    setSuccessMessage(null);
+    try {
+      await updateBusiness.mutateAsync({ [field]: value });
+      setSuccessMessage(value ? (field === "logoUrl" ? "Logo updated." : "Cover photo updated.") : "Image removed.");
+    } catch (error) {
+      setServerError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
+    }
+  }
+
   if (isBusinessLoading) {
     return (
       <div className="max-w-lg">
@@ -97,6 +109,25 @@ export function BusinessInfoSection() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="max-w-lg space-y-4">
+      <div className="space-y-4 rounded-2xl border border-stone-200 p-4">
+        <p className="text-sm font-semibold text-stone-900">Branding</p>
+        <ImageUpload
+          label="Logo"
+          hint="Square works best, at least 256×256. Shown on your booking page and in the app."
+          value={data?.business?.logoUrl}
+          onChange={(value) => void saveImage("logoUrl", value)}
+          maxSize={512}
+          disabled={updateBusiness.isPending}
+        />
+        <ImageUpload
+          label="Cover photo"
+          hint="A wide photo of your space or work. Appears at the top of your booking page."
+          value={data?.business?.coverImageUrl}
+          onChange={(value) => void saveImage("coverImageUrl", value)}
+          shape="wide"
+          disabled={updateBusiness.isPending}
+        />
+      </div>
       <FormField
         label="Business name"
         type="text"

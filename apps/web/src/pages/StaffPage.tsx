@@ -10,6 +10,7 @@ import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/ui/Button";
 import { ActiveBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
+import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
@@ -134,6 +135,8 @@ export function StaffPage() {
         }
       />
 
+      <OwnerStaffPrompt always className="mt-5" />
+
       {allStaffMembers.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <input
@@ -212,8 +215,9 @@ export function StaffPage() {
                   <tr key={staff.id}>
                     <td className="px-4 py-3 font-medium text-stone-900">
                       <Link to={`/staff/${staff.id}`} className="flex items-center gap-2.5 hover:text-brand-700">
-                        <Avatar name={staff.name} size="sm" />
+                        <Avatar name={staff.name} src={staff.avatarUrl} size="sm" />
                         {staff.name}
+                        {staff.isOwner && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">You</span>}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-stone-600">
@@ -269,8 +273,9 @@ export function StaffPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <Link to={`/staff/${staff.id}`} className="flex items-center gap-2.5 font-medium text-stone-900 hover:text-brand-700">
-                        <Avatar name={staff.name} size="sm" />
+                        <Avatar name={staff.name} src={staff.avatarUrl} size="sm" />
                         {staff.name}
+                        {staff.isOwner && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">You</span>}
                       </Link>
                       {staff.email && <p className="mt-0.5 pl-[calc(2rem+0.625rem)] text-sm text-stone-500">{staff.email}</p>}
                       {staff.phone && <p className="text-sm text-stone-500">{staff.phone}</p>}

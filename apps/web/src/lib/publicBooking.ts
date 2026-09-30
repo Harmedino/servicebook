@@ -4,13 +4,16 @@ import type {
   PublicBookingConfirmationResponse,
   PublicBookingCustomerInput,
   PublicBusinessResponse,
+  PublicCustomerSignupInput,
+  PublicCustomerSignupResponse,
   PublicStaffListResponse,
 } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
 
 export interface CreatePublicBookingInput {
   serviceId: string;
-  staffId: string;
+  /** Omit when the customer has no preference. */
+  staffId?: string;
   startTime: string;
   customer: PublicBookingCustomerInput;
   notes?: string;
@@ -71,6 +74,20 @@ export function useCreatePublicBooking(
   return useMutation({
     mutationFn: (input: CreatePublicBookingInput) =>
       apiRequest<PublicBookingConfirmationResponse>(`/api/public/businesses/${slug}/bookings`, {
+        method: "POST",
+        body: input,
+        auth: false,
+      }),
+  });
+}
+
+/** A customer adding themselves to the business's client list from the join link. */
+export function useCustomerSignup(
+  slug: string,
+): UseMutationResult<PublicCustomerSignupResponse, unknown, PublicCustomerSignupInput> {
+  return useMutation({
+    mutationFn: (input: PublicCustomerSignupInput) =>
+      apiRequest<PublicCustomerSignupResponse>(`/api/public/businesses/${slug}/customers`, {
         method: "POST",
         body: input,
         auth: false,

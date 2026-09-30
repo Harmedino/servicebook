@@ -3,44 +3,42 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 
   /* Card/panel surface. White in light mode, raised charcoal in dark mode. */
   --color-surface: #ffffff;
   --color-surface-muted: var(--color-stone-50);
+  /* Warm off-white used behind the marketing pages. */
+  --color-paper: #f6f5f0;
 
-  /* Brand scale aliased onto indigo — a professional SaaS primary — so the
-     accent color can be swapped from this one place. Used for primary
-     buttons, active nav, links, and selected states; nowhere else. */
-  --color-brand-50: var(--color-indigo-50);
-  --color-brand-100: var(--color-indigo-100);
-  --color-brand-200: var(--color-indigo-200);
-  --color-brand-300: var(--color-indigo-300);
-  --color-brand-400: var(--color-indigo-400);
-  --color-brand-500: var(--color-indigo-500);
-  --color-brand-600: var(--color-indigo-600);
-  --color-brand-700: var(--color-indigo-700);
-  --color-brand-800: var(--color-indigo-800);
-  --color-brand-900: var(--color-indigo-900);
+  /* Brand: a deep, money-and-growth green. Used for primary buttons, active
+     nav, links and selected states. Swap the scale here to rebrand. */
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fae1;
+  --color-brand-200: #a6f0c6;
+  --color-brand-300: #6ddda3;
+  --color-brand-400: #34c27d;
+  --color-brand-500: #16a263;
+  --color-brand-600: #0f8250;
+  --color-brand-700: #0e6843;
+  --color-brand-800: #0f5237;
+  --color-brand-900: #0e442f;
+  --color-brand-950: #04261a;
+
+  /* Near-black green for the header, sidebar and dark sections. */
+  --color-ink: #0c1a14;
+  --color-ink-800: #12261d;
+  --color-ink-700: #1b3528;
+
+  /* One loud accent, used only on dark ink backgrounds (primary CTA, highlights). */
+  --color-highlight: #c5f36b;
+  --color-highlight-soft: #e3fab5;
 
   /* Reserved for genuinely elevated surfaces (modals, popovers, dropdowns) —
-     ordinary panels use a border, not a shadow. See the "no card-itis"
-     principle: hierarchy comes from typography/spacing/dividers first. */
-  --shadow-elevated: 0 4px 6px -2px rgb(15 23 42 / 0.05), 0 12px 24px -8px rgb(15 23 42 / 0.12);
-  --shadow-glow: 0 20px 60px -15px rgb(79 70 229 / 0.45);
-
-  /* A secondary violet accent for sparing use alongside indigo — gradients,
-     small highlights — never as the primary interactive color. */
-  --color-accent-400: var(--color-violet-400);
-  --color-accent-500: var(--color-violet-500);
-  --color-accent-600: var(--color-violet-600);
-
-  /* Deep navy for the handful of intentionally dark branded sections
-     (hero panels, final CTA) — everything else stays light. */
-  --color-navy-900: #0f1029;
-  --color-navy-800: #171938;
-  --color-navy-700: #23264f;
+     ordinary panels use a border, not a shadow. */
+  --shadow-elevated: 0 4px 6px -2px rgb(12 26 20 / 0.05), 0 12px 24px -8px rgb(12 26 20 / 0.14);
+  --shadow-screen: 0 30px 80px -30px rgb(12 26 20 / 0.45), 0 0 0 1px rgb(12 26 20 / 0.06);
 }
 
 @layer base {
@@ -124,20 +122,13 @@
   animation: grow-width 0.7s ease-out both;
 }
 
-/* Sophisticated dark hero background: a couple of soft radial glows over a
-   deep navy base, plus a faint grid — no photography, no rainbow gradients. */
-.bg-hero-mesh {
-  background-color: var(--color-navy-900);
+/* Dark branded sections: flat ink with a faint grid. No glows, no rainbow gradients. */
+.bg-ink-grid {
+  background-color: var(--color-ink);
   background-image:
-    radial-gradient(ellipse 60% 50% at 15% 10%, rgb(99 102 241 / 0.35), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 100% 30%, rgb(139 92 246 / 0.28), transparent 60%),
-    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
-  background-size:
-    auto,
-    auto,
-    40px 40px,
-    40px 40px;
+    linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
 /* ---- Dark mode ---------------------------------------------------------
@@ -147,24 +138,26 @@
    their -700 text shades lighten, so status badges stay readable. */
 .dark {
   color-scheme: dark;
-  --color-surface: #16151a;
-  --color-surface-muted: #1c1b21;
-  --color-stone-50: #0e0d11;
-  --color-stone-100: #1f1e24;
-  --color-stone-200: #2a2930;
-  --color-stone-300: #3a3941;
-  --color-stone-400: #6f6d78;
-  --color-stone-500: #9b99a4;
-  --color-stone-600: #b9b7c0;
-  --color-stone-700: #d4d2da;
-  --color-stone-800: #e6e4ea;
-  --color-stone-900: #f4f3f7;
-  --color-stone-950: #fbfafc;
+  --color-surface: #151917;
+  --color-surface-muted: #1a1f1c;
+  --color-paper: #0d100f;
+  --color-stone-50: #0d100f;
+  --color-stone-100: #1d2220;
+  --color-stone-200: #282e2b;
+  --color-stone-300: #37403b;
+  --color-stone-400: #6b756f;
+  --color-stone-500: #98a29c;
+  --color-stone-600: #b8c0bb;
+  --color-stone-700: #d3d9d5;
+  --color-stone-800: #e5eae7;
+  --color-stone-900: #f3f6f4;
+  --color-stone-950: #fafcfb;
 
-  --color-brand-50: rgb(99 102 241 / 0.12);
-  --color-brand-100: rgb(99 102 241 / 0.2);
-  --color-brand-700: #a5b4fc;
-  --color-brand-800: #c7d2fe;
+  --color-brand-50: rgb(22 162 99 / 0.13);
+  --color-brand-100: rgb(22 162 99 / 0.22);
+  --color-brand-200: rgb(22 162 99 / 0.35);
+  --color-brand-700: #7ee2ae;
+  --color-brand-800: #aef0cb;
 
   --color-emerald-50: rgb(16 185 129 / 0.12);
   --color-emerald-100: rgb(16 185 129 / 0.18);
@@ -224,6 +217,28 @@
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 40s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+/* iOS zooms into any field under 16px on focus; keep phone forms steady.
+   Unlayered, so it wins over the text-sm utilities on individual inputs. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
   }
 }
 

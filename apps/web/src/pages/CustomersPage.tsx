@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
-import { Plus } from "lucide-react";
+import { ChevronRight, Link2, MessageCircle, Plus, Share2 } from "lucide-react";
 import type { CustomerAppointmentFilter, CustomerProfile, CustomerSort } from "@servicebook/types";
 import { useCreateCustomer, useCustomers, useUpdateCustomer } from "../lib/customers";
 import { useMyBusiness } from "../lib/business";
@@ -13,6 +13,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
+import { InviteCustomersModal } from "../components/InviteCustomersModal";
 
 const PAGE_SIZE = 25;
 
@@ -37,7 +38,9 @@ export function CustomersPage() {
   const [page, setPage] = useState(1);
 
   const { data: businessData } = useMyBusiness();
-  const timezone = businessData?.business?.timezone ?? "UTC";
+  const business = businessData?.business ?? undefined;
+  const timezone = business?.timezone ?? "UTC";
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
@@ -110,12 +113,39 @@ export function CustomersPage() {
         title="Customers"
         description="Manage your customers and their contact information."
         actions={
-          <Button onClick={openAddModal}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add customer
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setIsInviteOpen(true)} disabled={!business}>
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              Invite
+            </Button>
+            <Button onClick={openAddModal}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add customer
+            </Button>
+          </div>
         }
       />
+
+      {business && (
+        <div className="mt-5 flex flex-col gap-4 rounded-2xl bg-ink p-4 text-white sm:flex-row sm:items-center sm:p-5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-highlight text-ink">
+            <Link2 className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">Let customers add themselves</p>
+            <p className="mt-0.5 text-sm text-white/60">
+              Send your join link on WhatsApp or print its QR code. New sign-ups appear here with a &ldquo;Joined via link&rdquo; tag.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsInviteOpen(true)}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-highlight px-4 text-sm font-semibold text-ink transition hover:bg-highlight-soft"
+          >
+            <Share2 className="h-4 w-4" aria-hidden="true" /> Share join link
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <input
@@ -123,8 +153,9 @@ export function CustomersPage() {
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           placeholder="Search customers…"
-          className="w-full max-w-sm rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+          className="w-full rounded-lg border border-stone-300 bg-surface px-3 py-2 text-sm text-stone-900 sm:max-w-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
         />
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
         <select
           value={filter}
           onChange={(event) => setFilter(event.target.value as CustomerAppointmentFilter)}
@@ -147,6 +178,7 @@ export function CustomersPage() {
             </option>
           ))}
         </select>
+        </div>
       </div>
 
       <div className="mt-6">
@@ -167,12 +199,18 @@ export function CustomersPage() {
         {!isPending && !isError && customers.length === 0 && !hasActiveFilters && (
           <EmptyState
             title="No customers yet"
-            description="Customers will appear here when you add them or when they make their first booking."
+            description="Share your join link and customers add themselves, or add someone by hand. Anyone who books online appears here too."
             action={
-              <Button onClick={openAddModal}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Add customer
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => setIsInviteOpen(true)} disabled={!business}>
+                  <Share2 className="h-4 w-4" aria-hidden="true" />
+                  Share join link
+                </Button>
+                <Button variant="secondary" onClick={openAddModal}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add customer
+                </Button>
+              </div>
             }
           />
         )}
@@ -203,6 +241,7 @@ export function CustomersPage() {
                       <Link to={`/customers/${customer.id}`} className="flex items-center gap-2.5 hover:text-brand-700">
                         <Avatar name={customer.name} size="sm" />
                         {customer.name}
+                        {(customer.source === "link" || customer.source === "chat") && <JoinedBadge source={customer.source} />}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-stone-600">{customer.phone}</td>
@@ -223,28 +262,24 @@ export function CustomersPage() {
               </tbody>
             </table>
 
-            <ul className="space-y-3 md:hidden">
+            <ul className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-surface md:hidden">
               {customers.map((customer) => (
-                <li key={customer.id} className="rounded-xl border border-stone-200 bg-surface p-4">
-                  <Link to={`/customers/${customer.id}`} className="flex items-center gap-2.5 font-medium text-stone-900 hover:text-brand-700">
-                    <Avatar name={customer.name} size="sm" />
-                    {customer.name}
+                <li key={customer.id}>
+                  <Link to={`/customers/${customer.id}`} className="flex items-center gap-3 px-3.5 py-3 active:bg-stone-50">
+                    <Avatar name={customer.name} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 font-medium text-stone-900">
+                        <span className="truncate">{customer.name}</span>
+                        {(customer.source === "link" || customer.source === "chat") && <JoinedBadge source={customer.source} />}
+                      </p>
+                      <p className="truncate text-sm text-stone-500">{customer.phone}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold tabular-nums text-stone-900">{customer.appointmentCount ?? 0}</p>
+                      <p className="text-[11px] text-stone-400">visits</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-stone-300" aria-hidden="true" />
                   </Link>
-                  <p className="mt-0.5 pl-[calc(2rem+0.625rem)] text-sm text-stone-500">{customer.phone}</p>
-                  {customer.email && <p className="text-sm text-stone-500">{customer.email}</p>}
-                  <p className="mt-1 text-xs text-stone-500">
-                    {customer.appointmentCount ?? 0} appointment{customer.appointmentCount === 1 ? "" : "s"} · Last:{" "}
-                    {formatLastAppointment(customer.lastAppointmentAt)}
-                  </p>
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(customer)}
-                      className="text-sm font-medium text-brand-700 hover:text-brand-800"
-                    >
-                      Edit
-                    </button>
-                  </div>
                 </li>
               ))}
             </ul>
@@ -279,6 +314,10 @@ export function CustomersPage() {
         )}
       </div>
 
+      {isInviteOpen && business && (
+        <InviteCustomersModal slug={business.slug} businessName={business.name} onClose={() => setIsInviteOpen(false)} />
+      )}
+
       {modalCustomer !== undefined && (
         <CustomerFormModal
           customer={modalCustomer}
@@ -289,5 +328,14 @@ export function CustomersPage() {
         />
       )}
     </DashboardLayout>
+  );
+}
+
+function JoinedBadge({ source }: { source: "link" | "chat" }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+      {source === "link" ? <Link2 className="h-3 w-3" aria-hidden="true" /> : <MessageCircle className="h-3 w-3" aria-hidden="true" />}
+      {source === "link" ? "Joined via link" : "From chat"}
+    </span>
   );
 }

@@ -8,6 +8,7 @@ const SERVICES_QUERY_KEY = ["services"] as const;
 export interface CreateServiceInput {
   name: string;
   description?: string;
+  imageUrl?: string;
   price: number;
   durationMinutes: number;
   isActive?: boolean;
@@ -18,6 +19,7 @@ export interface UpdateServiceInput {
   id: string;
   name?: string;
   description?: string;
+  imageUrl?: string;
   price?: number;
   durationMinutes?: number;
   isActive?: boolean;

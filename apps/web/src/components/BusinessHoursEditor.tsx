@@ -90,7 +90,7 @@ export function BusinessHoursEditor() {
                 <div className="mt-3 pl-[1.125rem]">
                   <div className="relative h-1.5 rounded-full bg-stone-100">
                     <div
-                      className="absolute h-1.5 rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
+                      className="absolute h-1.5 rounded-full bg-brand-500"
                       style={{ left: `${barLeft}%`, width: `${barWidth}%` }}
                     />
                   </div>

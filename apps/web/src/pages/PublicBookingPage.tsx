@@ -9,32 +9,36 @@ import {
   Check,
   Clock,
   Globe,
-  Hand,
-  Heart,
   MapPin,
   MessageCircle,
   Moon,
   Phone,
-  Scissors,
   Sparkles,
   Sun,
   Sunrise,
   UserRound,
-  Wand2,
 } from "lucide-react";
-import type { PublicServiceProfile } from "@servicebook/types";
 import { usePublicAvailableSlots, usePublicBusiness, usePublicStaff, useCreatePublicBooking } from "../lib/publicBooking";
 import { ApiError } from "../lib/apiClient";
 import { formatDuration, formatPrice, setDisplayCurrency } from "../lib/format";
 import { FormField } from "../components/FormField";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
+import { ServiceThumb } from "../components/ServiceThumb";
+import { LogoMark } from "../components/Logo";
+import { imageSrc } from "../lib/images";
+import { activeChannels } from "../lib/socials";
+import { SocialIcon } from "../components/SocialIcon";
+import { ChatSheet } from "../components/ChatSheet";
 
-type Step = "service" | "staff" | "datetime" | "details" | "review" | "confirmation";
+type Step = "service" | "datetime" | "details" | "review" | "confirmation";
+
+// Choosing a professional is optional: "any" lets the business assign
+// someone (the owner first, if they take appointments).
+const ANY_STAFF = "any";
 
 const STEPS: { key: Exclude<Step, "confirmation">; label: string }[] = [
   { key: "service", label: "Service" },
-  { key: "staff", label: "Professional" },
   { key: "datetime", label: "Date & time" },
   { key: "details", label: "Your details" },
   { key: "review", label: "Confirm" },
@@ -51,18 +55,6 @@ function groupSlotsByPeriod(slots: string[], timezone: string) {
     ...period,
     slots: slots.filter((slot) => period.test(Number(formatInTimeZone(new Date(slot), timezone, "H")))),
   })).filter((group) => group.slots.length > 0);
-}
-
-// A friendly icon per service, guessed from its name.
-const SERVICE_ICONS: Array<{ match: RegExp; icon: typeof Scissors; tone: string }> = [
-  { match: /cut|trim|beard|barb|fade|line/i, icon: Scissors, tone: "from-indigo-500 to-blue-500" },
-  { match: /nail|mani|pedi|gel/i, icon: Hand, tone: "from-pink-500 to-rose-500" },
-  { match: /makeup|glam|brow|lash|face/i, icon: Wand2, tone: "from-violet-500 to-fuchsia-500" },
-  { match: /massage|spa|therapy|body/i, icon: Heart, tone: "from-emerald-500 to-teal-500" },
-  { match: /braid|hair|wash|color|colour|style|wig|locs/i, icon: Sparkles, tone: "from-amber-500 to-orange-500" },
-];
-function serviceIcon(service: PublicServiceProfile) {
-  return SERVICE_ICONS.find((entry) => entry.match.test(service.name)) ?? { icon: Sparkles, tone: "from-brand-500 to-violet-500" };
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -117,7 +109,7 @@ function Confetti() {
         x: (Math.random() - 0.5) * 360,
         y: -120 - Math.random() * 160,
         r: Math.random() * 540,
-        color: ["#6366f1", "#8b5cf6", "#10b981", "#f59e0b", "#ec4899"][i % 5],
+        color: ["#0f8250", "#c5f36b", "#16a263", "#f59e0b", "#0c1a14"][i % 5],
         delay: Math.random() * 0.15,
       })),
     [],
@@ -176,6 +168,7 @@ export function PublicBookingPage() {
   const [notes, setNotes] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const { data: staffData, isPending: isStaffPending } = usePublicStaff(slug, serviceId ?? undefined);
   const {
@@ -201,22 +194,23 @@ export function PublicBookingPage() {
   }, [business]);
 
   const selectedService = services.find((service) => service.id === serviceId) ?? null;
-  const selectedStaff = staff.find((member) => member.id === staffId) ?? null;
+  const selectedStaff = staffId && staffId !== ANY_STAFF ? (staff.find((member) => member.id === staffId) ?? null) : null;
+  // With a single professional there's nothing to choose; name them instead of "any".
+  const onlyStaff = staff.length === 1 ? staff[0] : null;
+  const staffLabel = selectedStaff?.name ?? onlyStaff?.name ?? (serviceId ? "Any available" : undefined);
   const stepIndex = step === "confirmation" ? STEPS.length : STEPS.findIndex((s) => s.key === step);
 
   function selectService(id: string) {
     setServiceId(id);
-    setStaffId(null);
-    setDate("");
+    setStaffId(ANY_STAFF);
+    setDate(today);
     setSelectedSlot(null);
-    setStep("staff");
+    setStep("datetime");
   }
 
   function selectStaff(id: string) {
     setStaffId(id);
-    setDate(today);
     setSelectedSlot(null);
-    setStep("datetime");
   }
 
   function selectSlot(slot: string) {
@@ -226,7 +220,7 @@ export function PublicBookingPage() {
   }
 
   function goBack() {
-    const order: Step[] = ["service", "staff", "datetime", "details", "review"];
+    const order: Step[] = ["service", "datetime", "details", "review"];
     const index = order.indexOf(step);
     if (index > 0) setStep(order[index - 1]);
   }
@@ -248,12 +242,12 @@ export function PublicBookingPage() {
 
   async function handleConfirm() {
     setSubmitError(null);
-    if (!serviceId || !staffId || !selectedSlot) return;
+    if (!serviceId || !selectedSlot) return;
 
     try {
       await createBooking.mutateAsync({
         serviceId,
-        staffId,
+        staffId: staffId && staffId !== ANY_STAFF ? staffId : undefined,
         startTime: selectedSlot,
         customer: { name: name.trim(), phone: phone.trim(), email: email.trim() || undefined },
         notes: notes.trim() || undefined,
@@ -286,7 +280,7 @@ export function PublicBookingPage() {
   if (isBusinessPending) {
     return (
       <div className="min-h-screen bg-stone-50">
-        <div className="h-44 bg-gradient-to-br from-brand-600 to-violet-600 sm:h-52" />
+        <div className="h-44 bg-ink-grid sm:h-52" />
         <div className="mx-auto -mt-16 max-w-5xl px-4">
           <Shimmer className="h-28 rounded-3xl" />
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -313,15 +307,26 @@ export function PublicBookingPage() {
     );
   }
 
-  const whatsappNumber = business.phone?.replace(/[^\d]/g, "");
+  const chatChannels = activeChannels(business.socials);
   const confirmation = createBooking.data?.confirmation;
 
   return (
     <div className="min-h-screen bg-stone-50 pb-16">
       {/* Branded header */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-indigo-600 to-violet-600 pb-24 pt-8 text-white sm:pb-28">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-        <div className="absolute -bottom-32 left-10 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" aria-hidden="true" />
+      <header className="relative overflow-hidden bg-ink-grid pb-24 pt-8 text-white sm:pb-40">
+        {business.coverImageUrl && (
+          <>
+            <motion.img
+              src={imageSrc(business.coverImageUrl)}
+              alt=""
+              initial={{ scale: 1.08, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" aria-hidden="true" />
+          </>
+        )}
         <div className="relative mx-auto flex max-w-5xl items-center justify-between px-4">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Online booking</span>
           <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">Instant confirmation</span>
@@ -332,13 +337,13 @@ export function PublicBookingPage() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-stone-200 bg-surface p-5 shadow-[0_20px_50px_-20px_rgb(15_23_42/0.25)] sm:p-7"
+          className="rounded-3xl border border-stone-200 bg-surface p-5 shadow-[0_20px_50px_-20px_rgb(12_26_20/0.3)] sm:p-7"
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             {business.logoUrl ? (
-              <img src={business.logoUrl} alt="" className="h-16 w-16 rounded-2xl object-cover sm:h-20 sm:w-20" />
+              <img src={imageSrc(business.logoUrl)} alt={`${business.name} logo`} className="h-16 w-16 rounded-2xl bg-surface object-cover shadow-lg ring-4 ring-surface sm:h-20 sm:w-20" />
             ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-violet-500 text-2xl font-bold text-white shadow-lg sm:h-20 sm:w-20 sm:text-3xl">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-ink text-2xl font-bold text-highlight shadow-lg sm:h-20 sm:w-20 sm:text-3xl">
                 {business.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -376,15 +381,25 @@ export function PublicBookingPage() {
                 )}
               </div>
             </div>
-            {whatsappNumber && (
-              <a
-                href={`https://wa.me/${whatsappNumber}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+            {chatChannels.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(true)}
+                className="group inline-flex items-center justify-center gap-3 rounded-xl bg-ink py-2 pl-4 pr-2 text-sm font-semibold text-white transition hover:bg-ink-700 dark:bg-highlight dark:text-ink"
               >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" /> Chat on WhatsApp
-              </a>
+                <MessageCircle className="h-4 w-4" aria-hidden="true" /> Chat with us
+                <span className="flex -space-x-1.5">
+                  {chatChannels.slice(0, 4).map((channel) => (
+                    <span
+                      key={channel.id}
+                      className="flex h-6 w-6 items-center justify-center rounded-full ring-2 ring-ink dark:ring-highlight"
+                      style={{ backgroundColor: channel.color, color: channel.onColor }}
+                    >
+                      <SocialIcon icon={channel.icon} className="h-3 w-3" />
+                    </span>
+                  ))}
+                </span>
+              </button>
             )}
           </div>
         </motion.div>
@@ -407,7 +422,7 @@ export function PublicBookingPage() {
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200">
                     <motion.div
-                      className="h-full rounded-full bg-gradient-to-r from-brand-500 to-violet-500"
+                      className="h-full rounded-full bg-brand-500"
                       animate={{ width: `${((stepIndex + 0.5) / STEPS.length) * 100}%` }}
                       transition={{ type: "spring", stiffness: 120, damping: 20 }}
                     />
@@ -420,13 +435,12 @@ export function PublicBookingPage() {
                   <motion.div key={step} {...slide}>
                     {step === "service" && (
                       <>
-                        <StepHeader title="What would you like to book?" subtitle="Choose a service to see who's available." />
+                        <StepHeader title="What would you like to book?" subtitle="Choose a service to see free times." />
                         {services.length === 0 ? (
                           <p className="text-sm text-stone-500">This business hasn&apos;t added any bookable services yet.</p>
                         ) : (
                           <div className="grid gap-3 sm:grid-cols-2">
                             {services.map((service, i) => {
-                              const { icon: Icon, tone } = serviceIcon(service);
                               return (
                                 <motion.button
                                   key={service.id}
@@ -437,11 +451,13 @@ export function PublicBookingPage() {
                                   transition={{ delay: i * 0.04 }}
                                   whileHover={{ y: -2 }}
                                   whileTap={{ scale: 0.98 }}
-                                  className="group flex items-start gap-4 rounded-2xl border border-stone-200 p-4 text-left transition-colors hover:border-brand-400 hover:shadow-[0_10px_30px_-15px_rgb(79_70_229/0.5)]"
+                                  className="group flex items-start gap-4 rounded-2xl border border-stone-200 p-4 text-left transition-colors hover:border-brand-400 hover:shadow-[0_10px_30px_-15px_rgb(15_130_80/0.45)]"
                                 >
-                                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${tone} text-white shadow-sm`}>
-                                    <Icon className="h-5 w-5" aria-hidden="true" />
-                                  </span>
+                                  <ServiceThumb
+                                    name={service.name}
+                                    imageUrl={service.imageUrl}
+                                    className={service.imageUrl ? "h-20 w-20 rounded-xl" : "h-11 w-11 rounded-xl"}
+                                  />
                                   <span className="min-w-0 flex-1">
                                     <span className="block font-semibold text-stone-900">{service.name}</span>
                                     {service.description && <span className="mt-0.5 line-clamp-2 block text-sm text-stone-500">{service.description}</span>}
@@ -460,43 +476,52 @@ export function PublicBookingPage() {
                       </>
                     )}
 
-                    {step === "staff" && selectedService && (
-                      <>
-                        <StepHeader title="Who would you like?" subtitle={`Professionals who offer ${selectedService.name}.`} onBack={goBack} />
-                        {isStaffPending ? (
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {[0, 1, 2].map((i) => (
-                              <Shimmer key={i} className="h-32" />
-                            ))}
-                          </div>
-                        ) : staff.length === 0 ? (
-                          <p className="text-sm text-stone-500">Nobody offers this service right now. Please choose another service.</p>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {staff.map((member, i) => (
-                              <motion.button
-                                key={member.id}
-                                type="button"
-                                onClick={() => selectStaff(member.id)}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: i * 0.05 }}
-                                whileHover={{ y: -2 }}
-                                whileTap={{ scale: 0.97 }}
-                                className="flex flex-col items-center gap-3 rounded-2xl border border-stone-200 p-5 text-center transition-colors hover:border-brand-400"
-                              >
-                                <Avatar name={member.name} size="lg" className="ring-4 ring-stone-100" />
-                                <span className="text-sm font-semibold text-stone-900">{member.name}</span>
-                              </motion.button>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {step === "datetime" && selectedService && selectedStaff && (
+                    {step === "datetime" && selectedService && (
                       <>
                         <StepHeader title="Pick a date & time" subtitle={`Times shown in ${timezone.replace(/_/g, " ")}.`} onBack={goBack} />
+                        {!isStaffPending && staff.length === 0 ? (
+                          <p className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500">
+                            Nobody offers this service right now. Please choose another service.
+                          </p>
+                        ) : (
+                        <>
+                        {staff.length > 1 && (
+                          <div className="mb-5">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+                              Professional <span className="font-normal normal-case tracking-normal">· optional</span>
+                            </p>
+                            <div className="no-scrollbar -mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
+                              {[{ id: ANY_STAFF, name: "Any available", avatarUrl: undefined }, ...staff].map((member) => {
+                                const active = (staffId ?? ANY_STAFF) === member.id;
+                                return (
+                                  <button
+                                    key={member.id}
+                                    type="button"
+                                    onClick={() => selectStaff(member.id)}
+                                    aria-pressed={active}
+                                    className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-sm font-medium transition-colors ${
+                                      active ? "border-brand-600 bg-brand-50 text-brand-800" : "border-stone-200 text-stone-700 hover:border-stone-300"
+                                    }`}
+                                  >
+                                    {member.id === ANY_STAFF ? (
+                                      <span className={`flex h-8 w-8 items-center justify-center rounded-full ${active ? "bg-brand-600 text-white" : "bg-stone-100 text-stone-500"}`}>
+                                        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                      </span>
+                                    ) : (
+                                      <Avatar name={member.name} src={member.avatarUrl} size="sm" />
+                                    )}
+                                    {member.id === ANY_STAFF ? member.name : member.name.split(" ")[0]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {onlyStaff && (
+                          <p className="mb-4 flex items-center gap-2 text-sm text-stone-600">
+                            <Avatar name={onlyStaff.name} src={onlyStaff.avatarUrl} size="xs" /> With {onlyStaff.name}
+                          </p>
+                        )}
                         {submitError && (
                           <p role="alert" className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
                             {submitError}
@@ -515,7 +540,7 @@ export function PublicBookingPage() {
                                 }}
                                 className={`flex w-16 shrink-0 snap-start flex-col items-center rounded-2xl border py-2.5 transition-all ${
                                   active
-                                    ? "border-brand-600 bg-brand-600 text-white shadow-[0_10px_20px_-10px_rgb(79_70_229/0.8)]"
+                                    ? "border-brand-600 bg-brand-600 text-white shadow-[0_10px_20px_-10px_rgb(15_130_80/0.8)]"
                                     : "border-stone-200 text-stone-700 hover:border-brand-300"
                                 }`}
                               >
@@ -587,10 +612,12 @@ export function PublicBookingPage() {
                             )}
                           </div>
                         )}
+                        </>
+                        )}
                       </>
                     )}
 
-                    {step === "details" && selectedService && selectedStaff && selectedSlot && (
+                    {step === "details" && selectedService && selectedSlot && (
                       <>
                         <StepHeader title="Your details" subtitle="So the business can confirm and remind you." onBack={goBack} />
                         <form onSubmit={handleContinueToReview} noValidate className="space-y-4">
@@ -616,7 +643,7 @@ export function PublicBookingPage() {
                       </>
                     )}
 
-                    {step === "review" && selectedService && selectedStaff && selectedSlot && (
+                    {step === "review" && selectedService && selectedSlot && (
                       <>
                         <StepHeader title="Confirm your booking" subtitle="Check the details, then tap confirm." onBack={goBack} />
                         <div className="space-y-4 rounded-2xl bg-stone-50 p-5">
@@ -626,7 +653,12 @@ export function PublicBookingPage() {
                             value={selectedService.name}
                             sub={`${formatDuration(selectedService.durationMinutes)} · ${formatPrice(selectedService.price)}`}
                           />
-                          <SummaryRow icon={UserRound} label="With" value={selectedStaff.name} />
+                          <SummaryRow
+                            icon={UserRound}
+                            label="With"
+                            value={staffLabel}
+                            sub={!selectedStaff && !onlyStaff ? "The first free professional; you'll see who on the next screen" : undefined}
+                          />
                           <SummaryRow
                             icon={CalendarDays}
                             label="When"
@@ -722,7 +754,7 @@ export function PublicBookingPage() {
                     value={selectedService?.name}
                     sub={selectedService && `${formatDuration(selectedService.durationMinutes)} · ${formatPrice(selectedService.price)}`}
                   />
-                  <SummaryRow icon={UserRound} label="Professional" value={selectedStaff?.name} />
+                  <SummaryRow icon={UserRound} label="Professional" value={staffLabel} />
                   <SummaryRow
                     icon={CalendarDays}
                     label="Date & time"
@@ -747,9 +779,13 @@ export function PublicBookingPage() {
           </div>
         )}
 
-        <p className="mt-10 text-center text-xs text-stone-400">
-          Powered by <span className="font-semibold text-stone-500">ServiceBook</span>
-        </p>
+        <AnimatePresence>
+          {isChatOpen && <ChatSheet slug={slug} business={business} services={services} onClose={() => setIsChatOpen(false)} />}
+        </AnimatePresence>
+
+        <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition-colors hover:text-stone-600">
+          Powered by <LogoMark className="h-4 w-4" /> <span className="font-semibold text-stone-500">ServiceBook</span>
+        </a>
       </div>
     </div>
   );

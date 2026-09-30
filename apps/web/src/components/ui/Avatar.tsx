@@ -1,11 +1,13 @@
+import { useState } from "react";
+import { imageSrc } from "../../lib/images";
 const PALETTE = [
-  "bg-indigo-100 text-indigo-700",
-  "bg-violet-100 text-violet-700",
-  "bg-blue-100 text-blue-700",
-  "bg-teal-100 text-teal-700",
-  "bg-amber-100 text-amber-700",
+  "bg-brand-100 text-brand-800",
+  "bg-amber-100 text-amber-800",
+  "bg-sky-100 text-sky-700",
   "bg-rose-100 text-rose-700",
-  "bg-emerald-100 text-emerald-700",
+  "bg-orange-50 text-orange-700",
+  "bg-stone-200 text-stone-700",
+  "bg-emerald-100 text-emerald-800",
 ];
 
 const SIZE_CLASSES = {
@@ -32,11 +34,25 @@ function paletteIndexFor(name: string): number {
 
 interface AvatarProps {
   name: string;
+  /** Photo URL or "/api/uploads/<id>"; falls back to initials if missing or broken. */
+  src?: string;
   size?: keyof typeof SIZE_CLASSES;
   className?: string;
 }
 
-export function Avatar({ name, size = "md", className = "" }: AvatarProps) {
+export function Avatar({ name, src, size = "md", className = "" }: AvatarProps) {
+  const [failed, setFailed] = useState(false);
+  const photo = !failed ? imageSrc(src) : undefined;
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt=""
+        onError={() => setFailed(true)}
+        className={`shrink-0 rounded-full object-cover ${SIZE_CLASSES[size]} ${className}`}
+      />
+    );
+  }
   const colorClass = PALETTE[paletteIndexFor(name)];
   return (
     <span

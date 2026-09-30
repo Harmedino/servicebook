@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
+import { ImageUpload } from "./ImageUpload";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
 import { formatDuration } from "../lib/format";
 import { Button } from "./ui/Button";
@@ -8,6 +9,8 @@ import { Button } from "./ui/Button";
 export interface ServiceFormSubmitValues {
   name: string;
   description?: string;
+  /** "" removes an existing photo. */
+  imageUrl?: string;
   price: number;
   durationMinutes: number;
   isActive: boolean;
@@ -47,6 +50,7 @@ export function ServiceFormModal({
 }: ServiceFormModalProps) {
   const [name, setName] = useState(service?.name ?? "");
   const [description, setDescription] = useState(service?.description ?? "");
+  const [imageUrl, setImageUrl] = useState(service?.imageUrl ?? "");
   const [price, setPrice] = useState(service ? String(service.price) : "");
   const [durationMode, setDurationMode] = useState<"preset" | "custom">(
     service && !DURATION_PRESETS.includes(service.durationMinutes) ? "custom" : "preset",
@@ -106,6 +110,8 @@ export function ServiceFormModal({
     onSubmit({
       name: name.trim(),
       description: description.trim() || undefined,
+      // Editing: send "" to clear a removed photo. Creating: omit when empty.
+      imageUrl: service ? imageUrl : imageUrl || undefined,
       price: Number(price),
       durationMinutes: Number(durationMinutes),
       isActive,
@@ -119,6 +125,14 @@ export function ServiceFormModal({
         <h2 className="text-lg font-semibold text-stone-900">{service ? "Edit service" : "Add service"}</h2>
 
         <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
+          <ImageUpload
+            label="Photo"
+            hint="Optional. Shown on your booking page."
+            value={imageUrl}
+            onChange={setImageUrl}
+            shape="card"
+            disabled={isSubmitting}
+          />
           <FormField
             label="Service name"
             type="text"
