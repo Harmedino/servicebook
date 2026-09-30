@@ -40,6 +40,9 @@ const envSchema = z
       .trim()
       .min(1, "is required, e.g. https://servicebook-drab.vercel.app"),
 
+    // Comma-separated emails that can manage the public roadmap.
+    ADMIN_EMAILS: z.string().trim().optional(),
+
     // Seeds the "Glow Studio Lekki" demo that the website's demo buttons open.
     // Set SEED_DEMO=false to skip it.
     SEED_DEMO: z
@@ -140,6 +143,19 @@ function parseAllowedOrigins(raw: string): Array<string | RegExp> {
 export const env = parsed.data;
 export const isProduction = isDeployed;
 export const allowedOrigins = parseAllowedOrigins(env.CORS_ORIGIN);
+
+/** Accounts that can move roadmap items and hide ideas. */
+export const adminEmails = new Set(
+  (env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+/** The web app's public address, for links in emails. */
+export const webAppUrl =
+  allowedOrigins.find((origin): origin is string => typeof origin === "string" && (!isDeployed || !/localhost|127\.0\.0\.1/.test(origin))) ??
+  DEFAULT_WEB_ORIGIN;
 
 if (env.NODE_ENV !== "test") {
   for (const warning of warnings) console.warn(`Warning: ${warning}`);

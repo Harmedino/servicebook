@@ -44,6 +44,8 @@ const bookingSchema = new Schema(
     /** Snapshots of the service/staff names at booking time — protects history from later renames. Absent on bookings created before this field existed; toBookingProfiles falls back to a live lookup in that case. */
     serviceName: { type: String, trim: true },
     staffName: { type: String, trim: true },
+    /** Secret for the customer's private booking page (/my-booking/:token): view, chat, cancel. */
+    accessToken: { type: String, index: { unique: true, sparse: true } },
     /** Set once the 24-hour reminder email has been sent — the claim that makes the reminder scheduler idempotent. */
     reminder24hSentAt: { type: Date, default: null },
   },

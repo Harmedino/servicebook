@@ -3,13 +3,18 @@ import { env } from "./config/env";
 import { connectDatabase, disconnectDatabase } from "./lib/database";
 import { startReminderScheduler, stopReminderScheduler } from "./services/reminderScheduler";
 import { ensureDemo } from "./scripts/seed";
+import { ensureRoadmap } from "./lib/roadmapSeed";
 
 async function main() {
   await connectDatabase();
 
+  await ensureRoadmap().catch((error: unknown) => console.warn("Roadmap was not seeded:", error));
+
   if (env.SEED_DEMO) {
-    // The demo powers the "Try the live demo" buttons; never block start-up on it.
-    await ensureDemo().catch((error: unknown) => console.warn("Demo business was not seeded:", error));
+    // The demo powers the website's demo buttons; never block start-up on it.
+    const refreshDemo = () => ensureDemo().catch((error: unknown) => console.warn("Demo business was not seeded:", error));
+    await refreshDemo();
+    setInterval(() => void refreshDemo(), 60 * 60 * 1000).unref();
   }
 
   const app = createApp();

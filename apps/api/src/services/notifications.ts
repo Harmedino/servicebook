@@ -11,6 +11,7 @@ import {
   type BookingEmailData,
 } from "../emails/booking";
 import { newBookingEmail } from "../emails/newBooking";
+import { emailsAllowed } from "../lib/demo";
 
 export interface BookingNotificationContext {
   business: BusinessDocument;
@@ -45,7 +46,7 @@ async function deliver(kind: string, bookingId: string, message: Parameters<type
 
 /** Confirmation to the customer, and a new-booking notice to the business — both optional per settings, both best-effort. */
 export async function notifyBookingCreated(ctx: BookingNotificationContext): Promise<void> {
-  if (!ctx.business.emailNotificationsEnabled) {
+  if (!emailsAllowed(ctx.business)) {
     return;
   }
 
@@ -84,7 +85,7 @@ export async function notifyBookingCreated(ctx: BookingNotificationContext): Pro
 
 /** Owner confirmed a previously-pending booking. Reuses the same "your appointment is confirmed" template sent at creation — it's the same message, just triggered by a different event. */
 export async function notifyBookingConfirmed(ctx: BookingNotificationContext): Promise<void> {
-  if (!ctx.business.emailNotificationsEnabled || !ctx.business.notifyCustomerOnBooking) {
+  if (!emailsAllowed(ctx.business) || !ctx.business.notifyCustomerOnBooking) {
     return;
   }
   const data = toBookingEmailData(ctx);
@@ -95,7 +96,7 @@ export async function notifyBookingConfirmed(ctx: BookingNotificationContext): P
 }
 
 export async function notifyBookingCancelled(ctx: BookingNotificationContext): Promise<void> {
-  if (!ctx.business.emailNotificationsEnabled || !ctx.business.notifyCustomerOnBooking) {
+  if (!emailsAllowed(ctx.business) || !ctx.business.notifyCustomerOnBooking) {
     return;
   }
   const data = toBookingEmailData(ctx);
@@ -109,7 +110,7 @@ export async function notifyBookingRescheduled(
   ctx: BookingNotificationContext,
   previous: { startTime: Date; endTime: Date },
 ): Promise<void> {
-  if (!ctx.business.emailNotificationsEnabled || !ctx.business.notifyCustomerOnBooking) {
+  if (!emailsAllowed(ctx.business) || !ctx.business.notifyCustomerOnBooking) {
     return;
   }
   const data = toBookingEmailData(ctx);

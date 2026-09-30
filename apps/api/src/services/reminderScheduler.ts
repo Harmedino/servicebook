@@ -5,6 +5,7 @@ import { Service } from "../models/Service";
 import { Staff } from "../models/Staff";
 import { sendEmail } from "./email";
 import { bookingReminderEmail } from "../emails/booking";
+import { emailsAllowed } from "../lib/demo";
 
 const REMINDER_WINDOW_HOURS = 24;
 const CHECK_INTERVAL_MS = 15 * 60 * 1000; // every 15 minutes — not a "few seconds" poll
@@ -39,7 +40,7 @@ export async function sendDueReminders(): Promise<void> {
 
     // eslint-disable-next-line no-await-in-loop
     const business = await Business.findById(claimed.businessId);
-    if (!business || !business.emailNotificationsEnabled || !business.notifyCustomerReminder) {
+    if (!business || !emailsAllowed(business) || !business.notifyCustomerReminder) {
       continue;
     }
 
