@@ -21,6 +21,8 @@ import { ensureAccessToken, scheduleDemoReply, toChatMessage } from "../lib/book
 import { emailsAllowed } from "../lib/demo";
 import { sendEmail } from "../services/email";
 import { newMessageEmail } from "../emails/message";
+import { notify } from "../lib/notify";
+import { formatInTimeZone } from "date-fns-tz";
 import { webAppUrl } from "../config/env";
 
 const messageSchema = z.object({ body: z.string().trim().min(1, "Write a message first").max(1000, "Keep it under 1000 characters") });
@@ -108,7 +110,17 @@ publicBookingChatRouter.post(
       body,
     });
 
-    const business = await Business.findById(booking.businessId).select("slug");
+    const [business, customer] = await Promise.all([
+      Business.findById(booking.businessId).select("slug"),
+      Customer.findById(booking.customerId).select("name"),
+    ]);
+    await notify({
+      businessId: booking.businessId,
+      type: "message",
+      title: `Message from ${customer?.name ?? "a customer"}`,
+      body: body.length > 120 ? `${body.slice(0, 117)}…` : body,
+      link: "/inbox?tab=messages",
+    });
     if (business) scheduleDemoReply({ businessSlug: business.slug, booking, customerText: body });
 
     const response: ChatMessageResponse = { message: toChatMessage(message) };
@@ -126,6 +138,17 @@ publicBookingChatRouter.post(
     }
     booking.status = "CANCELLED";
     await booking.save();
+    const [customer, owner] = await Promise.all([
+      Customer.findById(booking.customerId).select("name"),
+      Business.findById(booking.businessId).select("timezone"),
+    ]);
+    await notify({
+      businessId: booking.businessId,
+      type: "cancellation",
+      title: `${customer?.name ?? "A customer"} cancelled`,
+      body: `${booking.serviceName ?? "Appointment"} · ${formatInTimeZone(booking.startTime, owner?.timezone ?? "UTC", "EEE d MMM, h:mm a")}`,
+      link: "/bookings",
+    });
     await Message.create({
       businessId: booking.businessId,
       bookingId: booking._id,

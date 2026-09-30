@@ -17,6 +17,7 @@ import { Customer } from "../models/Customer";
 import { Booking, type BookingStatus } from "../models/Booking";
 import { Enquiry } from "../models/Enquiry";
 import { Message } from "../models/Message";
+import { Notification } from "../models/Notification";
 
 import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_SLUG } from "../lib/demo";
 
@@ -65,6 +66,7 @@ export async function seedDemo(): Promise<void> {
         Customer.deleteMany({ businessId: business.id }),
         Enquiry.deleteMany({ businessId: business.id }),
         Message.deleteMany({ businessId: business.id }),
+        Notification.deleteMany({ businessId: business.id }),
         Service.deleteMany({ businessId: business.id }),
         StaffAvailability.deleteMany({ staffId: { $in: staffIds } }),
         Staff.deleteMany({ businessId: business.id }),
@@ -207,6 +209,16 @@ export async function seedDemo(): Promise<void> {
       ...(thread.reply ? [{ ...base, from: "business", body: thread.reply, readAt: null, createdAt: at(thread.minutesAgo - 6) }] : []),
     ]);
   }
+
+  // Recent activity for the notification bell.
+  const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+  await Notification.insertMany([
+    { businessId: business.id, type: "message", title: "Message from Nneka Nwachukwu", body: "I might be 10 minutes late because of traffic, is that ok?", link: "/inbox?tab=messages", createdAt: ago(6) },
+    { businessId: business.id, type: "enquiry", title: "A customer wants to chat on Instagram", body: "Knotless Braids · Do you have space this Saturday morning?", link: "/inbox?tab=requests", createdAt: ago(14) },
+    { businessId: business.id, type: "booking", title: "New booking: Signature Haircut", body: "Daniel Adebayo · with Kelechi Nwosu", link: "/bookings", createdAt: ago(75) },
+    { businessId: business.id, type: "signup", title: "Yemi Ogunleye joined your client list", body: "From your join link", link: "/customers?sort=newest", createdAt: ago(160), readAt: ago(120) },
+    { businessId: business.id, type: "cancellation", title: "Tobi Lawal cancelled", body: "Gel Manicure · tomorrow", link: "/bookings", createdAt: ago(300), readAt: ago(200) },
+  ]);
 
   // A few chats started from the booking page, so the Inbox isn't empty.
   const enquiries = [

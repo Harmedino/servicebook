@@ -16,6 +16,7 @@ import { dashboardRouter } from "./routes/dashboard";
 import { uploadsRouter } from "./routes/uploads";
 import { enquiriesRouter } from "./routes/enquiries";
 import { roadmapRouter } from "./routes/roadmap";
+import { notificationsRouter } from "./routes/notifications";
 import { bookingMessagesRouter, conversationsRouter, publicBookingChatRouter } from "./routes/bookingChat";
 
 export function createApp() {
@@ -63,6 +64,7 @@ export function createApp() {
   app.use("/api/uploads", uploadsRouter);
   app.use("/api/enquiries", enquiriesRouter);
   app.use("/api/roadmap", roadmapRouter);
+  app.use("/api/notifications", notificationsRouter);
 
   // Feature routers mount here as they're built (payments, notifications, ...).
 
