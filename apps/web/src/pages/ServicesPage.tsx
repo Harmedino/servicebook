@@ -14,6 +14,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { ServiceThumb } from "../components/ServiceThumb";
+import { useNewParam } from "../lib/useNewParam";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -110,6 +111,8 @@ export function ServicesPage() {
     return service.staffIds.map((id) => staffNameById.get(id) ?? "Unknown").join(", ");
   }
 
+  useNewParam(openCreateModal);
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -201,7 +204,7 @@ export function ServicesPage() {
                   <tr key={service.id}>
                     <td className="px-4 py-3 font-medium text-stone-900">
                       <Link to={`/services/${service.id}`} className="flex items-center gap-3 hover:text-brand-700">
-                        <ServiceThumb name={service.name} imageUrl={service.imageUrl} className="h-10 w-10 rounded-lg" iconClassName="h-4 w-4" />
+                        <ServiceThumb name={service.name} imageUrl={service.imageUrl} className="h-10 w-10 rounded-lg" />
                         {service.name}
                       </Link>
                     </td>

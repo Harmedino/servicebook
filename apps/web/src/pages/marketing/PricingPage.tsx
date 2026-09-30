@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Minus, Plus, Sparkles } from "lucide-react";
+import { Check, Minus, Plus } from "lucide-react";
 import { MarketingLayout } from "../../components/marketing/MarketingLayout";
 import { CtaBand, Reveal, SectionHeading } from "../../components/marketing/primitives";
 
@@ -126,13 +126,9 @@ export function PricingPage() {
         <div className="absolute inset-x-0 top-0 h-[430px] bg-ink-grid sm:h-[400px]" aria-hidden="true" />
         <div className="relative mx-auto max-w-6xl px-4 pt-14 sm:px-6 sm:pt-20 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-highlight">Pricing</p>
             <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">Simple pricing, in Naira.</h1>
             <p className="mx-auto mt-5 max-w-lg text-base text-white/60 sm:text-lg">Start free. Upgrade when your team grows. Cancel whenever you like.</p>
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-highlight/15 px-4 py-2 text-sm font-medium text-highlight">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-              Early access: every feature is free for everyone right now
-            </div>
+            <p className="mt-4 text-sm text-highlight">While we&apos;re in early access, every account gets every feature for free.</p>
           </motion.div>
 
           <div className="mt-8 flex justify-center">
@@ -244,7 +240,7 @@ export function PricingPage() {
         </div>
       </section>
 
-      <CtaBand title="Start free today." description="No card needed. Set up your business in about five minutes." />
+      <CtaBand title="Start on the free plan." description="No card needed. You can change plans later." />
     </MarketingLayout>
   );
 }

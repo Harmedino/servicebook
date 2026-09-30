@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -30,6 +30,9 @@ import { imageSrc } from "../lib/images";
 import { activeChannels } from "../lib/socials";
 import { SocialIcon } from "../components/SocialIcon";
 import { ChatSheet } from "../components/ChatSheet";
+import { CustomerChat } from "../components/chat/CustomerChat";
+import { DemoBar } from "../components/DemoBar";
+import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
 
 type Step = "service" | "datetime" | "details" | "review" | "confirmation";
 
@@ -102,34 +105,6 @@ function StepHeader({ title, subtitle, onBack }: { title: string; subtitle?: str
   );
 }
 
-function Confetti() {
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 28 }, (_, i) => ({
-        x: (Math.random() - 0.5) * 360,
-        y: -120 - Math.random() * 160,
-        r: Math.random() * 540,
-        color: ["#0f8250", "#c5f36b", "#16a263", "#f59e0b", "#0c1a14"][i % 5],
-        delay: Math.random() * 0.15,
-      })),
-    [],
-  );
-  return (
-    <div className="pointer-events-none absolute inset-x-0 top-10 flex justify-center" aria-hidden="true">
-      {pieces.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute h-2 w-1.5 rounded-sm"
-          style={{ backgroundColor: p.color }}
-          initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
-          animate={{ x: p.x, y: [0, p.y, p.y + 260], opacity: [1, 1, 0], rotate: p.r }}
-          transition={{ duration: 1.6, delay: p.delay, ease: "easeOut" }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function SummaryRow({ icon: Icon, label, value, sub }: { icon: typeof Clock; label: string; value?: ReactNode; sub?: ReactNode }) {
   return (
     <div className="flex gap-3">
@@ -169,6 +144,8 @@ export function PublicBookingPage() {
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const embedded = isEmbedded();
 
   const { data: staffData, isPending: isStaffPending } = usePublicStaff(slug, serviceId ?? undefined);
   const {
@@ -192,6 +169,11 @@ export function PublicBookingPage() {
   useEffect(() => {
     if (business) document.title = `Book with ${business.name}`;
   }, [business]);
+
+  // The demo tour links here with ?chat=1 to open "Chat with us" straight away.
+  useEffect(() => {
+    if (business && searchParams.get("chat") === "1" && activeChannels(business.socials).length > 0) setIsChatOpen(true);
+  }, [business, searchParams]);
 
   const selectedService = services.find((service) => service.id === serviceId) ?? null;
   const selectedStaff = staffId && staffId !== ANY_STAFF ? (staff.find((member) => member.id === staffId) ?? null) : null;
@@ -312,8 +294,9 @@ export function PublicBookingPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pb-16">
+      {isDemoSlug(business.slug) && <DemoBar />}
       {/* Branded header */}
-      <header className="relative overflow-hidden bg-ink-grid pb-24 pt-8 text-white sm:pb-40">
+      <header className="relative h-40 overflow-hidden bg-ink text-white sm:h-56">
         {business.coverImageUrl && (
           <>
             <motion.img
@@ -324,13 +307,9 @@ export function PublicBookingPage() {
               transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" aria-hidden="true" />
+            <div className="absolute inset-0 bg-black/25" aria-hidden="true" />
           </>
         )}
-        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-4">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Online booking</span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">Instant confirmation</span>
-        </div>
       </header>
 
       <div className="relative mx-auto -mt-20 max-w-5xl px-4">
@@ -413,20 +392,15 @@ export function PublicBookingPage() {
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
             <div className="min-w-0">
               {step !== "confirmation" && (
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span className="text-brand-700">
-                      Step {stepIndex + 1} of {STEPS.length} · {STEPS[stepIndex]?.label}
-                    </span>
-                    <span className="text-stone-400">{Math.round((stepIndex / STEPS.length) * 100)}%</span>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex flex-1 gap-1.5" aria-hidden="true">
+                    {STEPS.map((entry, index) => (
+                      <span key={entry.key} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${index <= stepIndex ? "bg-brand-600" : "bg-stone-200"}`} />
+                    ))}
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200">
-                    <motion.div
-                      className="h-full rounded-full bg-brand-500"
-                      animate={{ width: `${((stepIndex + 0.5) / STEPS.length) * 100}%` }}
-                      transition={{ type: "spring", stiffness: 120, damping: 20 }}
-                    />
-                  </div>
+                  <span className="shrink-0 text-xs font-medium text-stone-500">
+                    {STEPS[stepIndex]?.label} · {stepIndex + 1}/{STEPS.length}
+                  </span>
                 </div>
               )}
 
@@ -680,62 +654,72 @@ export function PublicBookingPage() {
                     )}
 
                     {step === "confirmation" && confirmation && (
-                      <div className="relative py-4 text-center">
-                        <Confetti />
-                        <motion.div
-                          initial={{ scale: 0, rotate: -45 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          transition={{ type: "spring", stiffness: 260, damping: 15 }}
-                          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_12px_30px_-10px_rgb(16_185_129/0.8)]"
-                        >
-                          <Check className="h-8 w-8" strokeWidth={3} aria-hidden="true" />
-                        </motion.div>
-                        <h2 className="mt-5 text-2xl font-extrabold text-stone-900">You&apos;re booked!</h2>
-                        <p className="mt-1 text-sm text-stone-500">
-                          {confirmation.customerEmail
-                            ? `A confirmation is on its way to ${confirmation.customerEmail}.`
-                            : `${business.name} can see your booking now.`}
-                        </p>
-
-                        <div className="mx-auto mt-6 max-w-sm space-y-4 rounded-2xl bg-stone-50 p-5 text-left">
-                          <SummaryRow icon={Sparkles} label="Service" value={confirmation.serviceName} sub={`with ${confirmation.staffName}`} />
-                          <SummaryRow
-                            icon={CalendarDays}
-                            label="When"
-                            value={formatInTimeZone(new Date(confirmation.startTime), timezone, "EEEE, MMMM d")}
-                            sub={`${formatInTimeZone(new Date(confirmation.startTime), timezone, "h:mm a")} – ${formatInTimeZone(new Date(confirmation.endTime), timezone, "h:mm a")}`}
-                          />
+                      <div>
+                        <div className="flex items-start gap-3">
+                          <motion.span
+                            initial={{ scale: 0.6, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 320, damping: 20 }}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white"
+                          >
+                            <Check className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+                          </motion.span>
+                          <div className="min-w-0">
+                            <h2 className="text-xl font-semibold text-stone-900">You&apos;re booked, {confirmation.customerName.split(" ")[0]}</h2>
+                            <p className="mt-0.5 text-sm text-stone-600">
+                              {confirmation.serviceName} with {confirmation.staffName},{" "}
+                              {formatInTimeZone(new Date(confirmation.startTime), timezone, "EEE d MMM 'at' h:mm a")}
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="mx-auto mt-6 flex max-w-sm flex-col gap-2 sm:flex-row">
+                        <div className="mt-5 rounded-2xl border border-stone-200 p-3 sm:p-4">
+                          <p className="px-1 text-sm font-semibold text-stone-900">Message {business.name}</p>
+                          <p className="px-1 text-xs text-stone-500">Questions before your visit? Ask here. Replies also appear on your booking page.</p>
+                          <CustomerChat token={confirmation.accessToken} className="mt-1 h-[340px]" />
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Link
+                            to={`/my-booking/${confirmation.accessToken}`}
+                            target={embedded ? "_top" : undefined}
+                            className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white hover:bg-ink-700 dark:bg-highlight dark:text-ink"
+                          >
+                            Open my booking page
+                          </Link>
                           <a
                             href={googleCalendarUrl(
                               `${confirmation.serviceName} at ${business.name}`,
                               confirmation.startTime,
                               confirmation.endTime,
-                              `With ${confirmation.staffName}. Booked via ServiceBook.`,
+                              `With ${confirmation.staffName}.`,
                               business.address,
                             )}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
+                            className="inline-flex h-10 items-center gap-2 rounded-full border border-stone-300 px-4 text-sm font-medium text-stone-700 hover:bg-stone-50"
                           >
                             <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add to calendar
                           </a>
-                          <a
-                            href={`https://wa.me/?text=${encodeURIComponent(
-                              `I just booked ${confirmation.serviceName} at ${business.name} on ${formatInTimeZone(new Date(confirmation.startTime), timezone, "EEE d MMM, h:mm a")}. Book yours: ${window.location.href}`,
-                            )}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
-                          >
-                            <MessageCircle className="h-4 w-4" aria-hidden="true" /> Share
-                          </a>
+                          <button type="button" onClick={startOver} className="inline-flex h-10 items-center rounded-full px-3 text-sm font-medium text-stone-600 hover:bg-stone-100">
+                            Book another
+                          </button>
                         </div>
-                        <button type="button" onClick={startOver} className="mt-5 text-sm font-medium text-brand-700 hover:underline">
-                          Book another appointment
-                        </button>
+
+                        {isDemoSlug(business.slug) && (
+                          <div data-demo-banner className="mt-5 flex flex-col gap-3 rounded-2xl bg-ink p-4 text-white sm:flex-row sm:items-center">
+                            <p className="flex-1 text-sm text-white/75">
+                              <span className="font-semibold text-white">Now switch sides.</span> See this booking and your messages the way the salon owner sees them.
+                            </p>
+                            <a
+                              href={ownerDemoPath("/inbox?tab=messages")}
+                              target={embedded ? "_top" : undefined}
+                              className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-highlight px-4 text-sm font-semibold text-ink"
+                            >
+                              Open the owner&apos;s inbox
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                   </motion.div>
@@ -783,7 +767,7 @@ export function PublicBookingPage() {
           {isChatOpen && <ChatSheet slug={slug} business={business} services={services} onClose={() => setIsChatOpen(false)} />}
         </AnimatePresence>
 
-        <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition-colors hover:text-stone-600">
+        <a href="/" target={embedded ? "_top" : undefined} className="mx-auto mt-10 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition-colors hover:text-stone-600">
           Powered by <LogoMark className="h-4 w-4" /> <span className="font-semibold text-stone-500">ServiceBook</span>
         </a>
       </div>

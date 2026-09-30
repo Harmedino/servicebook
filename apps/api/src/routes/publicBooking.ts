@@ -20,6 +20,7 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, isDuplic
 import { Booking } from "../models/Booking";
 import { Enquiry } from "../models/Enquiry";
 import { SOCIAL_CHANNELS, toSocialLinks } from "../lib/socials";
+import { ensureAccessToken, postWelcomeMessage } from "../lib/bookingChat";
 import { asyncHandler } from "../utils/asyncHandler";
 import { objectIdField } from "../lib/validation";
 import { computeAvailableSlots, createValidatedBooking, getLocalDateAndTime, localDayStartUtc, nextDateKey } from "../lib/bookingEngine";
@@ -428,6 +429,15 @@ publicBookingRouter.post(
       throw lastError instanceof ConflictError ? lastError : new ConflictError("That time was just taken. Please pick another one.");
     }
     const { booking, service, staff } = result;
+    const accessToken = await ensureAccessToken(booking);
+    // Start the booking's chat with a reply, so the customer isn't left with silence.
+    await postWelcomeMessage({
+      booking,
+      businessTimezone: business.timezone,
+      customerName: customer.name,
+      serviceName: service.name,
+      staffName: staff.name,
+    }).catch((error: unknown) => console.warn("Welcome message failed:", error));
 
     const confirmation: PublicBookingConfirmation = {
       serviceName: service.name,
@@ -437,6 +447,7 @@ publicBookingRouter.post(
       customerName: customer.name,
       customerEmail: customer.email ?? undefined,
       status: booking.status,
+      accessToken,
     };
 
     const body: PublicBookingConfirmationResponse = { confirmation };

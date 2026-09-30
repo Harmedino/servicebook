@@ -14,6 +14,7 @@ import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
+import { useNewParam } from "../lib/useNewParam";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -121,6 +122,8 @@ export function StaffPage() {
   const assignableServices = allServices.filter(
     (service) => service.isActive || (modalStaff?.serviceIds.includes(service.id) ?? false),
   );
+
+  useNewParam(openAddModal);
 
   return (
     <DashboardLayout>

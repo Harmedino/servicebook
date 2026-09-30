@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { ChevronRight, Link2, MessageCircle, Plus, Share2 } from "lucide-react";
 import type { CustomerAppointmentFilter, CustomerProfile, CustomerSort } from "@servicebook/types";
@@ -14,6 +14,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
 import { InviteCustomersModal } from "../components/InviteCustomersModal";
+import { useNewParam } from "../lib/useNewParam";
 
 const PAGE_SIZE = 25;
 
@@ -33,7 +34,8 @@ const SORT_OPTIONS: { value: CustomerSort; label: string }[] = [
 export function CustomersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sort, setSort] = useState<CustomerSort>("recent");
+  const [searchParams] = useSearchParams();
+  const [sort, setSort] = useState<CustomerSort>(() => (SORT_OPTIONS.some((option) => option.value === searchParams.get("sort")) ? (searchParams.get("sort") as CustomerSort) : "recent"));
   const [filter, setFilter] = useState<CustomerAppointmentFilter>("all");
   const [page, setPage] = useState(1);
 
@@ -107,6 +109,8 @@ export function CustomersPage() {
     return iso ? formatInTimeZone(new Date(iso), timezone, "MMM d, yyyy") : "—";
   }
 
+  useNewParam(openAddModal);
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -128,9 +132,6 @@ export function CustomersPage() {
 
       {business && (
         <div className="mt-5 flex flex-col gap-4 rounded-2xl bg-ink p-4 text-white sm:flex-row sm:items-center sm:p-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-highlight text-ink">
-            <Link2 className="h-5 w-5" aria-hidden="true" />
-          </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">Let customers add themselves</p>
             <p className="mt-0.5 text-sm text-white/60">

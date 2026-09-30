@@ -13,13 +13,13 @@ import {
   Moon,
   MoreHorizontal,
   Plus,
+  Map as MapIcon,
   Scissors,
   Settings,
   Share2,
   Sun,
   UserRound,
   Users,
-  X,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
@@ -27,7 +27,10 @@ import { useTheme } from "../lib/theme";
 import { imageSrc } from "../lib/images";
 import { Logo, LogoMark } from "./Logo";
 import { InviteCustomersModal } from "./InviteCustomersModal";
+import { MoreSheet, QuickActionsSheet } from "./MobileSheets";
 import { useEnquiries } from "../lib/enquiries";
+import { useConversations } from "../lib/bookingChat";
+import { useIsDemoAccount } from "../lib/demo";
 
 interface NavItem {
   to: string;
@@ -40,11 +43,12 @@ interface NavGroup {
   items: NavItem[];
 }
 
+// Unlabelled groups: the day-to-day screens, then settings and extras.
 const NAV_GROUPS: NavGroup[] = [
-  { label: "Overview", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] },
   {
-    label: "Manage",
+    label: "",
     items: [
+      { to: "/dashboard", label: "Home", icon: LayoutDashboard },
       { to: "/inbox", label: "Inbox", icon: Inbox },
       { to: "/bookings", label: "Bookings", icon: ClipboardList },
       { to: "/calendar", label: "Calendar", icon: CalendarDays },
@@ -53,17 +57,22 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/staff", label: "Staff", icon: UserRound },
     ],
   },
-  { label: "Settings", items: [{ to: "/settings", label: "Settings", icon: Settings }] },
+  {
+    label: "",
+    items: [
+      { to: "/settings", label: "Settings", icon: Settings },
+      { to: "/roadmap", label: "Roadmap & ideas", icon: MapIcon },
+    ],
+  },
 ];
 
 const ALL_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
-// Bottom tab bar on phones: the four most-used screens plus "More".
+// Bottom tab bar on phones: Home, Calendar, the + menu, Inbox and More.
 const MOBILE_TABS: NavItem[] = [
   { to: "/dashboard", label: "Home", icon: LayoutDashboard },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/bookings", label: "Bookings", icon: ClipboardList },
-  { to: "/customers", label: "Clients", icon: Users },
+  { to: "/inbox", label: "Inbox", icon: Inbox },
 ];
 
 function isNavItemActive(pathname: string, to: string): boolean {
@@ -98,11 +107,11 @@ function ThemeButton({ className = "" }: { className?: string }) {
 
 function SidebarNav({ pathname, onNavigate, badges = {} }: { pathname: string; onNavigate?: () => void; badges?: Record<string, number> }) {
   return (
-    <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-      {NAV_GROUPS.map((group) => (
-        <div key={group.label}>
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-white/35">{group.label}</p>
-          <div className="mt-2 space-y-0.5">
+    <nav className="flex-1 space-y-5 divide-y divide-white/10 overflow-y-auto px-3 py-4 [&>*:not(:first-child)]:pt-5">
+      {NAV_GROUPS.map((group, groupIndex) => (
+        <div key={groupIndex}>
+          {group.label && <p className="mb-2 px-3 text-xs font-medium text-white/40">{group.label}</p>}
+          <div className="space-y-0.5">
             {group.items.map((item) => {
               const active = isNavItemActive(pathname, item.to);
               const Icon = item.icon;
@@ -235,8 +244,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const isDemo = useIsDemoAccount();
   const { data: enquiryData } = useEnquiries("open");
-  const newEnquiries = enquiryData?.counts.new ?? 0;
+  const { data: conversationData } = useConversations();
+  // One badge for everything waiting in the Inbox: new chat requests and unread booking messages.
+  const newEnquiries = (enquiryData?.counts.new ?? 0) + (conversationData?.unread ?? 0);
   const badges = { "/inbox": newEnquiries };
 
   function handleLogout() {
@@ -261,6 +274,26 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {isDemo && (
+          <div data-demo-banner className="flex items-center gap-3 bg-highlight px-4 py-2 text-ink">
+            <p className="min-w-0 flex-1 truncate text-xs font-medium sm:text-sm">
+              <span className="font-semibold">Demo salon.</span> <span className="hidden sm:inline">Click around and change anything; it resets every day.</span>
+            </p>
+            <Link to="/demo" className="shrink-0 text-xs font-semibold underline-offset-2 hover:underline sm:text-sm">
+              Back to site
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate("/register");
+              }}
+              className="shrink-0 rounded-full bg-ink px-3 py-1 text-xs font-semibold text-white sm:text-sm"
+            >
+              Start free
+            </button>
+          </div>
+        )}
         {/* Mobile header */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-ink px-4 lg:hidden">
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
@@ -283,88 +316,68 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-surface/90 backdrop-blur-xl lg:hidden">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-surface/95 backdrop-blur-xl lg:hidden">
         <div className="grid grid-cols-5 items-end">
           {MOBILE_TABS.slice(0, 2).map((tab) => (
             <TabLink key={tab.to} tab={tab} active={isNavItemActive(location.pathname, tab.to)} />
           ))}
           <div className="flex justify-center">
-            <Link
-              to="/bookings?new=1"
-              aria-label="New booking"
-              className="-mt-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-highlight shadow-[0_12px_24px_-8px_rgb(12_26_20/0.6)] ring-4 ring-surface transition active:scale-95 dark:bg-highlight dark:text-ink"
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen((open) => !open)}
+              aria-label={isCreateOpen ? "Close quick actions" : "Quick actions"}
+              aria-expanded={isCreateOpen}
+              className="relative z-[60] -mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-highlight shadow-[0_10px_24px_-8px_rgb(12_26_20/0.6)] ring-4 ring-surface transition active:scale-95 dark:bg-highlight dark:text-ink"
             >
-              <Plus className="h-6 w-6" aria-hidden="true" />
-            </Link>
+              <motion.span animate={{ rotate: isCreateOpen ? 45 : 0 }} transition={{ type: "spring", stiffness: 400, damping: 22 }}>
+                <Plus className="h-6 w-6" strokeWidth={2.25} aria-hidden="true" />
+              </motion.span>
+            </button>
           </div>
-          <TabLink tab={MOBILE_TABS[2]} active={isNavItemActive(location.pathname, MOBILE_TABS[2].to)} />
+          <TabLink tab={MOBILE_TABS[2]} active={isNavItemActive(location.pathname, MOBILE_TABS[2].to)} badge={newEnquiries} />
           <button
             type="button"
             onClick={() => setIsMoreOpen(true)}
-            className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${moreActive ? "text-brand-700" : "text-stone-500"}`}
+            className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${moreActive ? "text-stone-900" : "text-stone-500"}`}
           >
-            <span className="relative">
-              <MoreHorizontal className="h-[22px] w-[22px]" aria-hidden="true" />
-              {newEnquiries > 0 && <span className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-600 ring-2 ring-surface" />}
-            </span>
+            <MoreHorizontal className="h-[22px] w-[22px]" aria-hidden="true" />
             More
           </button>
         </div>
       </nav>
 
-      {/* Mobile "More" sheet */}
-      <AnimatePresence>
-        {isMoreOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            <motion.div
-              className="absolute inset-0 bg-black/50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMoreOpen(false)}
-            />
-            <motion.div
-              className="pb-safe absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-ink"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 320 }}
-            >
-              <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-white/20" />
-              <div className="flex items-center justify-between px-5 pt-3">
-                <span className="font-display text-lg font-bold text-white">Menu</span>
-                <button
-                  type="button"
-                  onClick={() => setIsMoreOpen(false)}
-                  aria-label="Close menu"
-                  className="rounded-lg p-1.5 text-white/60 hover:bg-white/10"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
-              <SidebarNav pathname={location.pathname} onNavigate={() => setIsMoreOpen(false)} badges={badges} />
-              <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} businessName={business?.name} />
-              <AccountArea businessName={business?.name} logoUrl={business?.logoUrl} userName={user?.name} onLogout={handleLogout} />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <QuickActionsSheet open={isCreateOpen} onClose={() => setIsCreateOpen(false)} slug={business?.slug} businessName={business?.name} />
+      <MoreSheet
+        open={isMoreOpen}
+        onClose={() => setIsMoreOpen(false)}
+        pathname={location.pathname}
+        business={business ? { name: business.name, slug: business.slug, logoUrl: business.logoUrl } : undefined}
+        userName={user?.name}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
 
-function TabLink({ tab, active }: { tab: NavItem; active: boolean }) {
+function TabLink({ tab, active, badge = 0 }: { tab: NavItem; active: boolean; badge?: number }) {
   const Icon = tab.icon;
   return (
     <Link
       to={tab.to}
       aria-current={active ? "page" : undefined}
-      className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${active ? "text-brand-700" : "text-stone-500"}`}
+      className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${active ? "text-stone-900" : "text-stone-500"}`}
     >
       {active && (
-        <motion.span layoutId="tab-indicator" className="absolute top-0 h-0.5 w-8 rounded-full bg-brand-600" transition={{ type: "spring", stiffness: 500, damping: 35 }} />
+        <motion.span layoutId="tab-indicator" className="absolute top-0 h-0.5 w-8 rounded-full bg-stone-900" transition={{ type: "spring", stiffness: 500, damping: 35 }} />
       )}
-      <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
+      <span className="relative">
+        <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+        {badge > 0 && (
+          <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white ring-2 ring-surface">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </span>
       {tab.label}
     </Link>
   );

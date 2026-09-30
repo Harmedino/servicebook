@@ -61,7 +61,7 @@
 }
 
 @utility section-label {
-  @apply text-xs font-semibold uppercase tracking-wider text-stone-400;
+  @apply text-[13px] font-medium text-stone-500;
 }
 
 @keyframes fade-in-up {

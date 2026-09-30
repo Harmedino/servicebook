@@ -355,6 +355,8 @@ export interface PublicBookingConfirmation {
   customerName: string;
   customerEmail?: string;
   status: BookingStatus;
+  /** Opens the customer's private booking page (/my-booking/:token) with the chat. */
+  accessToken: string;
 }
 
 export interface PublicBookingConfirmationResponse {
@@ -405,4 +407,101 @@ export interface EnquiryListResponse {
 
 export interface EnquiryResponse {
   enquiry: EnquiryProfile;
+}
+
+// ---- Booking chat ------------------------------------------------------------
+
+export type MessageSender = "customer" | "business";
+
+export interface ChatMessage {
+  id: string;
+  from: MessageSender;
+  body: string;
+  /** Sent automatically (welcome message, demo replies) rather than typed by a person. */
+  automated: boolean;
+  createdAt: string;
+}
+
+export interface ChatMessageResponse {
+  message: ChatMessage;
+}
+
+/** GET /api/public/bookings/:token — what the customer sees on their private booking page. */
+export interface PublicBookingThreadResponse {
+  booking: {
+    serviceName: string;
+    staffName: string;
+    startTime: string;
+    endTime: string;
+    status: BookingStatus;
+    price?: number;
+    customerName: string;
+    canCancel: boolean;
+  };
+  business: {
+    name: string;
+    slug: string;
+    logoUrl?: string;
+    phone?: string;
+    address?: string;
+    timezone: string;
+    currency: string;
+  };
+  messages: ChatMessage[];
+}
+
+/** GET /api/bookings/:id/messages — the owner's view of one booking's chat. */
+export interface BookingMessagesResponse {
+  messages: ChatMessage[];
+  /** For sharing the customer's private booking link. */
+  accessToken: string;
+}
+
+export interface ConversationSummary {
+  bookingId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone?: string;
+  serviceName: string;
+  startTime: string;
+  status: BookingStatus;
+  lastMessage: ChatMessage;
+  unread: number;
+}
+
+export interface ConversationListResponse {
+  conversations: ConversationSummary[];
+  unread: number;
+}
+
+// ---- Roadmap -----------------------------------------------------------------
+
+export type IdeaStatus = "idea" | "planned" | "in_progress" | "shipped";
+export type IdeaKind = "feature" | "design";
+
+export interface IdeaProfile {
+  id: string;
+  title: string;
+  description?: string;
+  kind: IdeaKind;
+  status: IdeaStatus;
+  votes: number;
+  /** Business name of the owner who suggested it, if it came from a user. */
+  authorName?: string;
+  shippedAt?: string;
+  createdAt: string;
+  hidden?: boolean;
+}
+
+export interface RoadmapResponse {
+  items: IdeaProfile[];
+  /** Ids the caller has voted for. */
+  myVotes: string[];
+  isAdmin: boolean;
+  canSuggest: boolean;
+}
+
+export interface IdeaResponse {
+  item: IdeaProfile;
+  voted?: boolean;
 }

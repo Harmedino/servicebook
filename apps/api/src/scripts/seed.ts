@@ -16,9 +16,11 @@ import { StaffAvailability } from "../models/StaffAvailability";
 import { Customer } from "../models/Customer";
 import { Booking, type BookingStatus } from "../models/Booking";
 import { Enquiry } from "../models/Enquiry";
+import { Message } from "../models/Message";
 
-export const DEMO_EMAIL = "demo@servicebook.app";
-export const DEMO_PASSWORD = "password123";
+import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_SLUG } from "../lib/demo";
+
+export { DEMO_EMAIL, DEMO_PASSWORD };
 const TIMEZONE = "Africa/Lagos";
 
 const SERVICES = [
@@ -62,6 +64,7 @@ export async function seedDemo(): Promise<void> {
         Booking.deleteMany({ businessId: business.id }),
         Customer.deleteMany({ businessId: business.id }),
         Enquiry.deleteMany({ businessId: business.id }),
+        Message.deleteMany({ businessId: business.id }),
         Service.deleteMany({ businessId: business.id }),
         StaffAvailability.deleteMany({ staffId: { $in: staffIds } }),
         Staff.deleteMany({ businessId: business.id }),
@@ -76,7 +79,7 @@ export async function seedDemo(): Promise<void> {
   const business = await Business.create({
     ownerId: owner.id,
     name: "Glow Studio Lekki",
-    slug: "glow-studio-lekki",
+    slug: DEMO_SLUG,
     description: "Hair, nails, makeup and massage in the heart of Lekki Phase 1.",
     phone: "+234 803 555 0100",
     email: "hello@glowstudio.ng",
@@ -84,6 +87,7 @@ export async function seedDemo(): Promise<void> {
     timezone: TIMEZONE,
     currency: "NGN",
     ownerStaffAnswered: true,
+    emailNotificationsEnabled: false,
     socials: {
       instagram: "servicebook_demo_salon",
       tiktok: "servicebook_demo_salon",
@@ -174,6 +178,36 @@ export async function seedDemo(): Promise<void> {
   }
   await Booking.insertMany(bookings);
 
+  // A few booking chats: the automatic welcome, the customer's question and, for some, the salon's reply.
+  const inserted = await Booking.find({ businessId: business.id, startTime: { $gt: new Date() }, status: { $in: ["PENDING", "CONFIRMED"] } })
+    .sort({ startTime: 1 })
+    .limit(3);
+  const threads = [
+    { ask: "Hi, can I bring a reference photo for the style I want?", reply: "Of course! Send it here or show Amaka when you arrive.", minutesAgo: 190 },
+    { ask: "Is there parking close by? Coming from Ajah.", reply: "Yes, free parking right in front of the building.", minutesAgo: 75 },
+    { ask: "I might be 10 minutes late because of traffic, is that ok?", reply: null, minutesAgo: 6 },
+  ];
+  for (const [index, booking] of inserted.entries()) {
+    const thread = threads[index];
+    const customer = customers.find((entry) => entry._id.equals(booking.customerId));
+    const at = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+    booking.set("accessToken", `demo${index}${booking.id}`);
+    await booking.save();
+    const base = { businessId: business.id, bookingId: booking._id, customerId: booking.customerId };
+    await Message.insertMany([
+      {
+        ...base,
+        from: "business",
+        automated: true,
+        body: `Hi ${customer?.name.split(" ")[0] ?? "there"}! Thanks for booking ${booking.serviceName}. Need anything before then? Reply here and we'll get back to you.`,
+        readAt: at(thread.minutesAgo),
+        createdAt: at(thread.minutesAgo + 30),
+      },
+      { ...base, from: "customer", body: thread.ask, readAt: thread.reply ? at(thread.minutesAgo - 5) : null, createdAt: at(thread.minutesAgo) },
+      ...(thread.reply ? [{ ...base, from: "business", body: thread.reply, readAt: null, createdAt: at(thread.minutesAgo - 6) }] : []),
+    ]);
+  }
+
   // A few chats started from the booking page, so the Inbox isn't empty.
   const enquiries = [
     { channel: "instagram", minutesAgo: 14, status: "new", service: 2, message: "Do you have space this Saturday morning? Mid-back length." },
@@ -207,10 +241,12 @@ export async function seedDemo(): Promise<void> {
   console.log(`Log in with ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
 }
 
+const DEMO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Keeps the public demo usable without anyone running the seed by hand:
- * creates it when missing, and rebuilds it once its schedule has drifted into
- * the past or visitors have deleted most of its services.
+ * creates it when missing, and rebuilds it every day, or sooner if visitors
+ * have paused online booking, renamed it or deleted most of its services.
  */
 export async function ensureDemo(): Promise<void> {
   const owner = await User.findOne({ email: DEMO_EMAIL });
@@ -220,8 +256,10 @@ export async function ensureDemo(): Promise<void> {
       Booking.exists({ businessId: business.id, startTime: { $gt: new Date(Date.now() + 3 * 86_400_000) } }),
       Service.countDocuments({ businessId: business.id, isActive: true }),
     ]);
-    if (upcoming && services >= 3) return;
-  } else if (await Business.exists({ slug: "glow-studio-lekki" })) {
+    const fresh = Date.now() - business.createdAt.getTime() < DEMO_MAX_AGE_MS;
+    const intact = business.isPublicBookingEnabled && business.name === "Glow Studio Lekki" && business.slug === DEMO_SLUG;
+    if (fresh && intact && upcoming && services >= 3) return;
+  } else if (await Business.exists({ slug: DEMO_SLUG })) {
     return; // Someone else owns the demo's slug; leave their business alone.
   }
   await seedDemo();

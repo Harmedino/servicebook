@@ -10,19 +10,39 @@ export const DEMO_JOIN_PATH = `/join/${DEMO_SLUG}`;
 const DEMO_EMAIL = "demo@servicebook.app";
 const DEMO_PASSWORD = "password123";
 
-/** Logs into the shared demo account and opens its dashboard. */
+export function isDemoSlug(slug: string | undefined): boolean {
+  return slug === DEMO_SLUG;
+}
+
+/** Link that signs into the demo owner account and opens `next` (e.g. "/inbox"). */
+export function ownerDemoPath(next = "/dashboard"): string {
+  return `/demo/owner?next=${encodeURIComponent(next)}`;
+}
+
+/** True while the signed-in account is the shared demo owner. */
+export function useIsDemoAccount(): boolean {
+  const { user } = useAuth();
+  return user?.email === DEMO_EMAIL;
+}
+
+/** True when a page is shown inside the /demo page's phone preview. */
+export function isEmbedded(): boolean {
+  return new URLSearchParams(window.location.search).get("embed") === "1";
+}
+
+/** Logs into the shared demo account and opens its dashboard (or `next`). */
 export function useDemoLogin() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function start() {
+  async function start(next = "/dashboard") {
     setIsLoading(true);
     setError(null);
     try {
       await login(DEMO_EMAIL, DEMO_PASSWORD);
-      navigate("/dashboard");
+      navigate(next.startsWith("/") ? next : "/dashboard", { replace: true });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "The demo is waking up. Try again in a few seconds.");
     } finally {

@@ -1,9 +1,14 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import { CalendarPlus, Inbox, MessageCircle, Phone, Settings2, UserRound } from "lucide-react";
-import type { EnquiryProfile, EnquiryStatus } from "@servicebook/types";
+import { ArrowLeft, CalendarPlus, Inbox, MessageCircle, MessagesSquare, Phone, Settings2, UserRound } from "lucide-react";
+import type { ConversationSummary, EnquiryProfile, EnquiryStatus } from "@servicebook/types";
+import { formatInTimeZone } from "date-fns-tz";
+import { useConversations } from "../lib/bookingChat";
+import { OwnerThread } from "../components/chat/OwnerThread";
+import { Avatar } from "../components/ui/Avatar";
+import { BookingStatusBadge } from "../components/ui/Badge";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -116,7 +121,7 @@ function EnquiryCard({ enquiry, businessWhatsapp }: { enquiry: EnquiryProfile; b
   );
 }
 
-export function InboxPage() {
+function ChatRequests() {
   const [filter, setFilter] = useState<EnquiryFilter>("open");
   const { data, isPending, isError } = useEnquiries(filter);
   const { data: businessData } = useMyBusiness();
@@ -133,16 +138,11 @@ export function InboxPage() {
   };
 
   return (
-    <DashboardLayout>
-      <PageHeader
-        title="Inbox"
-        description="Chats customers started from your booking page. Each one has a reference they quote in their message."
-        actions={
-          <Link to="/settings?tab=chat" className={buttonClassName("secondary", "md")}>
-            <Settings2 className="h-4 w-4" aria-hidden="true" /> Chat apps
-          </Link>
-        }
-      />
+    <>
+      <p className="mt-4 text-sm text-stone-500">
+        People who tapped &ldquo;Chat with us&rdquo; on your booking page. Each has a reference code they quote when they message you on WhatsApp,
+        Instagram and other apps.
+      </p>
 
       {business && channels.length <= 1 && (
         <div className="mt-5 flex flex-col gap-3 rounded-2xl bg-ink p-4 text-white sm:flex-row sm:items-center sm:p-5">
@@ -202,6 +202,178 @@ export function InboxPage() {
           </AnimatePresence>
         </ul>
       </div>
+    </>
+  );
+}
+
+function ConversationRow({ conversation, active, timezone, onSelect }: { conversation: ConversationSummary; active: boolean; timezone: string; onSelect: () => void }) {
+  const last = conversation.lastMessage;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors ${active ? "bg-stone-100" : "hover:bg-stone-50"}`}
+    >
+      <Avatar name={conversation.customerName} size="md" />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-2">
+          <span className={`truncate text-sm ${conversation.unread ? "font-semibold text-stone-900" : "font-medium text-stone-800"}`}>{conversation.customerName}</span>
+          <span className="ml-auto shrink-0 text-[11px] text-stone-400">{formatDistanceToNowStrict(new Date(last.createdAt))}</span>
+        </span>
+        <span className="block truncate text-xs text-stone-500">
+          {conversation.serviceName} · {formatInTimeZone(new Date(conversation.startTime), timezone, "EEE d MMM, h:mm a")}
+        </span>
+        <span className="mt-1 flex items-center gap-2">
+          <span className={`min-w-0 flex-1 truncate text-sm ${conversation.unread ? "text-stone-900" : "text-stone-500"}`}>
+            {last.from === "business" ? "You: " : ""}
+            {last.body}
+          </span>
+          {conversation.unread > 0 && (
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">{conversation.unread}</span>
+          )}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function ThreadHeader({ conversation, timezone, onBack }: { conversation: ConversationSummary; timezone: string; onBack?: () => void }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-stone-100 pb-3">
+      {onBack && (
+        <button type="button" onClick={onBack} aria-label="Back to messages" className="-ml-1 rounded-full p-1.5 text-stone-600 hover:bg-stone-100">
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+      )}
+      <Avatar name={conversation.customerName} size="md" />
+      <div className="min-w-0 flex-1">
+        <Link to={`/customers/${conversation.customerId}`} className="block truncate font-semibold text-stone-900 hover:text-brand-700">
+          {conversation.customerName}
+        </Link>
+        <p className="truncate text-xs text-stone-500">
+          {conversation.serviceName} · {formatInTimeZone(new Date(conversation.startTime), timezone, "EEE d MMM, h:mm a")}
+        </p>
+      </div>
+      <BookingStatusBadge status={conversation.status} />
+    </div>
+  );
+}
+
+function Messages({ timezone }: { timezone: string }) {
+  const { data, isPending, isError } = useConversations();
+  const conversations = data?.conversations ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  // On a wide screen, open the newest conversation straight away.
+  useEffect(() => {
+    if (isDesktop && !selectedId && conversations[0]) setSelectedId(conversations[0].bookingId);
+  }, [isDesktop, selectedId, conversations]);
+
+  const selected = conversations.find((conversation) => conversation.bookingId === selectedId) ?? null;
+
+  if (isPending) return <div className="mt-5"><CardListSkeleton /></div>;
+  if (isError) return <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">Couldn&apos;t load messages. Please refresh.</p>;
+  if (conversations.length === 0) {
+    return (
+      <div className="mt-5">
+        <EmptyState
+          icon={MessagesSquare}
+          title="No messages yet"
+          description="Every online booking comes with a chat. When a customer writes before their visit, it shows up here."
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 lg:grid lg:h-[calc(100svh-230px)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-4">
+      <div className="overflow-y-auto rounded-2xl border border-stone-200 bg-surface p-1.5">
+        {conversations.map((conversation) => (
+          <ConversationRow
+            key={conversation.bookingId}
+            conversation={conversation}
+            timezone={timezone}
+            active={isDesktop && conversation.bookingId === selectedId}
+            onSelect={() => setSelectedId(conversation.bookingId)}
+          />
+        ))}
+      </div>
+
+      {isDesktop && selected && (
+        <div className="flex min-h-0 flex-col rounded-2xl border border-stone-200 bg-surface p-4">
+          <ThreadHeader conversation={selected} timezone={timezone} />
+          <OwnerThread key={selected.bookingId} bookingId={selected.bookingId} timezone={timezone} className="mt-2 min-h-0 flex-1" />
+        </div>
+      )}
+
+      <AnimatePresence>
+        {!isDesktop && selected && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 32, stiffness: 320 }}
+            className="pb-safe fixed inset-0 z-50 flex flex-col bg-surface px-4 pt-3"
+          >
+            <ThreadHeader conversation={selected} timezone={timezone} onBack={() => setSelectedId(null)} />
+            <OwnerThread key={selected.bookingId} bookingId={selected.bookingId} timezone={timezone} className="mt-2 h-[calc(100svh-150px)]" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function InboxPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "requests" ? "requests" : "messages";
+  const { data: businessData } = useMyBusiness();
+  const timezone = businessData?.business?.timezone ?? "UTC";
+  const { data: conversationData } = useConversations();
+  const { data: enquiryData } = useEnquiries("open");
+  const unread = conversationData?.unread ?? 0;
+  const newRequests = enquiryData?.counts.new ?? 0;
+
+  const tabs = [
+    { key: "messages", label: "Messages", count: unread },
+    { key: "requests", label: "Chat requests", count: newRequests },
+  ] as const;
+
+  return (
+    <DashboardLayout>
+      <PageHeader
+        title="Inbox"
+        description="Messages from customers about their bookings, and people who asked to chat."
+        actions={
+          <Link to="/settings?tab=chat" className={buttonClassName("secondary", "md")}>
+            <Settings2 className="h-4 w-4" aria-hidden="true" /> Chat apps
+          </Link>
+        }
+      />
+      <div className="mt-5 flex gap-5 border-b border-stone-200">
+        {tabs.map((entry) => (
+          <button
+            key={entry.key}
+            type="button"
+            onClick={() => setSearchParams({ tab: entry.key }, { replace: true })}
+            className={`-mb-px flex items-center gap-2 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+              tab === entry.key ? "border-stone-900 text-stone-900" : "border-transparent text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            {entry.label}
+            {entry.count > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">{entry.count}</span>}
+          </button>
+        ))}
+      </div>
+      {tab === "messages" ? <Messages timezone={timezone} /> : <ChatRequests />}
     </DashboardLayout>
   );
 }

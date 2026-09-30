@@ -4,7 +4,6 @@ import {
   BarChart3,
   Bell,
   CalendarDays,
-  Check,
   Clock,
   Coins,
   Globe,
@@ -41,7 +40,7 @@ const FEATURES: Feature[] = [
     icon: Smartphone,
     nav: "Booking page",
     eyebrow: "Online booking page",
-    title: "Customers book themselves. You get the notification.",
+    title: "Customers book themselves",
     body: "Your page lives at your own link. It shows your services with photos and prices, lets customers pick someone if they want to, and only offers times that are genuinely free.",
     points: [
       "Service, time, details, confirm: four quick steps on any phone",
@@ -56,7 +55,7 @@ const FEATURES: Feature[] = [
     icon: CalendarDays,
     nav: "Calendar",
     eyebrow: "Team calendar",
-    title: "Day, week and month, for everyone at once.",
+    title: "A calendar for the whole team",
     body: "See every appointment across your team, colour-coded by status. Add a walk-in, move a booking to a new time, or mark someone as a no-show without leaving the page.",
     points: [
       "Filter by staff member or see the whole team",
@@ -71,7 +70,7 @@ const FEATURES: Feature[] = [
     icon: Users,
     nav: "Clients",
     eyebrow: "Client list and join link",
-    title: "Stop typing in phone numbers. Send one link.",
+    title: "Clients add their own details",
     body: "Share your join link on WhatsApp or print its QR code. Customers add their own details and land straight in your client list, tagged so you know they came from the link.",
     points: [
       "Join link and booking link, each with a downloadable QR code",
@@ -85,14 +84,14 @@ const FEATURES: Feature[] = [
     id: "inbox",
     icon: MessagesSquare,
     nav: "Inbox",
-    eyebrow: "Chat apps and Inbox",
-    title: "Every DM starts as a lead you can see.",
-    body: "Customers can reach you on WhatsApp, Instagram, Messenger, TikTok, X, Telegram or Snapchat. Before the app opens they leave their name, number and what they want, so the chat lands in your Inbox with a reference code.",
+    eyebrow: "Inbox",
+    title: "Customer messages in one inbox",
+    body: "Every online booking comes with its own chat: the customer gets a reply straight away and can ask questions before their visit. People who'd rather use WhatsApp, Instagram or TikTok leave their details first, so those chats are tracked too.",
     points: [
-      "Seven chat apps; show only the ones you use",
-      "Name, phone, service and message captured before the chat opens",
-      "Reference codes to match a DM to its enquiry",
-      "Mark as replied, booked or closed; reply on WhatsApp in one tap",
+      "A chat for every booking, on the customer's private booking page",
+      "Automatic first reply, quick replies for the answers you type every day",
+      "Chat requests from seven apps, each with a reference code",
+      "Customers can cancel from their booking page; you see it straight away",
     ],
     visual: { kind: "browser", src: "/screens/inbox.webp", path: "inbox", alt: "The Inbox with chats from the booking page" },
   },
@@ -101,7 +100,7 @@ const FEATURES: Feature[] = [
     icon: UserRound,
     nav: "Team",
     eyebrow: "Staff and services",
-    title: "Who does what, and when they work.",
+    title: "Staff, services and working hours",
     body: "Give each staff member their services, working days and hours. The booking page and calendar respect them automatically, so nobody is booked for something they don't do.",
     points: [
       "Weekly availability per staff member",
@@ -116,7 +115,7 @@ const FEATURES: Feature[] = [
     icon: BarChart3,
     nav: "Insights",
     eyebrow: "Insights",
-    title: "Know how the month is going.",
+    title: "Your monthly numbers",
     body: "Your dashboard compares this month with last: revenue, bookings, new clients and no-show rate, plus a 30-day revenue chart you can scrub through day by day.",
     points: ["Month-on-month change on every number", "Daily revenue and booking counts", "Today's schedule and quick actions up top"],
     visual: { kind: "browser", src: "/screens/dashboard.webp", path: "dashboard", alt: "The dashboard with insights" },
@@ -189,12 +188,9 @@ export function FeaturesPage() {
       <section className="bg-ink-grid">
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-highlight">Features</p>
-            <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">
-              Everything you need to run appointments. Nothing you don&apos;t.
-            </h1>
+            <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">What&apos;s in ServiceBook</h1>
             <p className="mt-5 max-w-xl text-base text-white/60 sm:text-lg">
-              Six tools that work together: a booking page, a team calendar, a client list, an inbox for chats, staff and services, and insights.
+              A booking page, a calendar for the team, a client list, one inbox for customer messages, and your monthly numbers. Here&apos;s how each part works.
             </p>
           </motion.div>
         </div>
@@ -225,14 +221,9 @@ export function FeaturesPage() {
           <section key={feature.id} id={feature.id} className="scroll-mt-32 grid items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
             <Reveal className={index % 2 === 1 ? "lg:order-2" : ""}>
               <SectionHeading eyebrow={feature.eyebrow} title={feature.title} description={feature.body} />
-              <ul className="mt-7 space-y-3.5">
+              <ul className="mt-6 list-disc space-y-2 pl-5 text-[15px] text-stone-700 marker:text-stone-300">
                 {feature.points.map((point) => (
-                  <li key={point} className="flex items-start gap-3 text-[15px] text-stone-700">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
-                      <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
-                    </span>
-                    {point}
-                  </li>
+                  <li key={point}>{point}</li>
                 ))}
               </ul>
             </Reveal>
@@ -245,13 +236,10 @@ export function FeaturesPage() {
 
       <section id="details" className="border-t border-stone-200/70">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-          <SectionHeading eyebrow="And the details" title="Small things that save you time every day." />
+          <SectionHeading title="And the smaller things" />
           <div className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {DETAILS.map((item, index) => (
-              <Reveal key={item.title} delay={(index % 3) * 0.05} className="flex gap-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-brand-700 ring-1 ring-stone-200">
-                  <item.icon className="h-5 w-5" aria-hidden="true" />
-                </span>
+              <Reveal key={item.title} delay={(index % 3) * 0.05} className="border-t border-stone-200 pt-4">
                 <div>
                   <h3 className="text-base font-semibold text-stone-900">{item.title}</h3>
                   <p className="mt-1 text-sm leading-relaxed text-stone-500">{item.body}</p>
@@ -262,7 +250,7 @@ export function FeaturesPage() {
         </div>
       </section>
 
-      <CtaBand title="See it with real data." description="Open the demo dashboard or book an appointment at our demo salon. No sign-up needed." />
+      <CtaBand title="See it with real data." description="Book as a customer at the demo salon, then look at the same booking as the owner. No sign-up needed." />
     </MarketingLayout>
   );
 }
