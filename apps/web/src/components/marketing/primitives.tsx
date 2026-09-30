@@ -21,7 +21,7 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
 
 export function Eyebrow({ children, onDark = false }: { children: ReactNode; onDark?: boolean }) {
   return (
-    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${onDark ? "text-highlight" : "text-brand-700"}`}>{children}</p>
+    <p className={`text-sm font-medium ${onDark ? "text-highlight" : "text-brand-700"}`}>{children}</p>
   );
 }
 
@@ -100,7 +100,7 @@ export function DemoButton({ className = "", onDark = true, children = "Try the 
     <div className="flex w-full flex-col items-center gap-1.5 sm:w-auto sm:items-start">
       <button
         type="button"
-        onClick={demo.start}
+        onClick={() => void demo.start()}
         disabled={demo.isLoading}
         className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border px-6 text-[15px] font-medium transition disabled:opacity-70 sm:w-auto ${
           onDark ? "border-white/20 text-white hover:bg-white/10" : "border-stone-300 text-stone-800 hover:bg-stone-100"
@@ -115,20 +115,26 @@ export function DemoButton({ className = "", onDark = true, children = "Try the 
 }
 
 export function CtaBand({
-  title = "Your next booking could come in tonight, while you sleep.",
-  description = "Set up takes about five minutes. Every feature is free during early access.",
+  title = "Put your booking link in your bio today.",
+  description = "Setting up takes a few minutes, and it's free while we're in early access.",
 }: {
   title?: ReactNode;
   description?: ReactNode;
 }) {
   return (
     <section className="px-4 pb-20 sm:px-6 lg:px-8">
-      <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-ink-grid px-6 py-14 text-center sm:px-12 sm:py-20">
-        <h2 className="mx-auto max-w-2xl text-3xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">{title}</h2>
-        <p className="mx-auto mt-4 max-w-lg text-base text-white/60 sm:text-lg">{description}</p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <PrimaryCta />
-          <DemoButton />
+      <Reveal className="mx-auto flex max-w-6xl flex-col gap-8 rounded-[2rem] bg-ink px-6 py-12 sm:px-12 sm:py-16 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-xl">
+          <h2 className="text-3xl font-semibold leading-[1.1] tracking-tight text-white sm:text-[2.6rem]">{title}</h2>
+          <p className="mt-4 text-base text-white/60 sm:text-lg">{description}</p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center">
+          <Link to="/register" className="inline-flex h-12 items-center justify-center rounded-full bg-highlight px-6 text-[15px] font-semibold text-ink transition hover:bg-highlight-soft">
+            Create your booking page
+          </Link>
+          <Link to="/demo" className="group inline-flex items-center justify-center gap-1.5 text-[15px] font-medium text-white">
+            Try the demo <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </Link>
         </div>
       </Reveal>
     </section>

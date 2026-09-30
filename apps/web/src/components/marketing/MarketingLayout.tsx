@@ -4,12 +4,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Logo } from "../Logo";
 import { useAuth } from "../../lib/auth-context";
-import { DEMO_BOOKING_PATH } from "../../lib/demo";
 
 const NAV = [
   { to: "/features", label: "Features" },
   { to: "/solutions", label: "Solutions" },
   { to: "/pricing", label: "Pricing" },
+  { to: "/demo", label: "Live demo" },
 ];
 
 function useScrolled(offset = 8): boolean {
@@ -82,9 +82,6 @@ function Header() {
               )}
             </NavLink>
           ))}
-          <Link to={DEMO_BOOKING_PATH} className="rounded-full px-3.5 py-2 text-sm font-medium text-white/65 transition-colors hover:text-white">
-            Live demo
-          </Link>
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -125,7 +122,7 @@ function Header() {
             className="fixed inset-x-0 bottom-0 top-16 z-40 flex flex-col overflow-y-auto bg-ink px-4 pb-8 md:hidden"
           >
             <nav className="mt-4 flex flex-col" aria-label="Mobile">
-              {[...NAV, { to: DEMO_BOOKING_PATH, label: "Live demo" }].map((item, index) => (
+              {NAV.map((item, index) => (
                 <motion.div key={item.to} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * index }}>
                   <Link
                     to={item.to}
@@ -168,8 +165,9 @@ const FOOTER_COLUMNS = [
     links: [
       { to: "/features", label: "Features" },
       { to: "/pricing", label: "Pricing" },
-      { to: DEMO_BOOKING_PATH, label: "Live demo" },
-      { to: "/features#clients", label: "Client join link" },
+      { to: "/demo", label: "Live demo" },
+      { to: "/roadmap", label: "Roadmap" },
+      { to: "/design", label: "Design system" },
     ],
   },
   {

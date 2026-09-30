@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Check, Dumbbell, GraduationCap, Hand, Heart, Scissors, Stethoscope, type LucideIcon } from "lucide-react";
+import { Dumbbell, GraduationCap, Hand, Heart, Scissors, Stethoscope, type LucideIcon } from "lucide-react";
 import { MarketingLayout } from "../../components/marketing/MarketingLayout";
 import { CtaBand, PhoneFrame, Reveal, SectionHeading } from "../../components/marketing/primitives";
 
@@ -101,8 +101,7 @@ export function SolutionsPage() {
       <section className="bg-ink-grid">
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-highlight">Solutions</p>
-            <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">Made for businesses that run on appointments.</h1>
+            <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">Who it&apos;s for</h1>
             <p className="mt-5 max-w-xl text-base text-white/60 sm:text-lg">
               If customers book time with you or your team, ServiceBook fits. Here&apos;s how different businesses use it.
             </p>
@@ -127,10 +126,7 @@ export function SolutionsPage() {
           {SOLUTIONS.map((solution, index) => (
             <Reveal key={solution.id} delay={(index % 3) * 0.06}>
               <article id={solution.id} className="flex h-full scroll-mt-24 flex-col rounded-3xl border border-stone-200 bg-surface p-6">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-highlight">
-                  <solution.icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <h2 className="mt-5 text-xl font-semibold text-stone-900">{solution.name}</h2>
+                <h2 className="text-xl font-semibold text-stone-900">{solution.name}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-stone-500">{solution.pain}</p>
                 <div className="mt-5 rounded-2xl bg-stone-50 p-3">
                   <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-stone-400">Typical services</p>
@@ -143,12 +139,9 @@ export function SolutionsPage() {
                     ))}
                   </ul>
                 </div>
-                <ul className="mt-5 space-y-2.5">
+                <ul className="mt-5 list-disc space-y-1.5 pl-5 text-sm text-stone-700 marker:text-stone-300">
                   {solution.wins.map((win) => (
-                    <li key={win} className="flex items-start gap-2.5 text-sm text-stone-700">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" strokeWidth={3} aria-hidden="true" />
-                      {win}
-                    </li>
+                    <li key={win}>{win}</li>
                   ))}
                 </ul>
               </article>
@@ -180,7 +173,7 @@ export function SolutionsPage() {
         </div>
       </section>
 
-      <CtaBand title="Whatever you book, book it here." />
+      <CtaBand title="Not sure it fits your business?" description="Try the demo salon, or set up yours and see. It's free while we're in early access." />
     </MarketingLayout>
   );
 }
