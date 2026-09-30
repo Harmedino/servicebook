@@ -58,17 +58,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, {
+      error: { message: "Can't reach the server. It may be waking up; please try again in a minute.", code: "NETWORK_ERROR" },
+    });
+  }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  const data = await response.json();
+  // Hosts return an HTML error page (502/503) while the API is down or restarting.
+  const data = await response.json().catch(() => ({
+    error: { message: "The server is starting up or unavailable. Please try again in a minute.", code: "SERVER_UNAVAILABLE" },
+  }));
 
   if (!response.ok) {
     if (response.status === 401 && auth) {
