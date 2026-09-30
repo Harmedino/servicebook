@@ -1,7 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
+  /** Base URL of the ServiceBook API, without a trailing slash. */
+  readonly VITE_API_URL?: string;
 }
 
 interface ImportMeta {

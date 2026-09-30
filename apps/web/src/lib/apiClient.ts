@@ -1,6 +1,9 @@
 import type { ApiErrorBody } from "@servicebook/types";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+// Set VITE_API_URL to the deployed API (e.g. https://servicebook-api.onrender.com).
+// Production builds refuse to build without it (see vite.config.ts); the
+// localhost fallback only ever applies to `pnpm dev`.
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/+$/, "");
 const TOKEN_STORAGE_KEY = "servicebook_token";
 const UNAUTHORIZED_EVENT = "servicebook:unauthorized";
 

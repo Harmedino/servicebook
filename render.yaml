@@ -1,0 +1,23 @@
+# Render Blueprint for the ServiceBook API. The web app is deployed on Vercel.
+services:
+  - type: web
+    name: servicebook-api
+    runtime: node
+    rootDir: apps/api
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # MongoDB Atlas connection string ending in /servicebook?...
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        value: https://servicebook-drab.vercel.app
+      - key: EMAIL_PROVIDER
+        value: console
