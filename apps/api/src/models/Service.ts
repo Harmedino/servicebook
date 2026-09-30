@@ -14,6 +14,7 @@ const serviceSchema = new Schema(
       trim: true,
     },
     description: { type: String, trim: true },
+    imageUrl: { type: String, trim: true },
     durationMinutes: {
       type: Number,
       required: true,

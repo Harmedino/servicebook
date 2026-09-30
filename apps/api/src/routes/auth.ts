@@ -9,9 +9,13 @@ import { ConflictError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth } from "../middleware/auth";
 
+// Only failed attempts count: that stops password guessing without locking
+// out everyone who shares a mobile carrier's IP address after a few normal
+// logins (and keeps the website's "Try the demo" button working).
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

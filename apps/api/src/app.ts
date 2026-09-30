@@ -13,6 +13,8 @@ import { customersRouter } from "./routes/customers";
 import { bookingsRouter } from "./routes/bookings";
 import { publicBookingRouter } from "./routes/publicBooking";
 import { dashboardRouter } from "./routes/dashboard";
+import { uploadsRouter } from "./routes/uploads";
+import { enquiriesRouter } from "./routes/enquiries";
 
 export function createApp() {
   const app = express();
@@ -53,6 +55,8 @@ export function createApp() {
   app.use("/api/bookings", bookingsRouter);
   app.use("/api/public", publicBookingRouter);
   app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/uploads", uploadsRouter);
+  app.use("/api/enquiries", enquiriesRouter);
 
   // Feature routers mount here as they're built (payments, notifications, ...).
 

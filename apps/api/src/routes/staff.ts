@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
+import { imageRefField } from "../lib/validation";
 import { formatInTimeZone } from "date-fns-tz";
 import type {
   StaffAvailabilityEntry,
   StaffAvailabilityResponse,
   StaffListResponse,
+  OwnerStaffResponse,
   StaffProfile,
   StaffResponse,
 } from "@servicebook/types";
@@ -29,6 +31,7 @@ const createStaffSchema = z.object({
   name: nameField,
   email: emailField.optional(),
   phone: phoneField.optional(),
+  avatarUrl: imageRefField.optional(),
   serviceIds: serviceIdsField.optional(),
   isActive: z.boolean().optional(),
 });
@@ -38,6 +41,7 @@ const updateStaffSchema = z
     name: nameField.optional(),
     email: emailField.optional(),
     phone: phoneField.optional(),
+    avatarUrl: imageRefField.optional(),
     serviceIds: serviceIdsField.optional(),
     isActive: z.boolean().optional(),
   })
@@ -74,8 +78,9 @@ function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number): S
     name: staff.name,
     email: staff.email ?? undefined,
     phone: staff.phone ?? undefined,
-    avatarUrl: staff.avatarUrl ?? undefined,
+    avatarUrl: staff.avatarUrl || undefined,
     isActive: staff.isActive ?? true,
+    isOwner: Boolean(staff.userId),
     serviceIds: staff.serviceIds.map((id) => id.toString()),
     todayAppointmentCount,
     createdAt: staff.createdAt.toISOString(),
@@ -138,6 +143,7 @@ staffRouter.post(
       name: payload.name,
       email: payload.email,
       phone: payload.phone,
+      avatarUrl: payload.avatarUrl || undefined,
       serviceIds,
       isActive: payload.isActive ?? true,
     });
@@ -187,6 +193,62 @@ staffRouter.get(
       staff: staff.map((member) => toStaffProfile(member, todayCountByStaffId.get(member.id) ?? 0)),
     };
     res.json(body);
+  }),
+);
+
+const ownerStaffSchema = z.object({ isStaff: z.boolean() });
+
+/** The owner's own staff profile, if they take appointments, and whether they've been asked. */
+staffRouter.get(
+  "/me",
+  asyncHandler(async (req, res) => {
+    const staff = await Staff.findOne({ businessId: req.businessId, userId: req.user?.id });
+    const body: OwnerStaffResponse = {
+      staff: staff ? toStaffProfile(staff) : null,
+      answered: Boolean(req.business?.ownerStaffAnswered) || Boolean(staff),
+    };
+    res.json(body);
+  }),
+);
+
+/**
+ * One-tap answer to "do you also take appointments?". Yes adds the owner as
+ * a staff member who performs every active service, working the business's
+ * hours. Safe to repeat: an existing owner profile is reused and reactivated.
+ */
+staffRouter.post(
+  "/me",
+  asyncHandler(async (req, res) => {
+    const { isStaff } = ownerStaffSchema.parse(req.body);
+    if (!req.business || !req.user) {
+      throw new UnauthorizedError();
+    }
+
+    let staff = await Staff.findOne({ businessId: req.businessId, userId: req.user.id });
+    if (isStaff) {
+      const services = await Service.find({ businessId: req.businessId, isActive: true }).select("_id");
+      const serviceIds = services.map((service) => service._id);
+      if (staff) {
+        staff.isActive = true;
+        staff.set("serviceIds", Array.from(new Set([...staff.serviceIds.map(String), ...serviceIds.map(String)])));
+        await staff.save();
+      } else {
+        staff = await Staff.create({
+          businessId: req.businessId,
+          userId: req.user.id,
+          name: req.user.name,
+          email: req.user.email,
+          serviceIds,
+        });
+      }
+      await ensureStaffAvailability(staff.id, req.businessId as string);
+    }
+
+    req.business.set("ownerStaffAnswered", true);
+    await req.business.save();
+
+    const body: OwnerStaffResponse = { staff: staff ? toStaffProfile(staff) : null, answered: true };
+    res.status(isStaff ? 201 : 200).json(body);
   }),
 );
 

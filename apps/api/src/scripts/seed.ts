@@ -15,6 +15,7 @@ import { Staff } from "../models/Staff";
 import { StaffAvailability } from "../models/StaffAvailability";
 import { Customer } from "../models/Customer";
 import { Booking, type BookingStatus } from "../models/Booking";
+import { Enquiry } from "../models/Enquiry";
 
 export const DEMO_EMAIL = "demo@servicebook.app";
 export const DEMO_PASSWORD = "password123";
@@ -51,6 +52,7 @@ function dateKey(offsetDays: number): string {
 }
 
 export async function seedDemo(): Promise<void> {
+  state = 42;
   const existing = await User.findOne({ email: DEMO_EMAIL });
   if (existing) {
     const business = await Business.findOne({ ownerId: existing.id });
@@ -59,6 +61,7 @@ export async function seedDemo(): Promise<void> {
       await Promise.all([
         Booking.deleteMany({ businessId: business.id }),
         Customer.deleteMany({ businessId: business.id }),
+        Enquiry.deleteMany({ businessId: business.id }),
         Service.deleteMany({ businessId: business.id }),
         StaffAvailability.deleteMany({ staffId: { $in: staffIds } }),
         Staff.deleteMany({ businessId: business.id }),
@@ -69,7 +72,7 @@ export async function seedDemo(): Promise<void> {
     await existing.deleteOne();
   }
 
-  const owner = await User.create({ name: "Demo Owner", email: DEMO_EMAIL, passwordHash: await hashPassword(DEMO_PASSWORD) });
+  const owner = await User.create({ name: "Ada Nwosu", email: DEMO_EMAIL, passwordHash: await hashPassword(DEMO_PASSWORD) });
   const business = await Business.create({
     ownerId: owner.id,
     name: "Glow Studio Lekki",
@@ -80,6 +83,14 @@ export async function seedDemo(): Promise<void> {
     address: "12 Admiralty Way, Lekki Phase 1, Lagos",
     timezone: TIMEZONE,
     currency: "NGN",
+    ownerStaffAnswered: true,
+    socials: {
+      instagram: "servicebook_demo_salon",
+      tiktok: "servicebook_demo_salon",
+      facebook: "servicebook.demo.salon",
+      telegram: "servicebook_demo_salon",
+      x: "servicebook_demo",
+    },
   });
 
   // Mon-Sat 9:00-19:00, closed Sunday.
@@ -118,6 +129,7 @@ export async function seedDemo(): Promise<void> {
         phone: `+234 80${(i % 9) + 1} 555 ${String(1000 + i * 37).slice(-4)}`,
         email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
         notes: i % 5 === 0 ? "Prefers afternoon appointments." : undefined,
+        source: i % 4 === 1 ? "link" : i % 3 === 0 ? "booking" : "manual",
       };
     }),
   );
@@ -161,8 +173,58 @@ export async function seedDemo(): Promise<void> {
     }
   }
   await Booking.insertMany(bookings);
+
+  // A few chats started from the booking page, so the Inbox isn't empty.
+  const enquiries = [
+    { channel: "instagram", minutesAgo: 14, status: "new", service: 2, message: "Do you have space this Saturday morning? Mid-back length." },
+    { channel: "whatsapp", minutesAgo: 95, status: "new", service: 4, message: "Bridal trial before my wedding in December. How much for two looks?" },
+    { channel: "tiktok", minutesAgo: 60 * 5, status: "contacted", service: 3, message: "Saw your nail video! Can I get the same design?" },
+    { channel: "whatsapp", minutesAgo: 60 * 26, status: "booked", service: 0, message: "" },
+    { channel: "facebook", minutesAgo: 60 * 50, status: "closed", service: undefined, message: "Are you open on public holidays?" },
+  ] as const;
+  await Enquiry.insertMany(
+    enquiries.map((entry, index) => {
+      const customer = customers[(index * 5 + 3) % customers.length];
+      const service = entry.service === undefined ? undefined : services[entry.service];
+      const createdAt = new Date(Date.now() - entry.minutesAgo * 60_000);
+      return {
+        businessId: business.id,
+        customerId: customer._id,
+        channel: entry.channel,
+        reference: `SB-${["K7Q2M", "R4TXN", "H9WJ3", "P2LZD", "F6CUV"][index]}`,
+        name: customer.name,
+        phone: customer.phone,
+        serviceId: service?._id,
+        serviceName: service?.name,
+        message: entry.message || undefined,
+        status: entry.status,
+        createdAt,
+        updatedAt: createdAt,
+      };
+    }),
+  );
   console.log(`Seeded ${business.name}: ${services.length} services, ${staff.length} staff, ${customers.length} customers, ${bookings.length} bookings.`);
   console.log(`Log in with ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
+}
+
+/**
+ * Keeps the public demo usable without anyone running the seed by hand:
+ * creates it when missing, and rebuilds it once its schedule has drifted into
+ * the past or visitors have deleted most of its services.
+ */
+export async function ensureDemo(): Promise<void> {
+  const owner = await User.findOne({ email: DEMO_EMAIL });
+  const business = owner ? await Business.findOne({ ownerId: owner.id }) : null;
+  if (business) {
+    const [upcoming, services] = await Promise.all([
+      Booking.exists({ businessId: business.id, startTime: { $gt: new Date(Date.now() + 3 * 86_400_000) } }),
+      Service.countDocuments({ businessId: business.id, isActive: true }),
+    ]);
+    if (upcoming && services >= 3) return;
+  } else if (await Business.exists({ slug: "glow-studio-lekki" })) {
+    return; // Someone else owns the demo's slug; leave their business alone.
+  }
+  await seedDemo();
 }
 
 // Run directly: `tsx src/scripts/seed.ts`

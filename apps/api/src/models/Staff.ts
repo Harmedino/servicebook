@@ -20,6 +20,9 @@ const staffSchema = new Schema(
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"],
     },
     phone: { type: String, trim: true },
+    // Set when this staff profile is the business owner themselves, so the
+    // public booking page can default to them when a customer has no preference.
+    userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     avatarUrl: { type: String, trim: true },
     isActive: {
       type: Boolean,

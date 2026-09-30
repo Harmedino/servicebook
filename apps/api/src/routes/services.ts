@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { imageRefField } from "../lib/validation";
 import type { ServiceListResponse, ServiceProfile, ServiceResponse } from "@servicebook/types";
 import { Service, type ServiceDocument } from "../models/Service";
 import { Staff } from "../models/Staff";
@@ -25,6 +26,7 @@ const staffIdsField = z.array(objectIdField).max(200);
 const createServiceSchema = z.object({
   name: nameField,
   description: descriptionField.optional(),
+  imageUrl: imageRefField.optional(),
   price: priceField,
   durationMinutes: durationField,
   isActive: z.boolean().optional(),
@@ -35,6 +37,7 @@ const updateServiceSchema = z
   .object({
     name: nameField.optional(),
     description: descriptionField.optional(),
+    imageUrl: imageRefField.optional(),
     price: priceField.optional(),
     durationMinutes: durationField.optional(),
     isActive: z.boolean().optional(),
@@ -108,6 +111,7 @@ function toServiceProfile(service: ServiceDocument, staffIds: string[]): Service
     businessId: service.businessId.toString(),
     name: service.name,
     description: service.description ?? undefined,
+    imageUrl: service.imageUrl || undefined,
     durationMinutes: service.durationMinutes,
     price: service.price,
     isActive: service.isActive ?? true,
@@ -137,17 +141,23 @@ servicesRouter.post(
       description: payload.description,
       price: payload.price,
       durationMinutes: payload.durationMinutes,
+      imageUrl: payload.imageUrl || undefined,
       isActive: payload.isActive ?? true,
     });
 
-    if (payload.staffIds && payload.staffIds.length > 0) {
-      await Staff.updateMany(
-        { _id: { $in: payload.staffIds }, businessId: req.businessId },
-        { $addToSet: { serviceIds: service.id } },
-      );
+    // A service nobody performs can't be booked. When no one is picked,
+    // default to the owner if they take appointments themselves.
+    let staffIds = payload.staffIds ?? [];
+    if (staffIds.length === 0) {
+      const ownerStaff = await Staff.findOne({ businessId: req.businessId, userId: req.business?.ownerId, isActive: true }).select("_id");
+      if (ownerStaff) staffIds = [ownerStaff.id];
     }
 
-    const body: ServiceResponse = { service: toServiceProfile(service, payload.staffIds ?? []) };
+    if (staffIds.length > 0) {
+      await Staff.updateMany({ _id: { $in: staffIds }, businessId: req.businessId }, { $addToSet: { serviceIds: service.id } });
+    }
+
+    const body: ServiceResponse = { service: toServiceProfile(service, staffIds) };
     res.status(201).json(body);
   }),
 );

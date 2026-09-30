@@ -28,6 +28,12 @@ export interface MeResponse {
   user: SafeUser;
 }
 
+/** Chat apps a business can be reached on from its booking page. */
+export type SocialChannel = "whatsapp" | "instagram" | "facebook" | "tiktok" | "x" | "telegram" | "snapchat";
+
+/** Handles per channel (WhatsApp: digits with country code). Only filled-in channels are present. */
+export type SocialLinks = Partial<Record<SocialChannel, string>>;
+
 export interface BusinessProfile {
   id: string;
   ownerId: string;
@@ -38,8 +44,10 @@ export interface BusinessProfile {
   email?: string;
   address?: string;
   website?: string;
+  socials: SocialLinks;
   timezone: string;
   logoUrl?: string;
+  coverImageUrl?: string;
   currency: string;
   isPublicBookingEnabled: boolean;
   emailNotificationsEnabled: boolean;
@@ -63,6 +71,7 @@ export interface ServiceProfile {
   businessId: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   durationMinutes: number;
   price: number;
   isActive: boolean;
@@ -88,11 +97,19 @@ export interface StaffProfile {
   phone?: string;
   avatarUrl?: string;
   isActive: boolean;
+  /** True for the business owner's own staff profile. */
+  isOwner?: boolean;
   serviceIds: string[];
   /** Only populated on list responses — today's non-cancelled appointment count, in the business's timezone. */
   todayAppointmentCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** GET/POST /api/staff/me: the owner's own staff profile, if any, and whether they've answered the prompt. */
+export interface OwnerStaffResponse {
+  staff: StaffProfile | null;
+  answered: boolean;
 }
 
 export interface StaffResponse {
@@ -127,6 +144,9 @@ export interface StaffAvailabilityResponse {
   availability: StaffAvailabilityEntry[];
 }
 
+/** How a customer got onto the list: added by staff, booked online, or joined via the invite link. */
+export type CustomerSource = "manual" | "booking" | "link" | "chat";
+
 export interface CustomerProfile {
   id: string;
   businessId: string;
@@ -134,6 +154,7 @@ export interface CustomerProfile {
   phone: string;
   email?: string;
   notes?: string;
+  source?: CustomerSource;
   createdAt: string;
   updatedAt: string;
   /** Only populated on list responses — total bookings ever made by this customer. */
@@ -262,17 +283,20 @@ export interface PublicBusinessProfile {
   description?: string;
   timezone: string;
   logoUrl?: string;
+  coverImageUrl?: string;
   currency: string;
   phone?: string;
   email?: string;
   address?: string;
   website?: string;
+  socials: SocialLinks;
 }
 
 export interface PublicServiceProfile {
   id: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   durationMinutes: number;
   price: number;
 }
@@ -280,6 +304,7 @@ export interface PublicServiceProfile {
 export interface PublicStaffProfile {
   id: string;
   name: string;
+  avatarUrl?: string;
 }
 
 export interface PublicBusinessResponse {
@@ -298,9 +323,22 @@ export interface PublicBookingCustomerInput {
   email?: string;
 }
 
+export interface PublicCustomerSignupInput {
+  name: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+}
+
+export interface PublicCustomerSignupResponse {
+  businessName: string;
+  bookingEnabled: boolean;
+}
+
 export interface PublicCreateBookingInput {
   serviceId: string;
-  staffId: string;
+  /** Omit for "any available": the owner is preferred, then whoever is free. */
+  staffId?: string;
   /** ISO 8601 UTC instant */
   startTime: string;
   customer: PublicBookingCustomerInput;
@@ -321,4 +359,50 @@ export interface PublicBookingConfirmation {
 
 export interface PublicBookingConfirmationResponse {
   confirmation: PublicBookingConfirmation;
+}
+
+export interface UploadResponse {
+  /** Path to the stored image, e.g. /api/uploads/<id>. Prefix with the API base URL to display it. */
+  url: string;
+}
+
+// ---- Chat enquiries ----------------------------------------------------------
+
+export type EnquiryStatus = "new" | "contacted" | "booked" | "closed";
+
+export interface PublicEnquiryInput {
+  channel: SocialChannel;
+  name: string;
+  phone: string;
+  email?: string;
+  serviceId?: string;
+  message?: string;
+}
+
+export interface PublicEnquiryResponse {
+  /** Quoted in the chat message so the owner can match the DM to the enquiry. */
+  reference: string;
+}
+
+export interface EnquiryProfile {
+  id: string;
+  customerId: string;
+  channel: SocialChannel;
+  reference: string;
+  name: string;
+  phone: string;
+  email?: string;
+  serviceName?: string;
+  message?: string;
+  status: EnquiryStatus;
+  createdAt: string;
+}
+
+export interface EnquiryListResponse {
+  enquiries: EnquiryProfile[];
+  counts: Record<EnquiryStatus, number>;
+}
+
+export interface EnquiryResponse {
+  enquiry: EnquiryProfile;
 }
