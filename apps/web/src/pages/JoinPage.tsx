@@ -6,6 +6,8 @@ import { usePublicBusiness, useCustomerSignup } from "../lib/publicBooking";
 import { ApiError } from "../lib/apiClient";
 import { imageSrc } from "../lib/images";
 import { LogoMark } from "../components/Logo";
+import { DemoBar } from "../components/DemoBar";
+import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -108,6 +110,7 @@ export function JoinPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pb-12">
+      {isDemoSlug(business.slug) && <DemoBar />}
       <header className="relative h-40 overflow-hidden bg-ink-grid sm:h-48">
         {business.coverImageUrl && (
           <>
@@ -164,6 +167,15 @@ export function JoinPage() {
                     >
                       <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Book an appointment
                     </Link>
+                  )}
+                  {isDemoSlug(business.slug) && (
+                    <a
+                      href={ownerDemoPath("/customers?sort=newest")}
+                      target={isEmbedded() ? "_top" : undefined}
+                      className="inline-flex h-12 items-center justify-center rounded-xl bg-highlight text-[15px] font-semibold text-ink"
+                    >
+                      See yourself in the owner&apos;s client list
+                    </a>
                   )}
                   {whatsapp && (
                     <a
