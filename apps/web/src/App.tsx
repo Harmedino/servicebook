@@ -22,7 +22,9 @@ const CalendarPage = lazy(() => import("./pages/CalendarPage").then((m) => ({ de
 const PublicBookingPage = lazy(() => import("./pages/PublicBookingPage").then((m) => ({ default: m.PublicBookingPage })));
 const FeaturesPage = lazy(() => import("./pages/marketing/FeaturesPage").then((m) => ({ default: m.FeaturesPage })));
 const SolutionsPage = lazy(() => import("./pages/marketing/SolutionsPage").then((m) => ({ default: m.SolutionsPage })));
-const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
+// Pricing is on hold while everything is free in early access; /pricing redirects to How it works.
+// const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
+const HowItWorksPage = lazy(() => import("./pages/marketing/HowItWorksPage").then((m) => ({ default: m.HowItWorksPage })));
 const JoinPage = lazy(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
 const MyBookingPage = lazy(() => import("./pages/MyBookingPage").then((m) => ({ default: m.MyBookingPage })));
 const RoadmapPage = lazy(() => import("./pages/marketing/RoadmapPage").then((m) => ({ default: m.RoadmapPage })));
@@ -72,7 +74,9 @@ export function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/features" element={<FeaturesPage />} />
       <Route path="/solutions" element={<SolutionsPage />} />
-      <Route path="/pricing" element={<PricingPage />} />
+      {/* <Route path="/pricing" element={<PricingPage />} /> */}
+      <Route path="/pricing" element={<Navigate to="/how-it-works" replace />} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route path="/demo" element={<DemoPage />} />
       <Route path="/roadmap" element={<RoadmapPage />} />
       <Route path="/design" element={<DesignPage />} />

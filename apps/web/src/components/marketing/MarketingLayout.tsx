@@ -8,7 +8,8 @@ import { useAuth } from "../../lib/auth-context";
 const NAV = [
   { to: "/features", label: "Features" },
   { to: "/solutions", label: "Solutions" },
-  { to: "/pricing", label: "Pricing" },
+  // { to: "/pricing", label: "Pricing" },
+  { to: "/how-it-works", label: "How it works" },
   { to: "/demo", label: "Live demo" },
 ];
 
@@ -164,7 +165,8 @@ const FOOTER_COLUMNS = [
     title: "Product",
     links: [
       { to: "/features", label: "Features" },
-      { to: "/pricing", label: "Pricing" },
+      // { to: "/pricing", label: "Pricing" },
+      { to: "/how-it-works", label: "How it works" },
       { to: "/demo", label: "Live demo" },
       { to: "/roadmap", label: "Roadmap" },
       { to: "/design", label: "Design system" },
@@ -184,7 +186,7 @@ const FOOTER_COLUMNS = [
     links: [
       { to: "/register", label: "Create an account" },
       { to: "/login", label: "Log in" },
-      { to: "/pricing#faq", label: "FAQ" },
+      { to: "/how-it-works#faq", label: "FAQ" },
     ],
   },
 ];
@@ -217,7 +219,7 @@ function Footer() {
         </div>
         <div className="mt-14 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} ServiceBook. All rights reserved.</p>
-          <p>Prices shown in Naira. Works in any currency and time zone.</p>
+          <p>Built for businesses in Nigeria. Works in any currency and time zone.</p>
         </div>
       </div>
     </footer>
