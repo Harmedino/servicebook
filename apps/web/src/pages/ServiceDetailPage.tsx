@@ -196,11 +196,11 @@ export function ServiceDetailPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedBookingId(booking.id)}
-                    className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={booking.customerName} size="xs" />
-                      <p className="text-sm font-semibold text-stone-900">
+                      <p className="truncate text-sm font-semibold text-stone-900">
                         {booking.customerName} <span className="font-normal text-stone-400">·</span> {booking.staffName}
                       </p>
                     </div>
