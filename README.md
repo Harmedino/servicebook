@@ -55,7 +55,7 @@ The API runs on Render and the web app on Vercel.
 |---|---|
 | Root Directory | `apps/api` |
 | Build Command | `pnpm install --frozen-lockfile && pnpm run build` |
-| Start Command | `pnpm start` (runs `node dist/index.js`, the tsup build output) |
+| Start Command | `pnpm start` (runs `node dist/index.js`, the tsup build output; `node app.js` is equivalent) |
 | Health Check Path | `/health` |
 
 Environment variables (the API exits at startup with a clear message if a required one is missing):
