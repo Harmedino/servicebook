@@ -169,13 +169,13 @@ export function JoinPage() {
                     </Link>
                   )}
                   {isDemoSlug(business.slug) && (
-                    <a
-                      href={ownerDemoPath("/customers?sort=newest")}
+                    <Link
+                      to={ownerDemoPath("/customers?sort=newest")}
                       target={isEmbedded() ? "_top" : undefined}
                       className="inline-flex h-12 items-center justify-center rounded-xl bg-highlight text-[15px] font-semibold text-ink"
                     >
                       See yourself in the owner&apos;s client list
-                    </a>
+                    </Link>
                   )}
                   {whatsapp && (
                     <a

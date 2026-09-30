@@ -20,7 +20,9 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
+        {/* Transitions keep the current page on screen while the next one loads,
+            instead of swapping the whole screen for a spinner. */}
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <App />
           <ServerStatus />
         </BrowserRouter>
