@@ -8,8 +8,9 @@ async function main() {
 
   const app = createApp();
 
+  // No host argument: listens on all interfaces, which Render requires.
   const server = app.listen(env.PORT, () => {
-    console.log(`API listening on http://localhost:${env.PORT}`);
+    console.log(`API listening on port ${env.PORT} (${env.NODE_ENV})`);
   });
 
   startReminderScheduler();

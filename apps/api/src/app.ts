@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import mongoose from "mongoose";
 import morgan from "morgan";
-import { env } from "./config/env";
+import { allowedOrigins, env, isProduction } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { authRouter } from "./routes/auth";
 import { businessRouter } from "./routes/business";
@@ -16,10 +17,19 @@ import { dashboardRouter } from "./routes/dashboard";
 export function createApp() {
   const app = express();
 
+  // Render (and most hosts) put one proxy in front of the app. Trusting it makes
+  // req.ip the real client IP, so rate limits apply per visitor instead of every
+  // request sharing the proxy's IP and locking everyone out together.
+  if (isProduction) {
+    app.set("trust proxy", 1);
+  }
+
   app.use(helmet());
   app.use(
     cors({
-      origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
+      // Auth uses a Bearer token (no cookies), so credentials aren't required,
+      // but they're harmless with an explicit origin allow-list.
+      origin: allowedOrigins,
       credentials: true,
     }),
   );
@@ -28,9 +38,12 @@ export function createApp() {
     app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
   }
 
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
-  });
+  const health = (_req: express.Request, res: express.Response) => {
+    const databaseUp = mongoose.connection.readyState === 1;
+    res.status(databaseUp ? 200 : 503).json({ status: databaseUp ? "ok" : "database unavailable" });
+  };
+  app.get("/health", health);
+  app.get("/api/health", health);
 
   app.use("/api/auth", authRouter);
   app.use("/api/business", businessRouter);

@@ -15,9 +15,17 @@ import { requireAuth, requireBusiness } from "../middleware/auth";
 import { slugify } from "../lib/slugify";
 import { ensureBusinessHours } from "../lib/businessHours";
 
-const VALID_TIMEZONES = new Set(
-  typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"],
-);
+// Accept any zone the runtime can format in. Intl.supportedValuesOf("timeZone")
+// omits "UTC" and legacy aliases (e.g. Asia/Calcutta) that browsers still report,
+// which made onboarding fail for users whose device is set to one of them.
+function isValidTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const nameField = z.string().trim().min(1, "Business name is required").max(120, "Business name is too long");
 const emailField = z.string().trim().toLowerCase().email("Enter a valid email address");
@@ -29,7 +37,7 @@ const logoUrlField = z.string().trim().url("Enter a valid URL");
 const timezoneField = z
   .string()
   .trim()
-  .refine((value) => VALID_TIMEZONES.has(value), "Unrecognized timezone");
+  .refine(isValidTimezone, "Unrecognized timezone");
 
 const createBusinessSchema = z.object({
   name: nameField,
