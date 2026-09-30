@@ -24,6 +24,11 @@ const FeaturesPage = lazy(() => import("./pages/marketing/FeaturesPage").then((m
 const SolutionsPage = lazy(() => import("./pages/marketing/SolutionsPage").then((m) => ({ default: m.SolutionsPage })));
 const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
 const JoinPage = lazy(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
+const MyBookingPage = lazy(() => import("./pages/MyBookingPage").then((m) => ({ default: m.MyBookingPage })));
+const RoadmapPage = lazy(() => import("./pages/marketing/RoadmapPage").then((m) => ({ default: m.RoadmapPage })));
+const DesignPage = lazy(() => import("./pages/marketing/DesignPage").then((m) => ({ default: m.DesignPage })));
+const DemoPage = lazy(() => import("./pages/marketing/DemoPage").then((m) => ({ default: m.DemoPage })));
+const DemoOwnerPage = lazy(() => import("./pages/DemoOwnerPage").then((m) => ({ default: m.DemoOwnerPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then((m) => ({ default: m.InboxPage })));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
@@ -68,6 +73,11 @@ export function App() {
       <Route path="/features" element={<FeaturesPage />} />
       <Route path="/solutions" element={<SolutionsPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="/roadmap" element={<RoadmapPage />} />
+      <Route path="/design" element={<DesignPage />} />
+      <Route path="/demo/owner" element={<DemoOwnerPage />} />
+      <Route path="/my-booking/:token" element={<MyBookingPage />} />
       <Route
         path="/login"
         element={

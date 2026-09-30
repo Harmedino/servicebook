@@ -257,51 +257,30 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout>
-      {/* Branded hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-ink-grid px-5 py-7 sm:px-9 sm:py-10">
-        <div className="relative z-10 flex flex-wrap items-start justify-between gap-6">
-          <div>
-            <p className="text-sm font-medium text-highlight">{todayLabel}</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-              {getGreeting()}
-              {user ? `, ${user.name.split(" ")[0]}` : ""}
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-white/65">
-              Here&apos;s what&apos;s happening with {summary?.businessName ?? "your business"} today.
-            </p>
-
-            {summary && (
-              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-semibold text-white">{summary.todayAppointmentCount}</span>
-                  <span className="text-sm text-white/65">appointment{summary.todayAppointmentCount === 1 ? "" : "s"} today</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-white/65">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> {todayConfirmed} confirmed
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-300" /> {todayPending} pending
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-white/40" /> {todayCancelled} cancelled
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm text-stone-500">{todayLabel}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900 sm:text-[1.75rem]">
+            {getGreeting()}
+            {user ? `, ${user.name.split(" ")[0]}` : ""}
+          </h1>
           {summary && (
-            <button
-              type="button"
-              onClick={() => setOpenModal("booking")}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-highlight px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-highlight-soft"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              New booking
-            </button>
+            <p className="mt-1.5 text-sm text-stone-600">
+              {summary.todayAppointmentCount === 0
+                ? "Nothing booked for today yet."
+                : `${summary.todayAppointmentCount} appointment${summary.todayAppointmentCount === 1 ? "" : "s"} today`}
+              {todayConfirmed > 0 && ` · ${todayConfirmed} confirmed`}
+              {todayPending > 0 && <span className="text-amber-700"> · {todayPending} waiting for you to confirm</span>}
+              {todayCancelled > 0 && ` · ${todayCancelled} cancelled`}
+            </p>
           )}
         </div>
+        {summary && (
+          <Button onClick={() => setOpenModal("booking")}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New booking
+          </Button>
+        )}
       </div>
 
       <OwnerStaffPrompt className="mt-4" />
