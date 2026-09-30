@@ -25,6 +25,9 @@ const customerSchema = new Schema(
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"],
     },
     notes: { type: String, trim: true },
+    // How the customer got onto the list: added by staff, made a booking,
+    // or signed themselves up through the business's invite link.
+    source: { type: String, enum: ["manual", "booking", "link", "chat"], default: "manual" },
   },
   { timestamps: true },
 );

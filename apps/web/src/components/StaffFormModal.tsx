@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
+import { ImageUpload } from "./ImageUpload";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
 import { Button } from "./ui/Button";
 
@@ -8,6 +9,8 @@ export interface StaffFormSubmitValues {
   name: string;
   email?: string;
   phone?: string;
+  /** "" removes an existing photo. */
+  avatarUrl?: string;
   serviceIds: string[];
   isActive: boolean;
 }
@@ -41,6 +44,7 @@ export function StaffFormModal({
   const [name, setName] = useState(staff?.name ?? "");
   const [email, setEmail] = useState(staff?.email ?? "");
   const [phone, setPhone] = useState(staff?.phone ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(staff?.avatarUrl ?? "");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(staff?.serviceIds ?? []);
   const [isActive, setIsActive] = useState(staff?.isActive ?? true);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -75,6 +79,7 @@ export function StaffFormModal({
       name: name.trim(),
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
+      avatarUrl: staff ? avatarUrl : avatarUrl || undefined,
       serviceIds: selectedServiceIds,
       isActive,
     });
@@ -86,6 +91,15 @@ export function StaffFormModal({
         <h2 className="text-lg font-semibold text-stone-900">{staff ? "Edit staff" : "Add staff"}</h2>
 
         <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
+          <ImageUpload
+            label="Photo"
+            hint="Optional. Customers see it when choosing who to book with."
+            value={avatarUrl}
+            onChange={setAvatarUrl}
+            shape="circle"
+            maxSize={512}
+            disabled={isSubmitting}
+          />
           <FormField
             label="Name"
             type="text"

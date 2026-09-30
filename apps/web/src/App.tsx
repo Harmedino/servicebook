@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { lazy, Suspense, type ReactNode } from "react";
 import { useAuth } from "./lib/auth-context";
-import { LandingPage } from "./pages/LandingPage";
+import { HomePage } from "./pages/marketing/HomePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BusinessGate } from "./components/BusinessGate";
 
@@ -20,6 +20,11 @@ const CustomerDetailPage = lazy(() => import("./pages/CustomerDetailPage").then(
 const BookingsPage = lazy(() => import("./pages/BookingsPage").then((m) => ({ default: m.BookingsPage })));
 const CalendarPage = lazy(() => import("./pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const PublicBookingPage = lazy(() => import("./pages/PublicBookingPage").then((m) => ({ default: m.PublicBookingPage })));
+const FeaturesPage = lazy(() => import("./pages/marketing/FeaturesPage").then((m) => ({ default: m.FeaturesPage })));
+const SolutionsPage = lazy(() => import("./pages/marketing/SolutionsPage").then((m) => ({ default: m.SolutionsPage })));
+const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
+const JoinPage = lazy(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
+const InboxPage = lazy(() => import("./pages/InboxPage").then((m) => ({ default: m.InboxPage })));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
 function PageSpinner() {
@@ -59,7 +64,10 @@ export function App() {
   return (
     <Suspense fallback={<PageSpinner />}>
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/solutions" element={<SolutionsPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route
         path="/login"
         element={
@@ -77,6 +85,7 @@ export function App() {
         }
       />
       <Route path="/book/:businessSlug" element={<PublicBookingPage />} />
+      <Route path="/join/:businessSlug" element={<JoinPage />} />
       <Route
         path="/onboarding/business"
         element={
@@ -156,6 +165,14 @@ export function App() {
         element={
           <OwnerRoute>
             <BookingsPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/inbox"
+        element={
+          <OwnerRoute>
+            <InboxPage />
           </OwnerRoute>
         }
       />

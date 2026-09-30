@@ -40,6 +40,13 @@ const envSchema = z
       .trim()
       .min(1, "is required, e.g. https://servicebook-drab.vercel.app"),
 
+    // Seeds the "Glow Studio Lekki" demo that the website's demo buttons open.
+    // Set SEED_DEMO=false to skip it.
+    SEED_DEMO: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
+
     // Email is optional: with no provider configured, sendEmail() logs to the
     // console instead of delivering, so the app runs fully without it.
     EMAIL_PROVIDER: z.enum(["console", "resend"]).default("console"),

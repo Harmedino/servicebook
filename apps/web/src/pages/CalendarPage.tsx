@@ -51,7 +51,8 @@ export function CalendarPage() {
   const timezone = businessData?.business?.timezone ?? "UTC";
   const todayKey = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
 
-  const [view, setView] = useState<ViewMode>("week");
+  // Phones open on today's day view; a seven-column week is unreadable at that width.
+  const [view, setView] = useState<ViewMode>(() => (window.matchMedia("(max-width: 767px)").matches ? "day" : "week"));
   const [anchorDate, setAnchorDate] = useState(todayKey);
   const [staffFilter, setStaffFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");

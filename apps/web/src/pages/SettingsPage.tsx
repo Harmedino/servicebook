@@ -1,22 +1,26 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BusinessInfoSection } from "../components/BusinessInfoSection";
 import { BookingPageSection } from "../components/BookingPageSection";
 import { BusinessHoursEditor } from "../components/BusinessHoursEditor";
 import { NotificationSettingsSection } from "../components/NotificationSettingsSection";
+import { SocialLinksSection } from "../components/SocialLinksSection";
 import { PageHeader } from "../components/ui/PageHeader";
 
-type Tab = "business" | "booking-page" | "hours" | "notifications";
+type Tab = "business" | "chat" | "booking-page" | "hours" | "notifications";
 
 const TABS: { key: Tab; label: string; description: string }[] = [
   { key: "business", label: "Business", description: "Business information and contact details." },
+  { key: "chat", label: "Chat apps", description: "WhatsApp, Instagram and other apps customers can reach you on." },
   { key: "booking-page", label: "Booking page", description: "Manage what customers see when they book online." },
   { key: "hours", label: "Business hours", description: "Configure when your business is open." },
   { key: "notifications", label: "Notifications", description: "Manage the emails ServiceBook sends automatically." },
 ];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("business");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => (TABS.some((entry) => entry.key === searchParams.get("tab")) ? (searchParams.get("tab") as Tab) : "business"));
   const activeTab = TABS.find((entry) => entry.key === tab) ?? TABS[0];
 
   return (
@@ -47,6 +51,7 @@ export function SettingsPage() {
 
           <div className="animate-fade-in-up">
             {tab === "business" && <BusinessInfoSection />}
+            {tab === "chat" && <SocialLinksSection />}
             {tab === "booking-page" && <BookingPageSection />}
             {tab === "hours" && <BusinessHoursEditor />}
             {tab === "notifications" && <NotificationSettingsSection />}

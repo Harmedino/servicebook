@@ -13,6 +13,7 @@ import { ActiveBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
+import { ServiceThumb } from "../components/ServiceThumb";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -199,7 +200,8 @@ export function ServicesPage() {
                 {services.map((service) => (
                   <tr key={service.id}>
                     <td className="px-4 py-3 font-medium text-stone-900">
-                      <Link to={`/services/${service.id}`} className="hover:text-brand-700">
+                      <Link to={`/services/${service.id}`} className="flex items-center gap-3 hover:text-brand-700">
+                        <ServiceThumb name={service.name} imageUrl={service.imageUrl} className="h-10 w-10 rounded-lg" iconClassName="h-4 w-4" />
                         {service.name}
                       </Link>
                     </td>
@@ -246,7 +248,8 @@ export function ServicesPage() {
               {services.map((service) => (
                 <li key={service.id} className="rounded-xl border border-stone-200 bg-surface p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <ServiceThumb name={service.name} imageUrl={service.imageUrl} className="h-12 w-12 rounded-xl" />
+                    <div className="min-w-0 flex-1">
                       <Link to={`/services/${service.id}`} className="font-medium text-stone-900 hover:text-brand-700">
                         {service.name}
                       </Link>

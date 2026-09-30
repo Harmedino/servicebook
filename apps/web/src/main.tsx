@@ -6,6 +6,9 @@ import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./lib/auth-context";
 import { ServerStatus } from "./components/ServerStatus";
 import { App } from "./App";
+// Self-hosted variable fonts: no third-party request, no layout shift waiting on Google.
+import "@fontsource-variable/geist/wght.css";
+import "@fontsource-variable/bricolage-grotesque/wght.css";
 import "./index.css";
 
 const rootElement = document.getElementById("root");

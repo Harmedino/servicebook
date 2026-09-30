@@ -23,6 +23,7 @@ import { useCreateBooking } from "../lib/bookings";
 import { useCreateCustomer } from "../lib/customers";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
+import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { InsightsSection } from "../components/InsightsSection";
 import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
@@ -257,15 +258,15 @@ export function DashboardPage() {
   return (
     <DashboardLayout>
       {/* Branded hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-hero-mesh px-6 py-8 sm:px-9 sm:py-10">
+      <div className="relative overflow-hidden rounded-2xl bg-ink-grid px-5 py-7 sm:px-9 sm:py-10">
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-6">
           <div>
-            <p className="text-sm font-medium text-indigo-200">{todayLabel}</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+            <p className="text-sm font-medium text-highlight">{todayLabel}</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               {getGreeting()}
               {user ? `, ${user.name.split(" ")[0]}` : ""}
             </h1>
-            <p className="mt-2 max-w-md text-sm text-indigo-100/80">
+            <p className="mt-2 max-w-md text-sm text-white/65">
               Here&apos;s what&apos;s happening with {summary?.businessName ?? "your business"} today.
             </p>
 
@@ -273,9 +274,9 @@ export function DashboardPage() {
               <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-semibold text-white">{summary.todayAppointmentCount}</span>
-                  <span className="text-sm text-indigo-100/80">appointment{summary.todayAppointmentCount === 1 ? "" : "s"} today</span>
+                  <span className="text-sm text-white/65">appointment{summary.todayAppointmentCount === 1 ? "" : "s"} today</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-indigo-100/80">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-white/65">
                   <span className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> {todayConfirmed} confirmed
                   </span>
@@ -294,7 +295,7 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={() => setOpenModal("booking")}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-[var(--shadow-glow)] transition-colors hover:bg-indigo-50"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-highlight px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-highlight-soft"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               New booking
@@ -302,6 +303,8 @@ export function DashboardPage() {
           )}
         </div>
       </div>
+
+      <OwnerStaffPrompt className="mt-4" />
 
       {isPending && <DashboardSkeleton />}
 
@@ -316,7 +319,7 @@ export function DashboardPage() {
           </h2>
           <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-stone-200">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
+              className="h-full rounded-full bg-brand-500"
               initial={{ width: 0 }}
               animate={{ width: `${setupPercent}%` }}
               transition={{ duration: 0.7, ease: "easeOut" }}
@@ -419,13 +422,13 @@ export function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedBookingId(booking.id)}
-                        className="mb-2 flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:bg-stone-50 hover:shadow-sm"
+                        className="mb-2 flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:bg-stone-50 hover:shadow-sm"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           <Avatar name={booking.staffName} size="sm" />
-                          <div>
-                            <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
-                            <p className="text-xs text-stone-500">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-stone-900">{booking.customerName}</p>
+                            <p className="truncate text-xs text-stone-500">
                               {booking.serviceName} <span className="text-stone-400">with</span> {booking.staffName}
                             </p>
                           </div>

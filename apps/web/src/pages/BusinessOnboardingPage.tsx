@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useCreateBusiness } from "../lib/business";
 import { TIMEZONES, detectTimezone } from "../lib/timezones";
 import { CURRENCIES, currencyForTimezone } from "../lib/format";
+import { useSetOwnerStaff } from "../lib/staff";
+import { Toggle } from "../components/Toggle";
 import { ApiError } from "../lib/apiClient";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Logo } from "../components/Logo";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,6 +28,8 @@ export function BusinessOnboardingPage() {
   const [description, setDescription] = useState("");
   const [timezone, setTimezone] = useState(detectTimezone());
   const [currency, setCurrency] = useState(() => currencyForTimezone(detectTimezone()));
+  const [servesCustomers, setServesCustomers] = useState(true);
+  const setOwnerStaff = useSetOwnerStaff();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -56,6 +61,8 @@ export function BusinessOnboardingPage() {
         timezone,
         currency,
       });
+      // Best effort: the dashboard asks again if this didn't go through.
+      await setOwnerStaff.mutateAsync({ isStaff: servesCustomers }).catch(() => undefined);
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setServerError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
@@ -66,9 +73,7 @@ export function BusinessOnboardingPage() {
     <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link to="/" className="text-xl font-semibold tracking-tight text-stone-900">
-            ServiceBook
-          </Link>
+          <Logo size="lg" />
         </div>
 
         <Card className="animate-fade-in-up p-8">
@@ -146,14 +151,24 @@ export function BusinessOnboardingPage() {
               <span className="mt-1 block text-xs text-stone-500">Prices on your booking page are shown in this currency.</span>
             </label>
 
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
+              <div>
+                <p className="text-sm font-semibold text-stone-900">I also take appointments myself</p>
+                <p className="mt-0.5 text-xs text-stone-500">
+                  We&apos;ll add you as a staff member, so customers who don&apos;t pick anyone are booked with you. You can change this later.
+                </p>
+              </div>
+              <Toggle checked={servesCustomers} onChange={setServesCustomers} label="I also take appointments myself" disabled={createBusiness.isPending} />
+            </div>
+
             {serverError && (
               <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
                 {serverError}
               </p>
             )}
 
-            <Button type="submit" size="lg" isLoading={createBusiness.isPending} className="w-full">
-              {createBusiness.isPending ? "Creating…" : "Continue"}
+            <Button type="submit" size="lg" isLoading={createBusiness.isPending || setOwnerStaff.isPending} className="w-full">
+              {createBusiness.isPending || setOwnerStaff.isPending ? "Creating…" : "Continue"}
             </Button>
           </form>
         </Card>

@@ -6,6 +6,7 @@ import { FormField } from "../components/FormField";
 import { PasswordInput } from "../components/PasswordInput";
 import { Button } from "../components/ui/Button";
 import { AuthBrandPanel } from "../components/AuthBrandPanel";
+import { Logo } from "../components/Logo";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -78,9 +79,7 @@ export function RegisterPage() {
       <div className="flex flex-1 items-center justify-center px-4 py-16">
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center lg:hidden">
-            <Link to="/" className="text-xl font-semibold tracking-tight text-stone-900">
-              ServiceBook
-            </Link>
+            <Logo size="lg" />
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Create your account</h1>

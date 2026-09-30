@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { CustomerListResponse, CustomerProfile, CustomerResponse } from "@servicebook/types";
+import type { CustomerListResponse, CustomerProfile, CustomerResponse, CustomerSource } from "@servicebook/types";
 import { Customer, type CustomerDocument } from "../models/Customer";
 import { Booking } from "../models/Booking";
 import { ConflictError, NotFoundError } from "../lib/errors";
@@ -50,6 +50,7 @@ export function toCustomerProfile(customer: CustomerDocument, stats?: CustomerSt
     phone: customer.phone,
     email: customer.email ?? undefined,
     notes: customer.notes ?? undefined,
+    source: (customer.source as CustomerSource | undefined) ?? "manual",
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
     appointmentCount: stats?.appointmentCount,

@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Copy,
   ExternalLink,
+  Inbox,
   LayoutDashboard,
   LogOut,
   Moon,
@@ -14,6 +15,7 @@ import {
   Plus,
   Scissors,
   Settings,
+  Share2,
   Sun,
   UserRound,
   Users,
@@ -22,6 +24,10 @@ import {
 import { useAuth } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
 import { useTheme } from "../lib/theme";
+import { imageSrc } from "../lib/images";
+import { Logo, LogoMark } from "./Logo";
+import { InviteCustomersModal } from "./InviteCustomersModal";
+import { useEnquiries } from "../lib/enquiries";
 
 interface NavItem {
   to: string;
@@ -39,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Manage",
     items: [
+      { to: "/inbox", label: "Inbox", icon: Inbox },
       { to: "/bookings", label: "Bookings", icon: ClipboardList },
       { to: "/calendar", label: "Calendar", icon: CalendarDays },
       { to: "/customers", label: "Customers", icon: Users },
@@ -63,16 +70,6 @@ function isNavItemActive(pathname: string, to: string): boolean {
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
-function Logo() {
-  return (
-    <Link to="/dashboard" className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-white shadow-sm">
-        <CalendarDays className="h-4 w-4" aria-hidden="true" />
-      </span>
-      <span className="font-display text-lg font-bold tracking-tight text-stone-900">ServiceBook</span>
-    </Link>
-  );
-}
 
 function ThemeButton({ className = "" }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
@@ -82,7 +79,7 @@ function ThemeButton({ className = "" }: { className?: string }) {
       onClick={toggleTheme}
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       title={theme === "dark" ? "Light mode" : "Dark mode"}
-      className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-surface text-stone-600 transition-colors hover:bg-stone-100 ${className}`}
+      className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white ${className}`}
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -99,12 +96,12 @@ function ThemeButton({ className = "" }: { className?: string }) {
   );
 }
 
-function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function SidebarNav({ pathname, onNavigate, badges = {} }: { pathname: string; onNavigate?: () => void; badges?: Record<string, number> }) {
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">{group.label}</p>
+          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-white/35">{group.label}</p>
           <div className="mt-2 space-y-0.5">
             {group.items.map((item) => {
               const active = isNavItemActive(pathname, item.to);
@@ -116,18 +113,21 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                    active ? "text-brand-700" : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                    active ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   {active && (
                     <motion.span
                       layoutId={onNavigate ? "nav-active-mobile" : "nav-active"}
-                      className="absolute inset-0 rounded-xl bg-brand-50"
+                      className="absolute inset-0 rounded-xl bg-white/[0.09] before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-highlight"
                       transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
-                  <Icon className="relative h-4 w-4 shrink-0" aria-hidden="true" />
+                  <Icon className={`relative h-4 w-4 shrink-0 ${active ? "text-highlight" : ""}`} aria-hidden="true" />
                   <span className="relative">{item.label}</span>
+                  {(badges[item.to] ?? 0) > 0 && (
+                    <span className="relative ml-auto rounded-full bg-highlight px-1.5 text-[11px] font-bold tabular-nums text-ink">{badges[item.to]}</span>
+                  )}
                 </Link>
               );
             })}
@@ -138,8 +138,9 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
   );
 }
 
-function BookingLinkCard({ slug, enabled }: { slug?: string; enabled?: boolean }) {
+function BookingLinkCard({ slug, enabled, businessName }: { slug?: string; enabled?: boolean; businessName?: string }) {
   const [copied, setCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   if (!slug) return null;
   const url = `${window.location.origin}/book/${slug}`;
 
@@ -154,50 +155,71 @@ function BookingLinkCard({ slug, enabled }: { slug?: string; enabled?: boolean }
   }
 
   return (
-    <div className="mx-3 mb-3 rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 p-4 text-white">
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Your booking page</p>
-      <p className="mt-1 truncate text-sm font-medium">/book/{slug}</p>
-      {!enabled && <p className="mt-1 text-xs text-amber-200">Online booking is paused</p>}
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={copy}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/15 px-2 py-1.5 text-xs font-semibold backdrop-blur transition hover:bg-white/25"
-        >
-          {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
-          {copied ? "Copied" : "Copy link"}
-        </button>
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Open booking page"
-          className="inline-flex items-center justify-center rounded-lg bg-white/15 px-2.5 py-1.5 backdrop-blur transition hover:bg-white/25"
-        >
+    <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-white">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Your booking page</p>
+        <a href={url} target="_blank" rel="noreferrer" aria-label="Open booking page" className="rounded-md p-1 text-white/50 transition hover:bg-white/10 hover:text-white">
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
       </div>
+      <p className="mt-1 truncate font-mono text-[13px] text-white/85">/book/{slug}</p>
+      {!enabled && <p className="mt-1 text-xs text-amber-300">Online booking is paused</p>}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/10 px-2 py-2 text-xs font-semibold transition hover:bg-white/15"
+        >
+          {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsShareOpen(true)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-highlight px-2 py-2 text-xs font-semibold text-ink transition hover:bg-highlight-soft"
+        >
+          <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Invite
+        </button>
+      </div>
+      {isShareOpen && (
+        <InviteCustomersModal slug={slug} businessName={businessName ?? "us"} onClose={() => setIsShareOpen(false)} />
+      )}
     </div>
   );
 }
 
-function AccountArea({ businessName, userName, onLogout }: { businessName?: string; userName?: string; onLogout: () => void }) {
+function AccountArea({
+  businessName,
+  logoUrl,
+  userName,
+  onLogout,
+}: {
+  businessName?: string;
+  logoUrl?: string;
+  userName?: string;
+  onLogout: () => void;
+}) {
   return (
-    <div className="border-t border-stone-200 p-3">
+    <div className="border-t border-white/10 p-3">
       <div className="flex items-center gap-2.5 rounded-xl px-2 py-2">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-violet-500 text-sm font-bold text-white">
-          {(businessName ?? userName ?? "S").charAt(0).toUpperCase()}
-        </div>
+        {logoUrl ? (
+          <img src={imageSrc(logoUrl)} alt="" className="h-9 w-9 shrink-0 rounded-xl object-cover" />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-highlight text-sm font-bold text-ink">
+            {(businessName ?? userName ?? "S").charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-stone-900">{businessName ?? "Your business"}</p>
-          <p className="truncate text-xs text-stone-500">{userName}</p>
+          <p className="truncate text-sm font-semibold text-white">{businessName ?? "Your business"}</p>
+          <p className="truncate text-xs text-white/50">{userName}</p>
         </div>
         <button
           type="button"
           onClick={onLogout}
           aria-label="Log out"
           title="Log out"
-          className="shrink-0 rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+          className="shrink-0 rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -213,6 +235,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const { data: enquiryData } = useEnquiries("open");
+  const newEnquiries = enquiryData?.counts.new ?? 0;
+  const badges = { "/inbox": newEnquiries };
 
   function handleLogout() {
     logout();
@@ -225,25 +250,23 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-stone-50">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200 bg-surface lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-ink lg:flex">
         <div className="flex h-16 items-center justify-between px-5">
-          <Logo />
+          <Logo to="/dashboard" tone="light" />
           <ThemeButton />
         </div>
-        <SidebarNav pathname={location.pathname} />
-        <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} />
-        <AccountArea businessName={business?.name} userName={user?.name} onLogout={handleLogout} />
+        <SidebarNav pathname={location.pathname} badges={badges} />
+        <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} businessName={business?.name} />
+        <AccountArea businessName={business?.name} logoUrl={business?.logoUrl} userName={user?.name} onLogout={handleLogout} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-surface/85 px-4 backdrop-blur-xl lg:hidden">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-white">
-              <CalendarDays className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <span className="font-display text-base font-bold text-stone-900">{currentLabel}</span>
-          </div>
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-ink px-4 lg:hidden">
+          <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
+            <LogoMark className="h-8 w-8 shrink-0" onDark />
+            <span className="truncate font-display text-base font-bold text-white">{currentLabel}</span>
+          </Link>
           <ThemeButton />
         </header>
 
@@ -269,7 +292,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <Link
               to="/bookings?new=1"
               aria-label="New booking"
-              className="-mt-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-[0_12px_24px_-8px_rgb(79_70_229/0.7)] transition active:scale-95"
+              className="-mt-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-highlight shadow-[0_12px_24px_-8px_rgb(12_26_20/0.6)] ring-4 ring-surface transition active:scale-95 dark:bg-highlight dark:text-ink"
             >
               <Plus className="h-6 w-6" aria-hidden="true" />
             </Link>
@@ -280,7 +303,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             onClick={() => setIsMoreOpen(true)}
             className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${moreActive ? "text-brand-700" : "text-stone-500"}`}
           >
-            <MoreHorizontal className="h-[22px] w-[22px]" aria-hidden="true" />
+            <span className="relative">
+              <MoreHorizontal className="h-[22px] w-[22px]" aria-hidden="true" />
+              {newEnquiries > 0 && <span className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-600 ring-2 ring-surface" />}
+            </span>
             More
           </button>
         </div>
@@ -298,27 +324,27 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               onClick={() => setIsMoreOpen(false)}
             />
             <motion.div
-              className="pb-safe absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-surface"
+              className="pb-safe absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-ink"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 320 }}
             >
-              <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-stone-300" />
+              <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-white/20" />
               <div className="flex items-center justify-between px-5 pt-3">
-                <span className="font-display text-lg font-bold text-stone-900">Menu</span>
+                <span className="font-display text-lg font-bold text-white">Menu</span>
                 <button
                   type="button"
                   onClick={() => setIsMoreOpen(false)}
                   aria-label="Close menu"
-                  className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100"
+                  className="rounded-lg p-1.5 text-white/60 hover:bg-white/10"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
-              <SidebarNav pathname={location.pathname} onNavigate={() => setIsMoreOpen(false)} />
-              <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} />
-              <AccountArea businessName={business?.name} userName={user?.name} onLogout={handleLogout} />
+              <SidebarNav pathname={location.pathname} onNavigate={() => setIsMoreOpen(false)} badges={badges} />
+              <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} businessName={business?.name} />
+              <AccountArea businessName={business?.name} logoUrl={business?.logoUrl} userName={user?.name} onLogout={handleLogout} />
             </motion.div>
           </div>
         )}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
-import type { BusinessResponse, MyBusinessResponse } from "@servicebook/types";
+import type { BusinessResponse, MyBusinessResponse, SocialLinks } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
 import { DASHBOARD_QUERY_KEY } from "./dashboard";
 
@@ -21,8 +21,10 @@ export interface UpdateBusinessInput {
   description?: string;
   address?: string;
   website?: string;
+  socials?: SocialLinks;
   timezone?: string;
   logoUrl?: string;
+  coverImageUrl?: string;
   currency?: string;
   isPublicBookingEnabled?: boolean;
   emailNotificationsEnabled?: boolean;

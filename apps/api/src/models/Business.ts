@@ -31,14 +31,29 @@ const businessSchema = new Schema(
     },
     address: { type: String, trim: true },
     website: { type: String, trim: true },
+    // Handles for the "Chat with us" buttons on the booking page (no @, no URL).
+    socials: {
+      whatsapp: { type: String, trim: true },
+      instagram: { type: String, trim: true },
+      facebook: { type: String, trim: true },
+      tiktok: { type: String, trim: true },
+      x: { type: String, trim: true },
+      telegram: { type: String, trim: true },
+      snapchat: { type: String, trim: true },
+    },
     timezone: {
       type: String,
       required: true,
       default: "UTC",
     },
     logoUrl: { type: String, trim: true },
+    /** Wide banner photo shown at the top of the public booking page. */
+    coverImageUrl: { type: String, trim: true },
     /** ISO 4217 code used to display prices, e.g. "NGN". */
     currency: { type: String, uppercase: true, trim: true, default: "USD" },
+    // Whether the owner has answered "do you also take appointments yourself?",
+    // so the dashboard only asks once.
+    ownerStaffAnswered: { type: Boolean, default: false },
     isPublicBookingEnabled: {
       type: Boolean,
       required: true,

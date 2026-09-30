@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { socialLinksSchema, toSocialLinks } from "../lib/socials";
 import type {
   BusinessHoursEntry,
   BusinessHoursResponse,
@@ -13,6 +14,7 @@ import { ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { slugify } from "../lib/slugify";
+import { imageRefField } from "../lib/validation";
 import { ensureBusinessHours } from "../lib/businessHours";
 
 // Accept any zone the runtime can format in. Intl.supportedValuesOf("timeZone")
@@ -33,7 +35,7 @@ const phoneField = z.string().trim().max(30, "Phone number is too long");
 const descriptionField = z.string().trim().max(1000, "Description is too long");
 const addressField = z.string().trim().max(300, "Address is too long");
 const websiteField = z.string().trim().url("Enter a valid website URL");
-const logoUrlField = z.string().trim().url("Enter a valid URL");
+
 export const SUPPORTED_CURRENCIES = ["NGN", "USD", "GBP", "EUR", "GHS", "KES", "ZAR", "CAD"] as const;
 const currencyField = z.enum(SUPPORTED_CURRENCIES);
 const timezoneField = z
@@ -58,8 +60,10 @@ const updateBusinessSchema = z
     description: descriptionField.optional(),
     address: addressField.optional(),
     website: websiteField.optional(),
+    socials: socialLinksSchema.optional(),
     timezone: timezoneField.optional(),
-    logoUrl: logoUrlField.optional(),
+    logoUrl: imageRefField.optional(),
+    coverImageUrl: imageRefField.optional(),
     currency: currencyField.optional(),
     isPublicBookingEnabled: z.boolean().optional(),
     emailNotificationsEnabled: z.boolean().optional(),
@@ -129,8 +133,10 @@ function toBusinessProfile(business: BusinessDocument): BusinessProfile {
     email: business.email ?? undefined,
     address: business.address ?? undefined,
     website: business.website ?? undefined,
+    socials: toSocialLinks(business.socials),
     timezone: business.timezone,
-    logoUrl: business.logoUrl ?? undefined,
+    logoUrl: business.logoUrl || undefined,
+    coverImageUrl: business.coverImageUrl || undefined,
     currency: business.currency ?? "USD",
     isPublicBookingEnabled: business.isPublicBookingEnabled ?? true,
     emailNotificationsEnabled: business.emailNotificationsEnabled ?? true,

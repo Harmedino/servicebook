@@ -145,13 +145,13 @@ export function BookingsPage() {
       />
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-b border-stone-200">
-        <div className="flex gap-5">
+        <div className="no-scrollbar flex gap-5 overflow-x-auto">
           {TABS.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => setTab(option.value)}
-              className={`-mb-px border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+              className={`-mb-px shrink-0 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
                 tab === option.value ? "border-brand-600 text-stone-900" : "border-transparent text-stone-500 hover:text-stone-700"
               }`}
             >
@@ -162,14 +162,14 @@ export function BookingsPage() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="relative w-full max-w-xs">
+        <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" aria-hidden="true" />
           <input
             type="search"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search customers…"
-            className="w-full rounded-lg border border-stone-300 py-1.5 pl-8 pr-3 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            className="w-full rounded-lg border border-stone-300 bg-surface py-2 pl-8 pr-3 text-sm text-stone-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
           />
         </div>
         <select
@@ -243,24 +243,31 @@ export function BookingsPage() {
           !isError &&
           groupedByDate.map(([dateKey, dayBookings]) => (
             <div key={dateKey} className="mb-6">
-              <p className="section-label">{dayLabel(dateKey)}</p>
-              <ol className="mt-1">
+              <p className="section-label flex items-center justify-between">
+                {dayLabel(dateKey)}
+                <span className="font-medium normal-case tracking-normal text-stone-400">
+                  {dayBookings.length} booking{dayBookings.length === 1 ? "" : "s"}
+                </span>
+              </p>
+              <ol className="mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-surface px-2 sm:px-3">
                 {dayBookings.map((booking) => (
-                  <li key={booking.id} className="flex gap-4 border-t border-stone-100 py-1 first:border-t-0">
-                    <div className="w-16 shrink-0 pt-3 text-sm font-medium text-stone-500">
+                  <li key={booking.id} className="flex gap-2.5 border-t border-stone-100 py-1 first:border-t-0 sm:gap-4">
+                    <div className="w-14 shrink-0 pt-3.5 text-xs font-semibold tabular-nums text-stone-500 sm:w-16 sm:text-sm sm:font-medium">
                       {formatInTimeZone(new Date(booking.startTime), timezone, "h:mm a")}
                     </div>
                     <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                     <button
                       type="button"
                       onClick={() => setSelectedBookingId(booking.id)}
-                      className="flex flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
+                      className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar name={booking.customerName} size="sm" />
-                        <div>
-                          <p className="text-sm font-semibold text-stone-900">{booking.customerName}</p>
-                          <p className="text-xs text-stone-500">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="hidden sm:block">
+                          <Avatar name={booking.customerName} size="sm" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-stone-900">{booking.customerName}</p>
+                          <p className="truncate text-xs text-stone-500">
                             {booking.serviceName} <span className="text-stone-400">with</span> {booking.staffName}
                           </p>
                         </div>
