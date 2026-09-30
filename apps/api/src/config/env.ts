@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
 // Render sets RENDER=true on every service. Treat it like production for the
@@ -12,6 +13,13 @@ const DEV_DEFAULTS: Record<string, string> = {
   JWT_SECRET: "local-development-only-secret-do-not-use-in-production",
   CORS_ORIGIN: "http://localhost:5173",
 };
+
+// The deployed web app. Always allowed in production so a missing or wrong
+// CORS_ORIGIN can't block sign-up from the real site.
+const DEFAULT_WEB_ORIGIN = "https://servicebook-drab.vercel.app";
+const DEFAULT_PREVIEW_ORIGINS = "https://servicebook-*.vercel.app";
+
+const warnings: string[] = [];
 
 const envSchema = z
   .object({
@@ -58,6 +66,20 @@ if (!isDeployed) {
   for (const [key, value] of Object.entries(DEV_DEFAULTS)) {
     rawEnv[key] ??= value;
   }
+} else {
+  // Don't refuse to start over settings with a safe fallback; warn loudly instead.
+  if ((!rawEnv.JWT_SECRET || rawEnv.JWT_SECRET.length < 32) && rawEnv.MONGODB_URI) {
+    warnings.push(
+      `JWT_SECRET is ${rawEnv.JWT_SECRET ? "too short" : "not set"}; using a secret derived from MONGODB_URI. ` +
+        "Set JWT_SECRET to 32+ random characters (openssl rand -base64 48) on Render.",
+    );
+    // Stable across restarts (so logins survive) and as secret as the database password.
+    rawEnv.JWT_SECRET = createHash("sha256").update(`jwt:${rawEnv.MONGODB_URI}`).digest("hex");
+  }
+  if (!rawEnv.CORS_ORIGIN) {
+    warnings.push(`CORS_ORIGIN is not set; allowing ${DEFAULT_WEB_ORIGIN}.`);
+    rawEnv.CORS_ORIGIN = DEFAULT_WEB_ORIGIN;
+  }
 }
 
 const parsed = envSchema.safeParse(rawEnv);
@@ -82,22 +104,21 @@ function parseAllowedOrigins(raw: string): Array<string | RegExp> {
 
   const invalid = entries.filter((origin) => !/^https?:\/\/[^/\s]+$/.test(origin));
   if (invalid.length > 0) {
-    console.error(
-      `\nInvalid CORS_ORIGIN entr${invalid.length === 1 ? "y" : "ies"}: ${invalid.join(", ")}\n` +
-        "Each entry must be a full origin like https://servicebook-drab.vercel.app (scheme + host, no path).\n",
+    warnings.push(
+      `Ignoring invalid CORS_ORIGIN entr${invalid.length === 1 ? "y" : "ies"} ${invalid.join(", ")}: ` +
+        "use full origins like https://servicebook-drab.vercel.app (scheme + host, no path).",
     );
-    process.exit(1);
+  }
+  const valid = entries.filter((origin) => !invalid.includes(origin));
+
+  if (isDeployed) {
+    if (valid.every((origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+      warnings.push(`CORS_ORIGIN only lists ${valid.join(", ") || "nothing valid"}; also allowing ${DEFAULT_WEB_ORIGIN}.`);
+    }
+    valid.push(DEFAULT_WEB_ORIGIN, DEFAULT_PREVIEW_ORIGINS);
   }
 
-  if (isDeployed && entries.every((origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
-    console.error(
-      `\nCORS_ORIGIN only allows ${entries.join(", ")}, so the deployed web app would be blocked.\n` +
-        "Set it to your Vercel URL, e.g. https://servicebook-drab.vercel.app\n",
-    );
-    process.exit(1);
-  }
-
-  const origins: Array<string | RegExp> = entries.map((origin) =>
+  const origins: Array<string | RegExp> = [...new Set(valid)].map((origin) =>
     origin.includes("*")
       ? new RegExp(`^${origin.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[a-z0-9-]+")}$`)
       : origin,
@@ -112,3 +133,7 @@ function parseAllowedOrigins(raw: string): Array<string | RegExp> {
 export const env = parsed.data;
 export const isProduction = isDeployed;
 export const allowedOrigins = parseAllowedOrigins(env.CORS_ORIGIN);
+
+if (env.NODE_ENV !== "test") {
+  for (const warning of warnings) console.warn(`Warning: ${warning}`);
+}

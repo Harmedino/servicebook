@@ -3,7 +3,7 @@ import type { ApiErrorBody } from "@servicebook/types";
 // Set VITE_API_URL to the deployed API (e.g. https://servicebook-api.onrender.com).
 // Production builds refuse to build without it (see vite.config.ts); the
 // localhost fallback only ever applies to `pnpm dev`.
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/+$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/+$/, "");
 const TOKEN_STORAGE_KEY = "servicebook_token";
 const UNAUTHORIZED_EVENT = "servicebook:unauthorized";
 
@@ -58,17 +58,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, {
+      error: { message: "Can't reach the server. It may be waking up; please try again in a minute.", code: "NETWORK_ERROR" },
+    });
+  }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  const data = await response.json();
+  // Hosts return an HTML error page (502/503) while the API is down or restarting.
+  const data = await response.json().catch(() => ({
+    error: { message: "The server is starting up or unavailable. Please try again in a minute.", code: "SERVER_UNAVAILABLE" },
+  }));
 
   if (!response.ok) {
     if (response.status === 401 && auth) {
