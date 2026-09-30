@@ -89,6 +89,14 @@ function parseAllowedOrigins(raw: string): Array<string | RegExp> {
     process.exit(1);
   }
 
+  if (isDeployed && entries.every((origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+    console.error(
+      `\nCORS_ORIGIN only allows ${entries.join(", ")}, so the deployed web app would be blocked.\n` +
+        "Set it to your Vercel URL, e.g. https://servicebook-drab.vercel.app\n",
+    );
+    process.exit(1);
+  }
+
   const origins: Array<string | RegExp> = entries.map((origin) =>
     origin.includes("*")
       ? new RegExp(`^${origin.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[a-z0-9-]+")}$`)
