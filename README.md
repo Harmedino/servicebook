@@ -77,8 +77,9 @@ Environment variables (the API exits at startup with a clear message if a requir
 
 ### Web → Vercel
 
-Import the repo with **Root Directory** `apps/web` (framework: Vite) and set
-`VITE_API_URL` to the Render URL without a trailing slash, e.g. `https://servicebook-api.onrender.com`.
+Import the repo with **Root Directory** `apps/web` (framework: Vite). `apps/web/.env.production`
+points production builds at `https://servicebook-ahh1.onrender.com`; setting `VITE_API_URL` in Vercel
+overrides it (no trailing slash).
 The production build fails with a clear message if it's missing. `apps/web/vercel.json`
 makes deep links such as `/dashboard` and `/book/your-business` work on refresh.
 `VITE_API_URL` is baked in at build time, so redeploy after changing it.
