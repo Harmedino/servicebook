@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { AuthResponse, MeResponse, SafeUser } from "@servicebook/types";
-import { apiRequest, getStoredToken, onUnauthorized, setStoredToken } from "./apiClient";
+import { ApiError, apiRequest, getStoredToken, onUnauthorized, setStoredToken } from "./apiClient";
+
+/** Waits between tries while restoring a session; null = stop trying. About 60s in total. */
+const SESSION_RETRY_DELAYS_MS: (number | null)[] = [2_000, 4_000, 8_000, 15_000, 30_000, null];
 
 interface AuthContextValue {
   user: SafeUser | null;
@@ -28,18 +31,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      try {
-        const data = await apiRequest<MeResponse>("/api/auth/me");
-        if (!cancelled) {
-          setUser(data.user);
-        }
-      } catch {
-        setStoredToken(null);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
+      // Only a 401 means the token is bad. A dropped connection, an aborted
+      // page load or the free-tier server waking up (502/503) must not log
+      // the owner out, so those are retried for about a minute.
+      for (const delay of SESSION_RETRY_DELAYS_MS) {
+        try {
+          const data = await apiRequest<MeResponse>("/api/auth/me");
+          if (!cancelled) setUser(data.user);
+          break;
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            setStoredToken(null);
+            break;
+          }
+          if (cancelled || delay === null) break;
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
+      if (!cancelled) setIsLoading(false);
     }
 
     void restoreSession();
