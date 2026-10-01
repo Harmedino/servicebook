@@ -11,6 +11,7 @@ import type {
   StaffProfile,
   StaffResponse,
   RatingSummary,
+  StaffAccess,
 } from "@servicebook/types";
 import { Staff, type StaffDocument } from "../models/Staff";
 import { Service } from "../models/Service";
@@ -83,7 +84,15 @@ async function assertServiceIdsBelongToBusiness(serviceIds: string[], businessId
   }
 }
 
-function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number, rating?: RatingSummary): StaffProfile {
+/** How this person signs in: as the owner, with their own login, invited, or not at all. */
+function accessOf(staff: StaffDocument, ownerId: string): StaffAccess {
+  if (staff.userId?.toString() === ownerId) return "owner";
+  if (staff.userId) return "active";
+  if (staff.inviteToken && staff.inviteExpiresAt && staff.inviteExpiresAt > new Date()) return "invited";
+  return "none";
+}
+
+function toStaffProfile(staff: StaffDocument, ownerId: string, todayAppointmentCount?: number, rating?: RatingSummary): StaffProfile {
   return {
     id: staff.id,
     businessId: staff.businessId.toString(),
@@ -95,7 +104,8 @@ function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number, ra
     bio: staff.bio || undefined,
     location: staff.location || undefined,
     isActive: staff.isActive ?? true,
-    isOwner: Boolean(staff.userId),
+    isOwner: staff.userId?.toString() === ownerId,
+    access: accessOf(staff, ownerId),
     serviceIds: staff.serviceIds.map((id) => id.toString()),
     todayAppointmentCount,
     rating: rating?.rating,
@@ -168,7 +178,7 @@ staffRouter.post(
       isActive: payload.isActive ?? true,
     });
 
-    const body: StaffResponse = { staff: toStaffProfile(staff) };
+    const body: StaffResponse = { staff: toStaffProfile(staff, req.business!.ownerId.toString()) };
     res.status(201).json(body);
   }),
 );
@@ -211,7 +221,7 @@ staffRouter.get(
 
     const ratings = await staffRatings(req.business.id);
     const body: StaffListResponse = {
-      staff: staff.map((member) => toStaffProfile(member, todayCountByStaffId.get(member.id) ?? 0, ratings.get(member.id))),
+      staff: staff.map((member) => toStaffProfile(member, req.business!.ownerId.toString(), todayCountByStaffId.get(member.id) ?? 0, ratings.get(member.id))),
     };
     res.json(body);
   }),
@@ -225,7 +235,7 @@ staffRouter.get(
   asyncHandler(async (req, res) => {
     const staff = await Staff.findOne({ businessId: req.businessId, userId: req.user?.id });
     const body: OwnerStaffResponse = {
-      staff: staff ? toStaffProfile(staff) : null,
+      staff: staff ? toStaffProfile(staff, req.business!.ownerId.toString()) : null,
       answered: Boolean(req.business?.ownerStaffAnswered) || Boolean(staff),
     };
     res.json(body);
@@ -268,7 +278,7 @@ staffRouter.post(
     req.business.set("ownerStaffAnswered", true);
     await req.business.save();
 
-    const body: OwnerStaffResponse = { staff: staff ? toStaffProfile(staff) : null, answered: true };
+    const body: OwnerStaffResponse = { staff: staff ? toStaffProfile(staff, req.business!.ownerId.toString()) : null, answered: true };
     res.status(isStaff ? 201 : 200).json(body);
   }),
 );
@@ -282,7 +292,7 @@ staffRouter.get(
       throw new NotFoundError("Staff member not found");
     }
 
-    const body: StaffResponse = { staff: toStaffProfile(staff) };
+    const body: StaffResponse = { staff: toStaffProfile(staff, req.business!.ownerId.toString()) };
     res.json(body);
   }),
 );
@@ -306,7 +316,7 @@ staffRouter.patch(
       throw new NotFoundError("Staff member not found");
     }
 
-    const body: StaffResponse = { staff: toStaffProfile(staff) };
+    const body: StaffResponse = { staff: toStaffProfile(staff, req.business!.ownerId.toString()) };
     res.json(body);
   }),
 );

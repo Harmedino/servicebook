@@ -12,6 +12,7 @@ import { formatDuration, formatPrice } from "../lib/format";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { BackLink } from "../components/ui/BackLink";
+import { useAuth } from "../lib/auth-context";
 import { DashboardLayout } from "../components/DashboardLayout";
 
 interface BookingFormSubmitValues {
@@ -159,7 +160,11 @@ function NewBookingForm({ isSubmitting, serverError, initialDate, initialCustome
 
   const customer = customers.find((entry) => entry.id === customerId);
   const service = activeServices.find((entry) => entry.id === serviceId);
-  const eligibleStaff = allStaff.filter((member) => member.isActive && Boolean(serviceId) && member.serviceIds.includes(serviceId));
+  const { user } = useAuth();
+  // A staff login books only themselves.
+  const eligibleStaff = allStaff.filter(
+    (member) => member.isActive && Boolean(serviceId) && member.serviceIds.includes(serviceId) && (user?.role !== "STAFF" || member.id === user.staffId),
+  );
   const staffMember = eligibleStaff.find((member) => member.id === staffId);
 
   const matches = useMemo(() => {

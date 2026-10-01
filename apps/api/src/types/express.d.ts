@@ -12,6 +12,8 @@ declare global {
       };
       business?: BusinessDocument;
       businessId?: string;
+      /** Set when a STAFF user is signed in: their staff id. Routes limit data to it. */
+      staffScope?: string;
     }
   }
 }

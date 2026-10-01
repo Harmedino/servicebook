@@ -1,5 +1,7 @@
 import { User } from "../models/User";
 import { Business } from "../models/Business";
+import { Staff } from "../models/Staff";
+import { staffMayCall } from "./staffAccess";
 import { verifyAccessToken } from "../lib/jwt";
 import { ForbiddenError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -50,6 +52,22 @@ export const optionalAuth = asyncHandler(async (req, _res, next) => {
 export const requireBusiness = asyncHandler(async (req, _res, next) => {
   if (!req.user) {
     throw new UnauthorizedError();
+  }
+
+  if (req.user.role === "STAFF") {
+    // Staff belong to the business their staff record is in; nothing else.
+    const staff = await Staff.findOne({ userId: req.user.id, isActive: true });
+    const business = staff ? await Business.findById(staff.businessId) : null;
+    if (!staff || !business) {
+      throw new ForbiddenError("Your access to this business has been removed");
+    }
+    if (!staffMayCall(req.method, `${req.baseUrl}${req.path}`)) {
+      throw new ForbiddenError("Only the business owner can do this");
+    }
+    req.business = business;
+    req.businessId = business.id;
+    req.staffScope = staff.id;
+    return next();
   }
 
   const business = await Business.findOne({ ownerId: req.user.id });

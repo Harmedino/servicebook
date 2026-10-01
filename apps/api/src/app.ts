@@ -20,6 +20,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { publicShowcaseRouter, reviewsRouter, showcaseRouter } from "./routes/showcase";
 import { timeOffRouter } from "./routes/timeOff";
 import { waitlistRouter } from "./routes/waitlist";
+import { teamRouter } from "./routes/team";
 import { calendarFeedPublicRouter, calendarFeedRouter } from "./routes/calendarFeed";
 import { customerPortalLinkRouter, publicCustomerPortalRouter } from "./routes/customerPortal";
 import { bookingMessagesRouter, conversationsRouter, publicBookingChatRouter } from "./routes/bookingChat";
@@ -76,6 +77,7 @@ export function createApp() {
   app.use("/api/showcase", showcaseRouter);
   app.use("/api/time-off", timeOffRouter);
   app.use("/api/waitlist", waitlistRouter);
+  app.use("/api/team", teamRouter);
   app.use("/api/calendar-feed", calendarFeedRouter);
   app.use("/api/calendar", calendarFeedPublicRouter);
   app.use("/api/reviews", reviewsRouter);

@@ -16,6 +16,7 @@ import { describeTimeOff, useCreateTimeOff, useDeleteTimeOff, useTimeOff } from 
 import { useStaffList } from "../lib/staff";
 import { useMyBusiness } from "../lib/business";
 import { useOpenBooking } from "../lib/bookings";
+import { useAuth, useIsStaff } from "../lib/auth-context";
 import { ApiError } from "../lib/apiClient";
 
 function Who({ entry }: { entry: TimeOffProfile }) {
@@ -161,7 +162,10 @@ export function NewTimeOffPage() {
   const today = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
   const staff = (staffData?.staff ?? []).filter((member) => member.isActive);
 
-  const [who, setWho] = useState(params.get("staff") ?? "");
+  const isStaff = useIsStaff();
+  const { user } = useAuth();
+  // A staff login can only add their own time off.
+  const [who, setWho] = useState(isStaff ? (user?.staffId ?? "") : (params.get("staff") ?? ""));
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [allDay, setAllDay] = useState(true);
@@ -235,7 +239,7 @@ export function NewTimeOffPage() {
         <div>
           <span className="text-sm font-medium text-stone-700">Who</span>
           <div className="mt-2 flex flex-wrap gap-2">
-            {[{ id: "", name: "Whole business" }, ...staff].map((member) => (
+            {(isStaff ? staff.filter((member) => member.id === user?.staffId) : [{ id: "", name: "Whole business" }, ...staff]).map((member) => (
               <button
                 key={member.id || "all"}
                 type="button"

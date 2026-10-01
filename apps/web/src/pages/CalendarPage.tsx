@@ -25,6 +25,7 @@ import { Button, buttonClassName } from "../components/ui/Button";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
+import { useAuth, useIsStaff } from "../lib/auth-context";
 import { Skeleton } from "../components/ui/Skeleton";
 
 type ViewMode = "day" | "week" | "month";
@@ -54,6 +55,9 @@ export function CalendarPage() {
   const [view, setView] = useState<ViewMode>(() => (window.matchMedia("(max-width: 767px)").matches ? "day" : "week"));
   const [anchorDate, setAnchorDate] = useState(todayKey);
   const [staffFilter, setStaffFilter] = useState("all");
+  // A staff login's bookings are already only theirs; the day view shows just their column.
+  const isStaff = useIsStaff();
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState("all");
 
   const openBooking = useOpenBooking();
@@ -175,7 +179,8 @@ export function CalendarPage() {
   );
 
   const dayColumns: GridColumn[] = useMemo(() => {
-    const staffToShow = staffFilter === "all" ? activeStaff : activeStaff.filter((staff) => staff.id === staffFilter);
+    const onlyId = isStaff ? user?.staffId : staffFilter !== "all" ? staffFilter : undefined;
+    const staffToShow = onlyId ? activeStaff.filter((staff) => staff.id === onlyId) : activeStaff;
     const dayBookings = bookingsByLocalDate.get(anchorDate) ?? [];
     return staffToShow.map((staff) => ({
       key: staff.id,
@@ -184,7 +189,7 @@ export function CalendarPage() {
       bookings: dayBookings.filter((booking) => booking.staffId === staff.id),
       blocks: blocksForDay(timeOff, anchorDate, timezone, staff.id),
     }));
-  }, [staffFilter, activeStaff, bookingsByLocalDate, anchorDate, timeOff, timezone]);
+  }, [staffFilter, activeStaff, bookingsByLocalDate, anchorDate, timeOff, timezone, isStaff, user?.staffId]);
 
   const rangeLabel = useMemo(() => {
     if (view === "day") {
@@ -205,12 +210,16 @@ export function CalendarPage() {
         description="Your appointment schedule."
         actions={
           <>
-            <Link to="/calendar/sync" className={buttonClassName("secondary", "md")}>
-              <RefreshCw className="h-4 w-4" aria-hidden="true" /> Sync to your calendar
-            </Link>
-            <Link to="/front-desk" className={buttonClassName("secondary", "md")}>
-              <Monitor className="h-4 w-4" aria-hidden="true" /> Front desk view
-            </Link>
+            {!isStaff && (
+              <>
+                <Link to="/calendar/sync" className={buttonClassName("secondary", "md")}>
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" /> Sync to your calendar
+                </Link>
+                <Link to="/front-desk" className={buttonClassName("secondary", "md")}>
+                  <Monitor className="h-4 w-4" aria-hidden="true" /> Front desk view
+                </Link>
+              </>
+            )}
             <Button onClick={openBlankForm}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               New booking
@@ -263,6 +272,7 @@ export function CalendarPage() {
             ))}
           </div>
 
+          {!isStaff && (
           <select
             value={staffFilter}
             onChange={(event) => setStaffFilter(event.target.value)}
@@ -275,6 +285,7 @@ export function CalendarPage() {
               </option>
             ))}
           </select>
+          )}
 
           <select
             value={statusFilter}

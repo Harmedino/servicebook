@@ -23,7 +23,7 @@ import {
   Images,
   CalendarOff,
 } from "lucide-react";
-import { useAuth } from "../lib/auth-context";
+import { useAuth, useIsStaff } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
 import { useTheme } from "../lib/theme";
 import { imageSrc } from "../lib/images";
@@ -34,6 +34,7 @@ import { NotificationBell, NotificationToasts } from "./Notifications";
 import { useEnquiries } from "../lib/enquiries";
 import { useConversations } from "../lib/bookingChat";
 import { useIsDemoAccount } from "../lib/demo";
+import { STAFF_HOME } from "../lib/staffMode";
 
 interface NavItem {
   to: string;
@@ -71,7 +72,20 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const ALL_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
+// A staff login sees just their own day.
+const STAFF_NAV_GROUPS: NavGroup[] = [
+  {
+    label: "",
+    items: [
+      { to: "/bookings", label: "My bookings", icon: ClipboardList },
+      { to: "/calendar", label: "Calendar", icon: CalendarDays },
+      { to: "/inbox", label: "Messages", icon: Inbox },
+      { to: "/time-off", label: "Time off", icon: CalendarOff },
+    ],
+  },
+];
+
+const ALL_ITEMS = [...NAV_GROUPS, ...STAFF_NAV_GROUPS].flatMap((group) => group.items);
 
 // Bottom tab bar on phones: Home, Calendar, the + menu, Inbox and More.
 const MOBILE_TABS: NavItem[] = [
@@ -110,10 +124,20 @@ function ThemeButton({ className = "" }: { className?: string }) {
   );
 }
 
-function SidebarNav({ pathname, onNavigate, badges = {} }: { pathname: string; onNavigate?: () => void; badges?: Record<string, number> }) {
+function SidebarNav({
+  pathname,
+  onNavigate,
+  badges = {},
+  groups = NAV_GROUPS,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+  badges?: Record<string, number>;
+  groups?: NavGroup[];
+}) {
   return (
     <nav className="flex-1 space-y-5 divide-y divide-white/10 overflow-y-auto px-3 py-4 [&>*:not(:first-child)]:pt-5">
-      {NAV_GROUPS.map((group, groupIndex) => (
+      {groups.map((group, groupIndex) => (
         <div key={groupIndex}>
           {group.label && <p className="mb-2 px-3 text-xs font-medium text-white/40">{group.label}</p>}
           <div className="space-y-0.5">
@@ -251,7 +275,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const isDemo = useIsDemoAccount();
-  const { data: enquiryData } = useEnquiries("open");
+  const isStaff = useIsStaff();
+  const home = isStaff ? STAFF_HOME : "/dashboard";
+  const mobileTabs: NavItem[] = isStaff
+    ? [{ to: STAFF_HOME, label: "Bookings", icon: ClipboardList }, MOBILE_TABS[1], { ...MOBILE_TABS[2], label: "Messages" }]
+    : MOBILE_TABS;
+  // Chat requests are the owner's; staff only get their own booking chats.
+  const { data: enquiryData } = useEnquiries("open", { enabled: !isStaff });
   const { data: conversationData } = useConversations();
   // One badge for everything waiting in the Inbox: new chat requests and unread booking messages.
   const newEnquiries = (enquiryData?.counts.new ?? 0) + (conversationData?.unread ?? 0);
@@ -263,20 +293,20 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   const currentLabel = ALL_ITEMS.find((item) => isNavItemActive(location.pathname, item.to))?.label ?? "ServiceBook";
-  const moreActive = !MOBILE_TABS.some((tab) => isNavItemActive(location.pathname, tab.to));
+  const moreActive = !mobileTabs.some((tab) => isNavItemActive(location.pathname, tab.to));
 
   return (
     <div className="flex min-h-screen bg-stone-50">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 z-40 hidden h-screen w-64 shrink-0 flex-col bg-ink lg:flex">
         <div className="flex h-16 items-center justify-between px-5">
-          <Logo to="/dashboard" tone="light" />
+          <Logo to={home} tone="light" />
           <div className="flex items-center gap-2">
-            <NotificationBell />
+            {!isStaff && <NotificationBell />}
             <ThemeButton />
           </div>
         </div>
-        <SidebarNav pathname={location.pathname} badges={badges} />
+        <SidebarNav pathname={location.pathname} badges={badges} groups={isStaff ? STAFF_NAV_GROUPS : NAV_GROUPS} />
         <BookingLinkCard slug={business?.slug} enabled={business?.isPublicBookingEnabled} businessName={business?.name} />
         <AccountArea businessName={business?.name} logoUrl={business?.logoUrl} userName={user?.name} onLogout={handleLogout} />
       </aside>
@@ -304,12 +334,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         )}
         {/* Mobile header */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-ink px-4 lg:hidden">
-          <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5">
+          <Link to={home} className="flex min-w-0 items-center gap-2.5">
             <LogoMark className="h-8 w-8 shrink-0" onDark />
             <span className="truncate font-display text-base font-bold text-white">{currentLabel}</span>
           </Link>
           <div className="flex items-center gap-2">
-            <NotificationBell />
+            {!isStaff && <NotificationBell />}
             <ThemeButton />
           </div>
         </header>
@@ -326,18 +356,19 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <NotificationToasts />
+      {!isStaff && <NotificationToasts />}
 
       {/* Mobile bottom tab bar */}
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-surface/95 backdrop-blur-xl lg:hidden">
         <div className="grid grid-cols-5 items-end">
-          {MOBILE_TABS.slice(0, 2).map((tab) => (
+          {mobileTabs.slice(0, 2).map((tab) => (
             <TabLink key={tab.to} tab={tab} active={isNavItemActive(location.pathname, tab.to)} />
           ))}
           <div className="flex justify-center">
             <button
               type="button"
-              onClick={() => setIsCreateOpen((open) => !open)}
+              // Staff only add bookings, so + goes straight there.
+              onClick={() => (isStaff ? navigate("/bookings/new", { state: { from: location.pathname } }) : setIsCreateOpen((open) => !open))}
               aria-label={isCreateOpen ? "Close quick actions" : "Quick actions"}
               aria-expanded={isCreateOpen}
               className="relative z-[60] -mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-highlight shadow-[0_10px_24px_-8px_rgb(12_26_20/0.6)] ring-4 ring-surface transition active:scale-95 dark:bg-highlight dark:text-ink"
@@ -347,7 +378,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </motion.span>
             </button>
           </div>
-          <TabLink tab={MOBILE_TABS[2]} active={isNavItemActive(location.pathname, MOBILE_TABS[2].to)} badge={newEnquiries} />
+          <TabLink tab={mobileTabs[2]} active={isNavItemActive(location.pathname, mobileTabs[2].to)} badge={newEnquiries} />
           <button
             type="button"
             onClick={() => setIsMoreOpen(true)}
@@ -367,6 +398,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         business={business ? { name: business.name, slug: business.slug, logoUrl: business.logoUrl } : undefined}
         userName={user?.name}
         onLogout={handleLogout}
+        staffOnly={isStaff}
       />
     </div>
   );

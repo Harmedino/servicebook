@@ -1,7 +1,8 @@
 import { Schema, model, type HydratedDocument, type InferSchemaType } from "mongoose";
 
-export type UserRole = "OWNER";
-const USER_ROLES: UserRole[] = ["OWNER"];
+// OWNER runs a business; STAFF signs in through an invite and sees only their own schedule.
+export type UserRole = "OWNER" | "STAFF";
+const USER_ROLES: UserRole[] = ["OWNER", "STAFF"];
 
 const userSchema = new Schema(
   {

@@ -100,6 +100,13 @@ export function DemoPage() {
                 </Link>
               ))}
             </div>
+            <Link
+              to="/demo/owner?as=staff"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-stone-700 underline decoration-stone-300 underline-offset-4 hover:decoration-stone-700"
+            >
+              Or sign in as Tunde, a barber with his own staff login
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
         </div>
 

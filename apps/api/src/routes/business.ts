@@ -8,9 +8,10 @@ import type {
   BusinessResponse,
   MyBusinessResponse,
 } from "@servicebook/types";
+import { Staff } from "../models/Staff";
 import { Business, type BusinessDocument } from "../models/Business";
 import { BusinessHours, type BusinessHoursDocument } from "../models/BusinessHours";
-import { ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
+import { ConflictError, NotFoundError, UnauthorizedError, ForbiddenError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { slugify } from "../lib/slugify";
@@ -161,6 +162,9 @@ businessRouter.post(
       throw new UnauthorizedError();
     }
 
+    if (req.user.role === "STAFF") {
+      throw new ForbiddenError("Staff accounts can't create a business");
+    }
     const payload = createBusinessSchema.parse(req.body);
 
     const existing = await Business.findOne({ ownerId: req.user.id });
@@ -194,7 +198,9 @@ businessRouter.get(
       throw new UnauthorizedError();
     }
 
-    const business = await Business.findOne({ ownerId: req.user.id });
+    // Staff see the business they work at; owners, the one they own (or none yet).
+    const staff = req.user.role === "STAFF" ? await Staff.findOne({ userId: req.user.id, isActive: true }) : null;
+    const business = req.user.role === "STAFF" ? (staff ? await Business.findById(staff.businessId) : null) : await Business.findOne({ ownerId: req.user.id });
 
     const body: MyBusinessResponse = { business: business ? toBusinessProfile(business) : null };
     res.json(body);

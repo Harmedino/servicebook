@@ -6,10 +6,11 @@ export type EnquiryFilter = EnquiryStatus | "open" | "all";
 
 const ENQUIRIES_QUERY_KEY = ["enquiries"] as const;
 
-export function useEnquiries(status: EnquiryFilter = "open"): UseQueryResult<EnquiryListResponse> {
+export function useEnquiries(status: EnquiryFilter = "open", options?: { enabled?: boolean }): UseQueryResult<EnquiryListResponse> {
   return useQuery({
     queryKey: [...ENQUIRIES_QUERY_KEY, status],
     queryFn: () => apiRequest<EnquiryListResponse>(`/api/enquiries?status=${status}`),
+    enabled: options?.enabled ?? true,
     // New chats arrive while the owner has the app open.
     refetchInterval: 60_000,
   });

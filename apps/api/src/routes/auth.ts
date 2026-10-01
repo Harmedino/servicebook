@@ -1,11 +1,14 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
-import type { ApiErrorBody, AuthResponse, MeResponse, SafeUser } from "@servicebook/types";
+import type {
+  StaffInviteInfoResponse, ApiErrorBody, AuthResponse, MeResponse, SafeUser } from "@servicebook/types";
+import { Staff } from "../models/Staff";
+import { Business } from "../models/Business";
 import { User, type UserDocument } from "../models/User";
 import { hashPassword, verifyPassword } from "../lib/password";
 import { signAccessToken } from "../lib/jwt";
-import { ConflictError, UnauthorizedError } from "../lib/errors";
+import { ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth } from "../middleware/auth";
 
@@ -38,13 +41,21 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-function toSafeUser(user: UserDocument): SafeUser {
+function toSafeUser(user: UserDocument, staffId?: string): SafeUser {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
+    ...(staffId ? { staffId } : {}),
   };
+}
+
+/** A staff login's staff id, so the app can show "my" schedule. */
+async function staffIdFor(user: { id?: string; role: string }): Promise<string | undefined> {
+  if (user.role !== "STAFF" || !user.id) return undefined;
+  const staff = await Staff.findOne({ userId: user.id }).select("_id");
+  return staff?.id;
 }
 
 export const authRouter = Router();
@@ -89,7 +100,7 @@ authRouter.post(
 
     const token = signAccessToken({ userId: user.id });
 
-    const body: AuthResponse = { user: toSafeUser(user), token };
+    const body: AuthResponse = { user: toSafeUser(user, await staffIdFor(user)), token };
     res.json(body);
   }),
 );
@@ -103,7 +114,60 @@ authRouter.get(
     }
 
     // req.user was populated by requireAuth from the verified JWT — already a safe shape.
-    const body: MeResponse = { user: req.user };
+    const body: MeResponse = { user: { ...req.user, ...(await staffIdFor(req.user).then((staffId) => (staffId ? { staffId } : {}))) } };
     res.json(body);
+  }),
+);
+
+// ---- Staff invites: /api/auth/invites/:token ----------------------------------------
+
+async function staffByInvite(token: string) {
+  const staff = /^[A-Za-z0-9_-]{16,64}$/.test(token)
+    ? await Staff.findOne({ inviteToken: token, inviteExpiresAt: { $gt: new Date() }, isActive: true })
+    : null;
+  if (!staff) throw new NotFoundError("This invite has expired or was already used. Ask for a new one.");
+  return staff;
+}
+
+authRouter.get(
+  "/invites/:token",
+  asyncHandler(async (req, res) => {
+    const staff = await staffByInvite(req.params.token);
+    const business = await Business.findById(staff.businessId).select("name");
+    const body: StaffInviteInfoResponse = { businessName: business?.name ?? "", staffName: staff.name, email: staff.email ?? undefined };
+    res.json(body);
+  }),
+);
+
+const acceptInviteSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+});
+
+authRouter.post(
+  "/invites/:token/accept",
+  authRateLimit,
+  asyncHandler(async (req, res) => {
+    const staff = await staffByInvite(req.params.token);
+    if (staff.userId) throw new ConflictError("This person already has a login");
+    const { email, password } = acceptInviteSchema.parse(req.body);
+    if (await User.exists({ email })) {
+      throw new ConflictError("That email already has a ServiceBook account. Use a different email for your staff login.");
+    }
+
+    const user = await User.create({ name: staff.name, email, passwordHash: await hashPassword(password), role: "STAFF" });
+    // Claim the invite only if it's still unused, so the same link can't make two logins.
+    const claimed = await Staff.findOneAndUpdate(
+      { _id: staff._id, inviteToken: req.params.token, userId: { $exists: false } },
+      { $set: { userId: user._id }, $unset: { inviteToken: 1, inviteExpiresAt: 1 } },
+      { new: true },
+    );
+    if (!claimed) {
+      await user.deleteOne();
+      throw new ConflictError("This invite was just used. Ask for a new one.");
+    }
+
+    const body: AuthResponse = { user: toSafeUser(user, staff.id), token: signAccessToken({ userId: user.id }) };
+    res.status(201).json(body);
   }),
 );

@@ -2,6 +2,8 @@
 export const DEMO_SLUG = "glow-studio-lekki";
 export const DEMO_EMAIL = "demo@servicebook.app";
 export const DEMO_PASSWORD = "password123";
+/** Tunde's staff login, for trying the staff view of the demo. */
+export const DEMO_STAFF_EMAIL = "tunde@demo.servicebook.app";
 
 /**
  * Whether a business may send email. The demo never does: visitors book

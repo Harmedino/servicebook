@@ -15,6 +15,7 @@ import { useWaitlist } from "./WaitlistPage";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
+import { useIsStaff } from "../lib/auth-context";
 import { Avatar } from "../components/ui/Avatar";
 
 type Tab = "today" | "upcoming" | "past" | "all";
@@ -79,7 +80,8 @@ export function BookingsPage() {
   });
 
   const navigate = useNavigate();
-  const { data: waitlist } = useWaitlist();
+  const isStaff = useIsStaff();
+  const { data: waitlist } = useWaitlist(!isStaff);
   const openBooking = useOpenBooking();
 
   const bookings = useMemo(() => data?.bookings ?? [], [data?.bookings]);
@@ -111,16 +113,18 @@ export function BookingsPage() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Bookings"
-        description="Your appointments, all in one place."
+        title={isStaff ? "My bookings" : "Bookings"}
+        description={isStaff ? "Your appointments. Only you and the owner can see these." : "Your appointments, all in one place."}
         actions={
           <>
+            {!isStaff && (
             <Link to="/waitlist" className={buttonClassName("secondary", "md")}>
               Waitlist
               {(waitlist?.entries.length ?? 0) > 0 && (
                 <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800">{waitlist?.entries.length}</span>
               )}
             </Link>
+            )}
             <Button onClick={openForm}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               New booking
@@ -169,6 +173,7 @@ export function BookingsPage() {
             </option>
           ))}
         </select>
+        {!isStaff && (
         <select
           value={staffFilter}
           onChange={(event) => setStaffFilter(event.target.value)}
@@ -181,6 +186,7 @@ export function BookingsPage() {
             </option>
           ))}
         </select>
+        )}
       </div>
 
       <div className="mt-4">

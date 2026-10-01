@@ -17,6 +17,7 @@ import { SocialIcon } from "../components/SocialIcon";
 import { buttonClassName } from "../components/ui/Button";
 import { useEnquiries, useUpdateEnquiry, type EnquiryFilter } from "../lib/enquiries";
 import { useMyBusiness } from "../lib/business";
+import { useIsStaff } from "../lib/auth-context";
 import { activeChannels, CHANNEL_BY_ID, whatsappNumberFor } from "../lib/socials";
 
 const FILTERS: { value: EnquiryFilter; label: string }[] = [
@@ -338,24 +339,30 @@ export function InboxPage() {
   const { data: businessData } = useMyBusiness();
   const timezone = businessData?.business?.timezone ?? "UTC";
   const { data: conversationData } = useConversations();
-  const { data: enquiryData } = useEnquiries("open");
+  const isStaff = useIsStaff();
+  const { data: enquiryData } = useEnquiries("open", { enabled: !isStaff });
   const unread = conversationData?.unread ?? 0;
   const newRequests = enquiryData?.counts.new ?? 0;
 
-  const tabs = [
-    { key: "messages", label: "Messages", count: unread },
-    { key: "requests", label: "Chat requests", count: newRequests },
-  ] as const;
+  // Chat requests come to the owner; a staff login only has their booking chats.
+  const tabs = (
+    [
+      { key: "messages", label: "Messages", count: unread },
+      { key: "requests", label: "Chat requests", count: newRequests },
+    ] as const
+  ).filter((entry) => !isStaff || entry.key === "messages");
 
   return (
     <DashboardLayout>
       <PageHeader
         title="Inbox"
-        description="Messages from customers about their bookings, and people who asked to chat."
+        description={isStaff ? "Messages from your customers about their bookings." : "Messages from customers about their bookings, and people who asked to chat."}
         actions={
-          <Link to="/settings?tab=chat" className={buttonClassName("secondary", "md")}>
-            <Settings2 className="h-4 w-4" aria-hidden="true" /> Chat apps
-          </Link>
+          isStaff ? undefined : (
+            <Link to="/settings?tab=chat" className={buttonClassName("secondary", "md")}>
+              <Settings2 className="h-4 w-4" aria-hidden="true" /> Chat apps
+            </Link>
+          )
         }
       />
       <div className="mt-5 flex gap-5 border-b border-stone-200">
@@ -373,7 +380,7 @@ export function InboxPage() {
           </button>
         ))}
       </div>
-      {tab === "messages" ? <Messages timezone={timezone} /> : <ChatRequests />}
+      {tab === "messages" || isStaff ? <Messages timezone={timezone} /> : <ChatRequests />}
     </DashboardLayout>
   );
 }

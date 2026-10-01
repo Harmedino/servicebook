@@ -13,6 +13,7 @@ import { BookingStatusBadge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
+import { useIsStaff } from "../lib/auth-context";
 import { Skeleton } from "../components/ui/Skeleton";
 
 const STATUS_ACCENT: Record<BookingStatus, string> = {
@@ -35,6 +36,7 @@ export function CustomerDetailPage() {
   });
 
   const navigate = useNavigate();
+  const isStaff = useIsStaff();
   const openBooking = useOpenBooking();
   const [historyFilter, setHistoryFilter] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
 
@@ -123,14 +125,16 @@ export function CustomerDetailPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{customer.name}</h1>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              navigate(`/customers/${customer.id}/edit`, { state: { from: `/customers/${customer.id}` } });
-            }}
-          >
-            Edit
-          </Button>
+          {!isStaff && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                navigate(`/customers/${customer.id}/edit`, { state: { from: `/customers/${customer.id}` } });
+              }}
+            >
+              Edit
+            </Button>
+          )}
           <Button
             onClick={() => {
               navigate(`/bookings/new?customer=${customer.id}`, { state: { from: `/customers/${customer.id}` } });
@@ -142,9 +146,11 @@ export function CustomerDetailPage() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <CustomerPageShare customer={customer} />
-      </div>
+      {!isStaff && (
+        <div className="mt-6">
+          <CustomerPageShare customer={customer} />
+        </div>
+      )}
 
       <Card className="mt-6 p-6">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">

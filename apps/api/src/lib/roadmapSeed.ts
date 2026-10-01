@@ -13,22 +13,73 @@ const STARTING_ITEMS = [
   { status: "shipped", daysAgo: 2, kind: "feature", title: "Photos for your logo, cover, services and staff" },
   { status: "shipped", daysAgo: 4, kind: "design", title: "Dark mode" },
   { status: "in_progress", kind: "feature", title: "WhatsApp reminders the day before", description: "A reminder message on WhatsApp instead of email, with a link to the customer's booking page." },
-  { status: "in_progress", kind: "design", title: "Printable QR poster", description: "An A5 poster with your logo, QR code and booking link, ready to print for the counter." },
+  { status: "shipped", daysAgo: 0, kind: "design", title: "Printable QR poster", description: "An A5 or A4 poster with your logo, colour, QR code and booking link, ready to print for the counter." },
   { status: "planned", kind: "feature", title: "Take deposits with Paystack", description: "Ask for a deposit when someone books, to cut no-shows on long appointments." },
-  { status: "planned", kind: "feature", title: "Staff logins", description: "Each staff member signs in to see and manage their own schedule." },
-  { status: "planned", kind: "feature", title: "Reviews after appointments", description: "A short review request after each completed booking, shown on your booking page." },
-  { status: "planned", kind: "design", title: "Your own colours on the booking page" },
-  { status: "planned", kind: "feature", title: "Google Calendar sync" },
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Staff logins", description: "Invite staff by link. They see only their own appointments, chats and time off." },
+  { status: "shipped", daysAgo: 1, kind: "feature", title: "Reviews after appointments", description: "A short review request after each completed booking, shown on your booking page." },
+  { status: "shipped", daysAgo: 0, kind: "design", title: "Your own colours on the booking page" },
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Google Calendar sync", description: "Subscribe from Google, Apple or Outlook; one link for everyone or one per staff member." },
   { status: "idea", kind: "feature", title: "Multiple locations under one account" },
-  { status: "idea", kind: "feature", title: "Waitlist when a day is fully booked" },
-  { status: "idea", kind: "feature", title: "Birthday messages to clients" },
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Waitlist when a day is fully booked" },
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Birthday messages to clients" },
   { status: "idea", kind: "feature", title: "Packages and memberships", description: "Sell five sessions at once, or a monthly plan." },
-  { status: "idea", kind: "design", title: "Larger calendar for a tablet at the front desk" },
+  { status: "shipped", daysAgo: 0, kind: "design", title: "Larger calendar for a tablet at the front desk" },
 ] as const;
+
+// Shipped since the roadmap first went live: moved to Shipped on existing roadmaps.
+const NOW_SHIPPED = [
+  "Printable QR poster",
+  "Staff logins",
+  "Reviews after appointments",
+  "Your own colours on the booking page",
+  "Google Calendar sync",
+  "Waitlist when a day is fully booked",
+  "Birthday messages to clients",
+  "Larger calendar for a tablet at the front desk",
+];
+
+// Added to every roadmap that doesn't have them yet (matched by title).
+const ADDED_ITEMS: Array<{ status: string; kind: string; title: string; description?: string; daysAgo?: number }> = [
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Phone alerts for new bookings", description: "Notifications on your phone or computer, even when ServiceBook is closed." },
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Time off and closures", description: "Block days or hours for one person or the whole business; nobody can book them." },
+  { status: "shipped", daysAgo: 0, kind: "feature", title: "Customers' own page", description: "Past and upcoming visits, \"Book again\" and no retyping their details." },
+  { status: "shipped", daysAgo: 1, kind: "feature", title: "Staff portfolios and ratings", description: "Photos of each person's work and how customers rate them, with \"Book this style\"." },
+  { status: "planned", kind: "feature", title: "Mark appointments as paid", description: "Cash, transfer or card, with a daily and monthly takings summary." },
+  { status: "planned", kind: "feature", title: "Repeat bookings", description: "Every two weeks with the same person, booked in one go." },
+  { status: "idea", kind: "feature", title: "Loyalty stamps", description: "Every sixth visit free, tracked for you." },
+  { status: "idea", kind: "feature", title: "Gift cards" },
+  { status: "idea", kind: "feature", title: "Earnings per staff member", description: "What each person brought in this week and month, for paying commission." },
+  { status: "idea", kind: "feature", title: "Book button on Instagram and Google Maps" },
+  { status: "idea", kind: "feature", title: "SMS reminders for customers without WhatsApp" },
+  { status: "idea", kind: "design", title: "Before and after photos on a customer's profile" },
+];
+
+/** Brings an existing roadmap up to date. Safe to run on every start. */
+async function applyRoadmapUpdates(): Promise<void> {
+  const now = Date.now();
+  await Idea.updateMany({ title: { $in: NOW_SHIPPED }, status: { $ne: "shipped" } }, { $set: { status: "shipped", shippedAt: new Date(now) } });
+  for (const [index, item] of ADDED_ITEMS.entries()) {
+    // eslint-disable-next-line no-await-in-loop
+    await Idea.updateOne(
+      { title: item.title },
+      {
+        $setOnInsert: {
+          title: item.title,
+          description: item.description,
+          kind: item.kind,
+          status: item.status,
+          shippedAt: item.daysAgo !== undefined ? new Date(now - item.daysAgo * DAY) : undefined,
+          createdAt: new Date(now - index * 60_000),
+        },
+      },
+      { upsert: true },
+    );
+  }
+}
 
 /** Fills an empty roadmap once; after that it belongs to its admins and voters. */
 export async function ensureRoadmap(): Promise<void> {
-  if ((await Idea.estimatedDocumentCount()) > 0) return;
+  if ((await Idea.estimatedDocumentCount()) > 0) return applyRoadmapUpdates();
   const now = Date.now();
   await Idea.insertMany(
     STARTING_ITEMS.map((item, index) => ({
@@ -41,4 +92,5 @@ export async function ensureRoadmap(): Promise<void> {
       createdAt: new Date(now - index * 60_000),
     })),
   );
+  await applyRoadmapUpdates();
 }
