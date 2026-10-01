@@ -40,3 +40,12 @@ export function useMarkAllNotificationsRead() {
       ),
   });
 }
+
+/** Creates a "Test alert" notification, which also goes out as a push to every subscribed device. */
+export function useSendTestNotification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiRequest<{ devices: number }>("/api/notifications/test", { method: "POST" }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+}
