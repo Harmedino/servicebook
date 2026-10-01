@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { AnimatePresence, motion } from "motion/react";
@@ -14,10 +14,13 @@ import {
   Moon,
   Phone,
   Sparkles,
+  Star,
   Sun,
   Sunrise,
   UserRound,
+  X,
 } from "lucide-react";
+import type { ShowcaseStaff } from "@servicebook/types";
 import { usePublicAvailableSlots, usePublicBusiness, usePublicStaff, useCreatePublicBooking } from "../lib/publicBooking";
 import { ApiError } from "../lib/apiClient";
 import { formatDuration, formatPrice, setDisplayCurrency } from "../lib/format";
@@ -33,6 +36,9 @@ import { ChatSheet } from "../components/ChatSheet";
 import { CustomerChat } from "../components/chat/CustomerChat";
 import { DemoBar } from "../components/DemoBar";
 import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
+import { usePublicShowcase } from "../lib/showcase";
+import { PublicShowcase, type BookIntent } from "../components/showcase/PublicShowcase";
+import { RatingBadge } from "../components/showcase/Stars";
 
 type Step = "service" | "datetime" | "details" | "review" | "confirmation";
 
@@ -144,6 +150,9 @@ export function PublicBookingPage() {
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  // Set by "Book with Tunde" on the team section: narrows the services to theirs.
+  const [preferredStaff, setPreferredStaff] = useState<ShowcaseStaff | null>(null);
+  const bookingCard = useRef<HTMLDivElement>(null);
   const [searchParams] = useSearchParams();
   const embedded = isEmbedded();
 
@@ -157,6 +166,7 @@ export function PublicBookingPage() {
 
   const business = businessData?.business;
   const bookingEnabled = businessData?.bookingEnabled ?? true;
+  const { data: showcase } = usePublicShowcase(slug);
   const services = businessData?.services ?? [];
   const staff = staffData?.staff ?? [];
   const slots = slotsData?.slots ?? [];
@@ -182,12 +192,28 @@ export function PublicBookingPage() {
   const staffLabel = selectedStaff?.name ?? onlyStaff?.name ?? (serviceId ? "Any available" : undefined);
   const stepIndex = step === "confirmation" ? STEPS.length : STEPS.findIndex((s) => s.key === step);
 
-  function selectService(id: string) {
+  function selectService(id: string, withStaffId?: string) {
     setServiceId(id);
-    setStaffId(ANY_STAFF);
+    setStaffId(withStaffId ?? preferredStaff?.id ?? ANY_STAFF);
+    setPreferredStaff(null);
     setDate(today);
     setSelectedSlot(null);
     setStep("datetime");
+  }
+
+  /** From the team, a portfolio post or a staff profile: jump into the booking flow with them preselected. */
+  function bookFromShowcase(intent: BookIntent, member?: ShowcaseStaff) {
+    const theirServices = member?.serviceIds.filter((id) => services.some((service) => service.id === id)) ?? [];
+    const serviceForBooking = intent.serviceId ?? (theirServices.length === 1 ? theirServices[0] : undefined);
+    if (serviceForBooking) {
+      selectService(serviceForBooking, intent.staffId);
+    } else {
+      setServiceId(null);
+      setSelectedSlot(null);
+      setPreferredStaff(member ?? null);
+      setStep("service");
+    }
+    bookingCard.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function selectStaff(id: string) {
@@ -328,6 +354,13 @@ export function PublicBookingPage() {
             )}
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-extrabold text-stone-900 sm:text-3xl">{business.name}</h1>
+              {showcase && showcase.summary.count > 0 && (
+                <a href="#reviews" className="mt-1 inline-flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />
+                  <span className="font-semibold text-stone-900">{showcase.summary.rating.toFixed(1)}</span>
+                  <span className="underline decoration-stone-300 underline-offset-2">{showcase.summary.count} reviews</span>
+                </a>
+              )}
               {business.description && <p className="mt-1 text-sm text-stone-500 sm:text-base">{business.description}</p>}
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 {business.address && (
@@ -389,7 +422,7 @@ export function PublicBookingPage() {
             <p className="mt-2 text-sm text-stone-500">Please contact the business directly to book an appointment.</p>
           </div>
         ) : (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div ref={bookingCard} className="mt-6 grid scroll-mt-4 gap-6 lg:grid-cols-[1fr_320px]">
             <div className="min-w-0">
               {step !== "confirmation" && (
                 <div className="mb-4 flex items-center gap-3">
@@ -409,12 +442,31 @@ export function PublicBookingPage() {
                   <motion.div key={step} {...slide}>
                     {step === "service" && (
                       <>
-                        <StepHeader title="What would you like to book?" subtitle="Choose a service to see free times." />
+                        <StepHeader
+                          title={preferredStaff ? `What would you like ${preferredStaff.name.split(" ")[0]} to do?` : "What would you like to book?"}
+                          subtitle="Choose a service to see free times."
+                        />
+                        {preferredStaff && (
+                          <div className="mb-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-3 py-2.5 text-sm text-brand-900">
+                            <Avatar name={preferredStaff.name} src={preferredStaff.avatarUrl} size="sm" />
+                            <span className="flex-1">
+                              Booking with <span className="font-semibold">{preferredStaff.name}</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPreferredStaff(null)}
+                              aria-label="Show every service"
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-brand-800 hover:bg-brand-100"
+                            >
+                              <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </div>
+                        )}
                         {services.length === 0 ? (
                           <p className="text-sm text-stone-500">This business hasn&apos;t added any bookable services yet.</p>
                         ) : (
                           <div className="grid gap-3 sm:grid-cols-2">
-                            {services.map((service, i) => {
+                            {services.filter((service) => !preferredStaff || preferredStaff.serviceIds.includes(service.id)).map((service, i) => {
                               return (
                                 <motion.button
                                   key={service.id}
@@ -485,6 +537,7 @@ export function PublicBookingPage() {
                                       <Avatar name={member.name} src={member.avatarUrl} size="sm" />
                                     )}
                                     {member.id === ANY_STAFF ? member.name : member.name.split(" ")[0]}
+                                    {"reviewCount" in member && <RatingBadge rating={member.rating} count={member.reviewCount} className="ml-0.5" />}
                                   </button>
                                 );
                               })}
@@ -762,6 +815,8 @@ export function PublicBookingPage() {
             )}
           </div>
         )}
+
+        <PublicShowcase slug={slug} onBook={bookingEnabled ? bookFromShowcase : () => undefined} />
 
         <AnimatePresence>
           {isChatOpen && <ChatSheet slug={slug} business={business} services={services} onClose={() => setIsChatOpen(false)} />}

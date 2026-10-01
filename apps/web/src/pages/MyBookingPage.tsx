@@ -12,6 +12,7 @@ import { DemoBar } from "../components/DemoBar";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { LogoMark } from "../components/Logo";
+import { ReviewForm } from "../components/showcase/ReviewForm";
 
 function googleCalendarUrl(title: string, start: string, end: string, location?: string): string {
   const fmt = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -133,6 +134,10 @@ export function MyBookingPage() {
             </p>
           )}
         </section>
+
+        {(booking.canReview || booking.review) && (
+          <ReviewForm token={token} staffName={booking.staffName} serviceName={booking.serviceName} existing={booking.review} />
+        )}
 
         <section className="mt-4 rounded-3xl border border-stone-200 bg-surface p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3 px-1">
