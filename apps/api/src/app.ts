@@ -18,6 +18,7 @@ import { enquiriesRouter } from "./routes/enquiries";
 import { roadmapRouter } from "./routes/roadmap";
 import { notificationsRouter } from "./routes/notifications";
 import { publicShowcaseRouter, reviewsRouter, showcaseRouter } from "./routes/showcase";
+import { customerPortalLinkRouter, publicCustomerPortalRouter } from "./routes/customerPortal";
 import { bookingMessagesRouter, conversationsRouter, publicBookingChatRouter } from "./routes/bookingChat";
 
 export function createApp() {
@@ -55,11 +56,13 @@ export function createApp() {
   app.use("/api/business", businessRouter);
   app.use("/api/services", servicesRouter);
   app.use("/api/staff", staffRouter);
+  app.use("/api/customers", customerPortalLinkRouter);
   app.use("/api/customers", customersRouter);
   app.use("/api/bookings/:id/messages", bookingMessagesRouter);
   app.use("/api/bookings", bookingsRouter);
   app.use("/api/conversations", conversationsRouter);
   app.use("/api/public/bookings", publicBookingChatRouter);
+  app.use("/api/public/customers", publicCustomerPortalRouter);
   app.use("/api/public/businesses/:slug", publicShowcaseRouter);
   app.use("/api/public", publicBookingRouter);
   app.use("/api/dashboard", dashboardRouter);

@@ -57,6 +57,7 @@ const STAFF = [
     name: "Kelechi Nwosu", email: "kelechi@glowstudio.ng", phone: "+234 803 555 0104", services: [5, 0],
     title: "Massage therapist",
     bio: "Deep tissue and sports massage. Also cuts on busy days.",
+    location: "Treatment room upstairs, 12 Admiralty Way, Lekki Phase 1",
   },
 ];
 
@@ -139,6 +140,7 @@ export async function seedDemo(): Promise<void> {
       phone: s.phone,
       title: s.title,
       bio: s.bio,
+      location: "location" in s ? s.location : undefined,
       serviceIds: s.services.map((i) => services[i]._id),
     })),
   );

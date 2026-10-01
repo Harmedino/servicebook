@@ -98,6 +98,8 @@ export interface StaffProfile {
   avatarUrl?: string;
   title?: string;
   bio?: string;
+  /** Where they work, when it isn't the business address. */
+  location?: string;
   /** Average customer rating (1–5) and how many reviews it's based on. */
   rating?: number;
   reviewCount?: number;
@@ -365,6 +367,8 @@ export interface PublicBookingConfirmation {
   status: BookingStatus;
   /** Opens the customer's private booking page (/my-booking/:token) with the chat. */
   accessToken: string;
+  /** Opens the customer's page with all their appointments here (/c/:token). */
+  customerToken: string;
 }
 
 export interface PublicBookingConfirmationResponse {
@@ -449,6 +453,8 @@ export interface PublicBookingThreadResponse {
     canReview: boolean;
     review?: { rating: number; comment?: string };
   };
+  /** Opens the customer's page with all their appointments here (/c/:token). */
+  customerToken: string;
   business: {
     name: string;
     slug: string;
@@ -570,6 +576,8 @@ export interface RatingSummary {
 
 export interface ShowcaseStaff extends PublicStaffProfile {
   bio?: string;
+  /** Their own work location, or the business address. */
+  location?: string;
   /** Names of the active services they do, for display. */
   services: string[];
   serviceIds: string[];
@@ -586,6 +594,9 @@ export interface PublicShowcaseResponse {
 /** GET /api/public/businesses/:slug/staff/:staffId */
 export interface PublicStaffDetailResponse {
   staff: ShowcaseStaff;
+  /** Their usual week, Sunday (0) to Saturday (6), in the business's time zone. */
+  hours: Array<{ dayOfWeek: number; isOff: boolean; startTime?: string; endTime?: string }>;
+  timezone: string;
   serviceRatings: Array<{ serviceId: string; serviceName: string } & RatingSummary>;
   posts: WorkPostProfile[];
   reviews: ReviewProfile[];
@@ -598,4 +609,48 @@ export interface WorkPostListResponse {
 export interface ReviewListResponse {
   reviews: ReviewProfile[];
   summary: RatingSummary;
+}
+
+// ---- Customer's own page (/c/:token) ------------------------------------------
+
+export interface CustomerPortalAppointment {
+  /** Opens this appointment's page with its chat (/my-booking/:token). */
+  accessToken: string;
+  serviceId: string;
+  serviceName: string;
+  staffId: string;
+  staffName: string;
+  startTime: string;
+  endTime: string;
+  status: BookingStatus;
+  price?: number;
+  /** Completed and not yet rated. */
+  canReview: boolean;
+  rating?: number;
+}
+
+/** GET /api/public/customers/:token */
+export interface CustomerPortalResponse {
+  customer: { name: string; phone: string; email?: string };
+  business: {
+    name: string;
+    slug: string;
+    logoUrl?: string;
+    coverImageUrl?: string;
+    phone?: string;
+    address?: string;
+    timezone: string;
+    currency: string;
+    bookingEnabled: boolean;
+  };
+  upcoming: CustomerPortalAppointment[];
+  /** Most recent first. */
+  past: CustomerPortalAppointment[];
+  /** Completed visits, all time. */
+  visits: number;
+}
+
+/** GET /api/customers/:id/portal-link */
+export interface CustomerPortalLinkResponse {
+  token: string;
 }

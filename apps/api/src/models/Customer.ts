@@ -28,6 +28,9 @@ const customerSchema = new Schema(
     // How the customer got onto the list: added by staff, made a booking,
     // or signed themselves up through the business's invite link.
     source: { type: String, enum: ["manual", "booking", "link", "chat"], default: "manual" },
+    // Secret for the customer's own page (/c/:token): their appointments with
+    // this business, and booking again without retyping their details.
+    portalToken: { type: String, unique: true, sparse: true },
   },
   { timestamps: true },
 );
