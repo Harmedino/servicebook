@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { MarketingLayout } from "../../components/marketing/MarketingLayout";
-import { CtaBand, PhotoFigure, Reveal } from "../../components/marketing/primitives";
+import { CtaBand, Photo, Reveal } from "../../components/marketing/primitives";
 import { PHOTOS } from "../../components/marketing/photos";
 
-const ROW_SIZES = "(min-width: 1152px) 512px, (min-width: 1024px) 45vw, 100vw";
+// Row photos sit in a 4:3 box, so the 3:2 image renders 1.125x wider than its column.
+const ROW_SIZES = "(min-width: 1152px) 576px, (min-width: 1024px) 50vw, 110vw";
 
 const ROWS = [
   {
@@ -57,13 +58,8 @@ export function HomePage() {
             <p className="mt-6 text-sm text-white/50">Free while we&apos;re in early access. Prices in naira; works in any currency.</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }}>
-            <PhotoFigure
-              photo={PHOTOS.bookingOnPhone}
-              sizes="(min-width: 1024px) 880px, 100vw"
-              imgClassName="aspect-[4/3] lg:aspect-[4/5]"
-              eager
-              onDark
-            />
+            {/* Cropped to 4:5 on desktop, so the image renders about 1.9x wider than its column. */}
+            <Photo photo={PHOTOS.bookingOnPhone} sizes="(min-width: 1152px) 870px, (min-width: 1024px) 75vw, 110vw" className="aspect-[4/3] lg:aspect-[4/5]" eager />
           </motion.div>
         </div>
       </section>
@@ -76,12 +72,7 @@ export function HomePage() {
               Today&apos;s appointments, who still needs confirming, and how the month compares with last month.
             </p>
           </div>
-          <PhotoFigure
-            photo={PHOTOS.busyBarbershop}
-            sizes="(min-width: 1152px) 1088px, 100vw"
-            imgClassName="aspect-[3/2] object-[50%_15%] sm:aspect-[16/9]"
-            className="mt-8"
-          />
+          <Photo photo={PHOTOS.busyBarbershop} sizes="(min-width: 1152px) 1088px, 100vw" className="mt-8 aspect-[3/2] object-[50%_15%] sm:aspect-[16/9]" />
         </Reveal>
       </section>
 
@@ -100,7 +91,7 @@ export function HomePage() {
                 </Link>
               </Reveal>
               <Reveal delay={0.1} className={index % 2 === 1 ? "lg:order-1" : ""}>
-                <PhotoFigure photo={row.photo} sizes={ROW_SIZES} />
+                <Photo photo={row.photo} sizes={ROW_SIZES} />
               </Reveal>
             </div>
           ))}

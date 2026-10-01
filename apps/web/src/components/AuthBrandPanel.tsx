@@ -30,24 +30,19 @@ export function AuthBrandPanel({ headline, description }: { headline: string; de
         </ul>
       </div>
 
-      <figure className="relative -mb-10 -mr-10 mt-auto pt-12 xl:-mb-14 xl:-mr-14">
+      <div className="relative -mb-10 -mr-10 mt-auto pt-12 xl:-mb-14 xl:-mr-14">
         <img
           src={photo.src}
           srcSet={photo.srcSet}
-          sizes="(min-width: 1280px) 50vw, 512px"
+          sizes="50vw"
           alt={photo.alt}
           width={photo.width}
           height={photo.height}
+          loading="lazy"
+          decoding="async"
           className="block aspect-[3/2] w-full rounded-tl-2xl object-cover"
         />
-        <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-4 pb-3 pt-8 text-[11px] text-white/75">
-          Photo:{" "}
-          <a href={photo.credit.url} target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 underline-offset-2 hover:text-white">
-            {photo.credit.name}
-          </a>{" "}
-          on Pexels
-        </figcaption>
-      </figure>
+      </div>
     </div>
   );
 }

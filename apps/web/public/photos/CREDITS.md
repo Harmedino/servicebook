@@ -1,10 +1,10 @@
 # Photo credits
 
-Photos on the home page and the sign-in/sign-up panel. All come from Pexels and are used under the
-[Pexels license](https://www.pexels.com/license/) (free to use, attribution appreciated). Each one is
-credited on the page where it appears; `src/components/marketing/photos.ts` is the source of truth.
+Photos on the home page and the Log in / Register panel. All come from Pexels and are used under the
+[Pexels license](https://www.pexels.com/license/), which doesn't require on-page attribution, so the
+photographers are credited here instead.
 
-Every file was resized and converted to webp at two widths (`-700`/`-1200`; `-800`/`-1600` for the hero, which is cropped tall on desktop; `-1000`/`-2000` for the wide one).
+Each file was exported from the full-size original to webp at 800, 1400 and 2000 px wide.
 
 | File | Used on | Photographer | Original |
 | --- | --- | --- | --- |
