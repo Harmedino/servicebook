@@ -180,6 +180,7 @@ These run inside the API process:
 - **Email reminders:** a day before each booking, every 15 minutes.
 - **Birthday notices:** once a day per business, from 8 AM local time.
 - **Demo reset:** the demo salon is rebuilt daily.
+- **Keep-awake:** on Render it pings its own `/health` every 10 minutes. The free plan sleeps after 15 idle minutes, which makes the next visitor wait about a minute and pauses the jobs above.
 
 ---
 
@@ -237,6 +238,7 @@ The API runs on **Render**, the web app on **Vercel**. `render.yaml` describes t
 | `ADMIN_EMAILS` | no | Comma-separated emails that can change roadmap statuses |
 | `SEED_DEMO` | no | Default `true`: keeps the demo salon available and fresh. Set `false` to skip it |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | no | Push keys. Generated and stored automatically if unset |
+| `KEEP_AWAKE` | no | Default on when Render's `RENDER_EXTERNAL_URL` is set. `false` turns it off. `KEEP_AWAKE_URL` sets the address on other hosts |
 
 The API stops at start-up with a clear message if a required variable is missing.
 
