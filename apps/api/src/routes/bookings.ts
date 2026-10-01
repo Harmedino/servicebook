@@ -1,3 +1,4 @@
+import { announceOpening } from "../lib/waitlist";
 import { Router } from "express";
 import { z } from "zod";
 import mongoose from "mongoose";
@@ -413,6 +414,7 @@ bookingsRouter.patch(
           const ctx = { business, customer, service, staff, booking: confirmedBooking };
           if (isNewlyCancelled) {
             await notifyBookingCancelled(ctx);
+            await announceOpening(confirmedBooking, business);
           } else if (isRescheduling) {
             await notifyBookingRescheduled(ctx, { startTime: previousStartTime, endTime: previousEndTime });
           } else if (isNewlyConfirmed) {

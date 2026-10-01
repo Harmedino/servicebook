@@ -31,6 +31,8 @@ const customerSchema = new Schema(
     // Secret for the customer's own page (/c/:token): their appointments with
     // this business, and booking again without retyping their details.
     portalToken: { type: String, unique: true, sparse: true },
+    // "MM-DD": the day and month only; nobody needs to share the year.
+    birthday: { type: String, match: [/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Birthday must be MM-DD"] },
   },
   { timestamps: true },
 );

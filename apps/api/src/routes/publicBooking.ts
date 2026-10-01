@@ -3,6 +3,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import type {
+  PublicWaitlistResponse,
   ApiErrorBody,
   AvailableSlotsResponse,
   PublicBookingConfirmation,
@@ -20,6 +21,7 @@ import { Customer, type CustomerDocument } from "../models/Customer";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, isDuplicateKeyError } from "../lib/errors";
 import { Booking } from "../models/Booking";
 import { TimeOff } from "../models/TimeOff";
+import { WaitlistEntry } from "../models/WaitlistEntry";
 import { ensureBusinessHours } from "../lib/businessHours";
 import { Enquiry } from "../models/Enquiry";
 import { SOCIAL_CHANNELS, toSocialLinks } from "../lib/socials";
@@ -81,6 +83,11 @@ const customerSignupSchema = z.object({
     .optional()
     .or(z.literal("").transform(() => undefined)),
   notes: z.string().trim().max(500).optional(),
+  birthday: z
+    .string()
+    .regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Pick a day and month")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 const enquirySchema = z.object({
@@ -144,11 +151,16 @@ function assertPublicBookingEnabled(business: { isPublicBookingEnabled: boolean 
 /** Finds an existing customer for this business by phone, or creates one — never a global customer. */
 async function findOrCreateCustomer(
   businessId: string,
-  input: { name: string; phone: string; email?: string; notes?: string },
+  input: { name: string; phone: string; email?: string; notes?: string; birthday?: string },
   source: "booking" | "link" | "chat" = "booking",
 ): Promise<CustomerDocument> {
   const existing = await Customer.findOne({ businessId, phone: input.phone });
   if (existing) {
+    // A returning customer adding their birthday on the join form: keep it.
+    if (input.birthday && !existing.birthday) {
+      existing.birthday = input.birthday;
+      await existing.save();
+    }
     return existing;
   }
 
@@ -159,6 +171,7 @@ async function findOrCreateCustomer(
       phone: input.phone,
       email: input.email,
       notes: input.notes,
+      birthday: input.birthday,
       source,
     });
   } catch (error) {
@@ -506,6 +519,68 @@ publicBookingRouter.post(
     };
 
     const body: PublicBookingConfirmationResponse = { confirmation };
+    res.status(201).json(body);
+  }),
+);
+
+// ---- Waitlist: POST /api/public/businesses/:slug/waitlist --------------------------
+
+const waitlistSchema = z.object({
+  serviceId: objectIdField,
+  staffId: objectIdField.optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a day"),
+  customer: z.object({
+    name: z.string().trim().min(1, "Please enter your name").max(120),
+    phone: z.string().trim().min(7, "Please enter a valid phone number").max(40),
+    email: z.string().trim().email("That email doesn't look right").max(200).optional().or(z.literal("").transform(() => undefined)),
+  }),
+  note: z.string().trim().max(300).optional(),
+});
+
+publicBookingRouter.post(
+  "/businesses/:slug/waitlist",
+  publicRateLimit,
+  asyncHandler(async (req, res) => {
+    const business = await resolveBusinessBySlug(req.params.slug);
+    if (!business.isPublicBookingEnabled) throw new ForbiddenError("This business isn't taking online bookings right now");
+    const input = waitlistSchema.parse(req.body);
+    const today = formatInTimeZone(new Date(), business.timezone, "yyyy-MM-dd");
+    if (input.date < today) throw new BadRequestError("That day has already passed");
+    const service = await Service.findOne({ _id: input.serviceId, businessId: business.id, isActive: true });
+    if (!service) throw new BadRequestError("This service is no longer available");
+    if (input.staffId && !(await Staff.exists({ _id: input.staffId, businessId: business.id, isActive: true }))) {
+      throw new BadRequestError("Pick someone from the team");
+    }
+
+    const customer = await findOrCreateCustomer(business.id, input.customer);
+    // Joining twice for the same day and service just keeps the one place.
+    const existing = await WaitlistEntry.findOne({
+      businessId: business.id,
+      customerId: customer._id,
+      serviceId: service._id,
+      date: input.date,
+      status: "waiting",
+    });
+    if (!existing) {
+      await WaitlistEntry.create({
+        businessId: business.id,
+        customerId: customer._id,
+        serviceId: service._id,
+        staffId: input.staffId ?? null,
+        date: input.date,
+        note: input.note || undefined,
+      });
+      const day = new Date(`${input.date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+      await notify({
+        businessId: business.id,
+        type: "enquiry",
+        title: `${customer.name} joined the waitlist`,
+        body: `${service.name} · ${day}`,
+        link: `/waitlist?date=${input.date}`,
+      });
+    }
+    const position = await WaitlistEntry.countDocuments({ businessId: business.id, date: input.date, status: "waiting" });
+    const body: PublicWaitlistResponse = { position };
     res.status(201).json(body);
   }),
 );

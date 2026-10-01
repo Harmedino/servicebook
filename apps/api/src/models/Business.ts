@@ -49,6 +49,10 @@ const businessSchema = new Schema(
     logoUrl: { type: String, trim: true },
     /** Wide banner photo shown at the top of the public booking page. */
     coverImageUrl: { type: String, trim: true },
+    // Secret for the calendar feed (/api/calendar/:token.ics). Regenerating it cuts off old subscribers.
+    calendarToken: { type: String, unique: true, sparse: true },
+    // Last business-local day the "birthdays today" notification went out, so it's sent once a day.
+    birthdayNoticeDate: { type: String },
     // The colour used on the booking page, customer pages and poster (#rrggbb). Unset = ServiceBook green-black.
     brandColor: { type: String, trim: true, match: [/^#[0-9a-fA-F]{6}$/, "Use a colour like #1f6f5c"] },
     /** ISO 4217 code used to display prices, e.g. "NGN". */

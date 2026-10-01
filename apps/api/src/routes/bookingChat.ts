@@ -24,6 +24,7 @@ import { emailsAllowed } from "../lib/demo";
 import { sendEmail } from "../services/email";
 import { newMessageEmail } from "../emails/message";
 import { notify } from "../lib/notify";
+import { announceOpening } from "../lib/waitlist";
 import { formatInTimeZone } from "date-fns-tz";
 import { webAppUrl } from "../config/env";
 
@@ -156,6 +157,7 @@ publicBookingChatRouter.post(
       body: `${booking.serviceName ?? "Appointment"} · ${formatInTimeZone(booking.startTime, owner?.timezone ?? "UTC", "EEE d MMM, h:mm a")}`,
       link: `/bookings/${booking.id}`,
     });
+    if (owner) await announceOpening(booking, owner);
     await Message.create({
       businessId: booking.businessId,
       bookingId: booking._id,
