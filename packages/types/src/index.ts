@@ -597,6 +597,8 @@ export interface PublicStaffDetailResponse {
   /** Their usual week, Sunday (0) to Saturday (6), in the business's time zone. */
   hours: Array<{ dayOfWeek: number; isOff: boolean; startTime?: string; endTime?: string }>;
   timezone: string;
+  /** Coming time off in the next 60 days (theirs or the whole business's). Never the private note. */
+  away: Array<{ allDay: boolean; startDate: string; endDate: string; startTime?: string; endTime?: string }>;
   serviceRatings: Array<{ serviceId: string; serviceName: string } & RatingSummary>;
   posts: WorkPostProfile[];
   reviews: ReviewProfile[];
@@ -653,4 +655,44 @@ export interface CustomerPortalResponse {
 /** GET /api/customers/:id/portal-link */
 export interface CustomerPortalLinkResponse {
   token: string;
+}
+
+// ---- Time off ------------------------------------------------------------------
+
+export interface TimeOffProfile {
+  id: string;
+  /** Missing = the whole business is closed. */
+  staffId?: string;
+  staffName?: string;
+  allDay: boolean;
+  /** yyyy-MM-dd, business-local. */
+  startDate: string;
+  endDate: string;
+  /** HH:mm, only when not all day. */
+  startTime?: string;
+  endTime?: string;
+  startAt: string;
+  endAt: string;
+  note?: string;
+}
+
+export interface TimeOffInput {
+  /** Omit for the whole business. */
+  staffId?: string;
+  startDate: string;
+  endDate: string;
+  /** Both or neither; neither = all day. */
+  startTime?: string;
+  endTime?: string;
+  note?: string;
+}
+
+export interface TimeOffListResponse {
+  timeOff: TimeOffProfile[];
+}
+
+/** Bookings already in the new time off. They're kept; the owner decides what to do. */
+export interface TimeOffCreatedResponse {
+  timeOff: TimeOffProfile;
+  clashes: Array<{ id: string; customerName: string; serviceName: string; staffName: string; startTime: string }>;
 }

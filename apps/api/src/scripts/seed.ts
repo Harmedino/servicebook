@@ -20,6 +20,7 @@ import { Message } from "../models/Message";
 import { Notification } from "../models/Notification";
 import { Review } from "../models/Review";
 import { WorkPost } from "../models/WorkPost";
+import { TimeOff } from "../models/TimeOff";
 import { publicName } from "../lib/ratings";
 
 import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_SLUG } from "../lib/demo";
@@ -88,6 +89,7 @@ export async function seedDemo(): Promise<void> {
         Message.deleteMany({ businessId: business.id }),
         Review.deleteMany({ businessId: business.id }),
         WorkPost.deleteMany({ businessId: business.id }),
+        TimeOff.deleteMany({ businessId: business.id }),
         Notification.deleteMany({ businessId: business.id }),
         Service.deleteMany({ businessId: business.id }),
         StaffAvailability.deleteMany({ staffId: { $in: staffIds } }),
@@ -245,6 +247,22 @@ export async function seedDemo(): Promise<void> {
       };
     });
   await Review.insertMany(reviewDocs, { timestamps: false } as never);
+
+  // Amaka is away for two days of training next week; her bookings then are left alone,
+  // the same as when an owner adds time off for real.
+  const awayFrom = dateKey(9);
+  const awayTo = dateKey(10);
+  await TimeOff.create({
+    businessId: business.id,
+    staffId: staff[1]._id,
+    startAt: fromZonedTime(`${awayFrom}T00:00:00`, TIMEZONE),
+    endAt: fromZonedTime(`${dateKey(11)}T00:00:00`, TIMEZONE),
+    allDay: true,
+    startDate: awayFrom,
+    endDate: awayTo,
+    note: "Braiding masterclass",
+  });
+  await Booking.deleteMany({ staffId: staff[1]._id, startTime: { $gte: fromZonedTime(`${awayFrom}T00:00:00`, TIMEZONE), $lt: fromZonedTime(`${dateKey(11)}T00:00:00`, TIMEZONE) } });
 
   // A few booking chats: the automatic welcome, the customer's question and, for some, the salon's reply.
   const inserted = await Booking.find({ businessId: business.id, startTime: { $gt: new Date() }, status: { $in: ["PENDING", "CONFIRMED"] } })

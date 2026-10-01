@@ -3,6 +3,7 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { Booking, type BookingDocument } from "../models/Booking";
 import { Service, type ServiceDocument } from "../models/Service";
 import { Staff, type StaffDocument } from "../models/Staff";
+import { TimeOff } from "../models/TimeOff";
 import type { BusinessDocument } from "../models/Business";
 import type { CustomerDocument } from "../models/Customer";
 import { BadRequestError, ConflictError } from "./errors";
@@ -67,6 +68,19 @@ export function localDayStartUtc(dateKey: string, timeZone: string): Date {
   return fromZonedTime(`${dateKey}T00:00:00`, timeZone);
 }
 
+// ---- Time off ------------------------------------------------------------
+
+/** Time off that overlaps [from, to) for this staff member, including whole-business closures. */
+export function findTimeOff(params: { businessId: string; staffId: string; from: Date; to: Date }) {
+  const { businessId, staffId, from, to } = params;
+  return TimeOff.find({
+    businessId,
+    $or: [{ staffId }, { staffId: null }],
+    startAt: { $lt: to },
+    endAt: { $gt: from },
+  });
+}
+
 // ---- Business-rule validation (ownership/hours/availability) -----------
 
 /**
@@ -113,6 +127,11 @@ export async function validateBookingWindow(params: {
     throw new BadRequestError(
       `This staff member is only available ${dayAvailability.startTime}-${dayAvailability.endTime} that day`,
     );
+  }
+
+  const [away] = await findTimeOff({ businessId, staffId, from: startTime, to: endTime });
+  if (away) {
+    throw new BadRequestError(away.staffId ? "This staff member is off at the selected time" : "The business is closed at the selected time");
   }
 }
 
@@ -192,12 +211,15 @@ export async function computeAvailableSlots(params: {
   const dayStartUtc = localDayStartUtc(dateKey, business.timezone);
   const dayEndUtc = localDayStartUtc(nextDateKey(dateKey), business.timezone);
 
-  const existingBookings = await Booking.find({
-    staffId,
-    status: { $ne: "CANCELLED" },
-    startTime: { $lt: dayEndUtc },
-    endTime: { $gt: dayStartUtc },
-  });
+  const [existingBookings, timeOff] = await Promise.all([
+    Booking.find({
+      staffId,
+      status: { $ne: "CANCELLED" },
+      startTime: { $lt: dayEndUtc },
+      endTime: { $gt: dayStartUtc },
+    }),
+    findTimeOff({ businessId, staffId, from: dayStartUtc, to: dayEndUtc }),
+  ]);
 
   const now = Date.now();
   const slots: Date[] = [];
@@ -208,7 +230,9 @@ export async function computeAvailableSlots(params: {
     const slotEndUtc = new Date(slotStartUtc.getTime() + serviceDurationMinutes * 60_000);
 
     const isPast = slotStartUtc.getTime() < now;
-    const overlaps = existingBookings.some((booking) => booking.startTime < slotEndUtc && booking.endTime > slotStartUtc);
+    const overlaps =
+      existingBookings.some((booking) => booking.startTime < slotEndUtc && booking.endTime > slotStartUtc) ||
+      timeOff.some((block) => block.startAt < slotEndUtc && block.endAt > slotStartUtc);
 
     if (!isPast && !overlaps) {
       slots.push(slotStartUtc);

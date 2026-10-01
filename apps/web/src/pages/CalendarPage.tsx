@@ -9,6 +9,7 @@ import { useMyBusiness } from "../lib/business";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { TimeGridView, type GridColumn } from "../components/TimeGridView";
 import { MonthGridView } from "../components/MonthGridView";
+import { blocksForDay, useTimeOff } from "../lib/timeOff";
 import {
   addDaysToKey,
   addMonthsToKey,
@@ -156,6 +157,9 @@ export function CalendarPage() {
     return map;
   }, [bookings, timezone]);
 
+  const { data: timeOffData } = useTimeOff();
+  const timeOff = useMemo(() => timeOffData?.timeOff ?? [], [timeOffData]);
+
   const weekColumns: GridColumn[] = useMemo(
     () =>
       dayKeys.map((dateKey) => ({
@@ -163,8 +167,11 @@ export function CalendarPage() {
         label: formatDateKey(dateKey, "EEE d"),
         dateKey,
         bookings: bookingsByLocalDate.get(dateKey) ?? [],
+        // Shade the day only when the whole business is closed; one person's time off is a note.
+        blocks: blocksForDay(timeOff.filter((entry) => !entry.staffId), dateKey, timezone),
+        notes: [...new Set(blocksForDay(timeOff.filter((entry) => entry.staffId), dateKey, timezone).map((block) => block.label))],
       })),
-    [dayKeys, bookingsByLocalDate],
+    [dayKeys, bookingsByLocalDate, timeOff, timezone],
   );
 
   const dayColumns: GridColumn[] = useMemo(() => {
@@ -175,8 +182,9 @@ export function CalendarPage() {
       label: staff.name,
       dateKey: anchorDate,
       bookings: dayBookings.filter((booking) => booking.staffId === staff.id),
+      blocks: blocksForDay(timeOff, anchorDate, timezone, staff.id),
     }));
-  }, [staffFilter, activeStaff, bookingsByLocalDate, anchorDate]);
+  }, [staffFilter, activeStaff, bookingsByLocalDate, anchorDate, timeOff, timezone]);
 
   const rangeLabel = useMemo(() => {
     if (view === "day") {

@@ -7,6 +7,7 @@ import { useServices } from "../lib/services";
 import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { StaffAvailabilityEditor } from "../components/StaffAvailabilityEditor";
+import { StaffTimeOff } from "../components/StaffTimeOff";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
@@ -202,6 +203,10 @@ export function StaffDetailPage() {
 
       <div className="mt-6">
         <StaffAvailabilityEditor staffId={staff.id} />
+      </div>
+
+      <div className="mt-6">
+        <StaffTimeOff staffId={staff.id} staffName={staff.name} />
       </div>
 
       <div className="mt-6">

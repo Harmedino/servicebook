@@ -18,6 +18,7 @@ import { enquiriesRouter } from "./routes/enquiries";
 import { roadmapRouter } from "./routes/roadmap";
 import { notificationsRouter } from "./routes/notifications";
 import { publicShowcaseRouter, reviewsRouter, showcaseRouter } from "./routes/showcase";
+import { timeOffRouter } from "./routes/timeOff";
 import { customerPortalLinkRouter, publicCustomerPortalRouter } from "./routes/customerPortal";
 import { bookingMessagesRouter, conversationsRouter, publicBookingChatRouter } from "./routes/bookingChat";
 
@@ -71,6 +72,7 @@ export function createApp() {
   app.use("/api/roadmap", roadmapRouter);
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/showcase", showcaseRouter);
+  app.use("/api/time-off", timeOffRouter);
   app.use("/api/reviews", reviewsRouter);
 
   // Feature routers mount here as they're built (payments, notifications, ...).
