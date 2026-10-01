@@ -50,6 +50,7 @@ const RoadmapPage = lazyPage(() => import("./pages/marketing/RoadmapPage").then(
 const DesignPage = lazyPage(() => import("./pages/marketing/DesignPage").then((m) => ({ default: m.DesignPage })));
 const DemoPage = lazyPage(() => import("./pages/marketing/DemoPage").then((m) => ({ default: m.DemoPage })));
 const DemoOwnerPage = lazyPage(() => import("./pages/DemoOwnerPage").then((m) => ({ default: m.DemoOwnerPage })));
+const ShowcasePage = lazyPage(() => import("./pages/ShowcasePage").then((m) => ({ default: m.ShowcasePage })));
 const InboxPage = lazyPage(() => import("./pages/InboxPage").then((m) => ({ default: m.InboxPage })));
 const NotFoundPage = lazyPage(() => import("./pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
@@ -199,6 +200,14 @@ export function App() {
         element={
           <OwnerRoute>
             <BookingsPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/showcase"
+        element={
+          <OwnerRoute>
+            <ShowcasePage />
           </OwnerRoute>
         }
       />

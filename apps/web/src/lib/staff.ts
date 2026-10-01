@@ -10,6 +10,8 @@ export interface CreateStaffInput {
   email?: string;
   phone?: string;
   avatarUrl?: string;
+  title?: string;
+  bio?: string;
   serviceIds?: string[];
   isActive?: boolean;
 }
@@ -20,6 +22,8 @@ export interface UpdateStaffInput {
   email?: string;
   phone?: string;
   avatarUrl?: string;
+  title?: string;
+  bio?: string;
   serviceIds?: string[];
   isActive?: boolean;
 }

@@ -11,6 +11,9 @@ export interface StaffFormSubmitValues {
   phone?: string;
   /** "" removes an existing photo. */
   avatarUrl?: string;
+  /** "" clears it when editing. */
+  title?: string;
+  bio?: string;
   serviceIds: string[];
   isActive: boolean;
 }
@@ -45,6 +48,8 @@ export function StaffFormModal({
   const [email, setEmail] = useState(staff?.email ?? "");
   const [phone, setPhone] = useState(staff?.phone ?? "");
   const [avatarUrl, setAvatarUrl] = useState(staff?.avatarUrl ?? "");
+  const [title, setTitle] = useState(staff?.title ?? "");
+  const [bio, setBio] = useState(staff?.bio ?? "");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(staff?.serviceIds ?? []);
   const [isActive, setIsActive] = useState(staff?.isActive ?? true);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -80,13 +85,15 @@ export function StaffFormModal({
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
       avatarUrl: staff ? avatarUrl : avatarUrl || undefined,
+      title: staff ? title.trim() : title.trim() || undefined,
+      bio: staff ? bio.trim() : bio.trim() || undefined,
       serviceIds: selectedServiceIds,
       isActive,
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-8">
       <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-surface p-6 shadow-[var(--shadow-elevated)]">
         <h2 className="text-lg font-semibold text-stone-900">{staff ? "Edit staff" : "Add staff"}</h2>
 
@@ -117,6 +124,21 @@ export function StaffFormModal({
             disabled={isSubmitting}
           />
           <FormField label="Phone" type="tel" value={phone} onChange={setPhone} disabled={isSubmitting} />
+          <FormField label="Title (shown to customers)" type="text" value={title} onChange={setTitle} disabled={isSubmitting} />
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">
+              Short bio <span className="font-normal text-stone-400">· what they're best at</span>
+            </span>
+            <textarea
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              rows={3}
+              maxLength={400}
+              disabled={isSubmitting}
+              placeholder="e.g. Nine years on the clippers. Clean fades and sharp line-ups."
+              className="mt-1 w-full resize-none rounded-lg border border-stone-300 bg-surface px-3 py-2.5 text-base text-stone-900 sm:py-2 sm:text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            />
+          </label>
 
           <div>
             <span className="text-sm font-medium text-stone-700">Services</span>

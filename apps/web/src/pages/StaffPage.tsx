@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { RatingBadge } from "../components/showcase/Stars";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
@@ -230,6 +231,7 @@ export function StaffPage() {
                     </td>
                     <td className="max-w-xs px-4 py-3 text-stone-600">
                       {resolveServiceNames(staff.serviceIds, allServices)}
+                      <RatingBadge rating={staff.rating} count={staff.reviewCount} className="mt-1 flex" />
                     </td>
                     <td className="px-4 py-3 text-stone-600">
                       {staff.todayAppointmentCount ?? 0} appointment{staff.todayAppointmentCount === 1 ? "" : "s"}
@@ -283,6 +285,7 @@ export function StaffPage() {
                       {staff.email && <p className="mt-0.5 pl-[calc(2rem+0.625rem)] text-sm text-stone-500">{staff.email}</p>}
                       {staff.phone && <p className="text-sm text-stone-500">{staff.phone}</p>}
                       <p className="mt-1 text-sm text-stone-500">{resolveServiceNames(staff.serviceIds, allServices)}</p>
+                      <RatingBadge rating={staff.rating} count={staff.reviewCount} className="mt-1 flex" />
                       <p className="text-xs text-stone-500">
                         {staff.todayAppointmentCount ?? 0} appointment{staff.todayAppointmentCount === 1 ? "" : "s"} today
                       </p>
