@@ -8,7 +8,6 @@ import { Avatar } from "../../components/ui/Avatar";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { FormField } from "../../components/FormField";
 import { Toggle } from "../../components/Toggle";
-import { ServiceThumb } from "../../components/ServiceThumb";
 import { ChatThread } from "../../components/chat/ChatThread";
 import { LogoMark } from "../../components/Logo";
 
@@ -251,19 +250,12 @@ export function DesignPage() {
             </div>
           </Section>
 
-          <Section id="people" title="People & services" intro="Photos when there are some; otherwise initials for people and a two-letter monogram for services. Never an emoji or a clip-art icon.">
+          <Section id="people" title="People & services" intro="Real photos when there are some; otherwise initials for people. Services show their own photo or nothing at all: never a guessed icon, emoji or monogram.">
             <div className="flex flex-wrap items-end gap-6 rounded-2xl border border-stone-200 bg-surface p-5">
               {(["xs", "sm", "md", "lg"] as const).map((size) => (
                 <div key={size} className="flex flex-col items-center gap-2">
                   <Avatar name="Amaka Obi" size={size} />
                   <span className="text-xs text-stone-400">{size}</span>
-                </div>
-              ))}
-              <span className="w-px self-stretch bg-stone-200" />
-              {["Knotless Braids", "Gel Manicure", "Deep Tissue Massage"].map((name) => (
-                <div key={name} className="flex flex-col items-center gap-2">
-                  <ServiceThumb name={name} className="h-14 w-14 rounded-2xl" />
-                  <span className="text-xs text-stone-400">{name.split(" ")[0]}</span>
                 </div>
               ))}
             </div>
