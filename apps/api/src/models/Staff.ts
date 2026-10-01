@@ -28,6 +28,9 @@ const staffSchema = new Schema(
     // Set when this staff profile is the business owner themselves, so the
     // public booking page can default to them when a customer has no preference.
     userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
+    // A one-time link (/join-team/:token) the owner sends so this person can create their login.
+    inviteToken: { type: String, unique: true, sparse: true },
+    inviteExpiresAt: { type: Date },
     avatarUrl: { type: String, trim: true },
     isActive: {
       type: Boolean,

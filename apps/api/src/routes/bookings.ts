@@ -7,7 +7,7 @@ import { Booking, type BookingDocument } from "../models/Booking";
 import { Customer } from "../models/Customer";
 import { Service, type ServiceDocument } from "../models/Service";
 import { Staff, type StaffDocument } from "../models/Staff";
-import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from "../lib/errors";
+import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError, ForbiddenError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { escapeRegExp, objectIdField } from "../lib/validation";
@@ -122,6 +122,31 @@ export async function toBookingProfiles(bookings: BookingDocument[]): Promise<Bo
 export const bookingsRouter = Router();
 
 bookingsRouter.use(requireAuth, requireBusiness);
+
+// Staff only ever see and book their own appointments: their id replaces any
+// staffId sent for lists, free times and new bookings, and a booking that
+// isn't theirs doesn't exist as far as they're concerned.
+bookingsRouter.use(
+  asyncHandler(async (req, _res, next) => {
+    const scope = req.staffScope;
+    if (!scope) return next();
+    if (req.method === "GET" && (req.path === "/" || req.path === "/available-slots")) {
+      req.query.staffId = scope;
+    } else if (req.method === "POST" && req.path === "/") {
+      req.body = { ...req.body, staffId: scope };
+    } else {
+      const id = req.path.split("/")[1];
+      if (/^[0-9a-f]{24}$/.test(id)) {
+        const own = await Booking.exists({ _id: id, businessId: req.businessId, staffId: scope });
+        if (!own) throw new NotFoundError("Booking not found");
+        if (req.method === "PATCH" && req.body?.staffId && req.body.staffId !== scope) {
+          throw new ForbiddenError("Only the owner can move a booking to someone else");
+        }
+      }
+    }
+    next();
+  }),
+);
 
 bookingsRouter.post(
   "/",

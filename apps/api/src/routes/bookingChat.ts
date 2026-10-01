@@ -217,8 +217,9 @@ export const bookingMessagesRouter = Router({ mergeParams: true });
 
 bookingMessagesRouter.use(requireAuth, requireBusiness);
 
-async function ownedBooking(id: string, businessId: string | undefined): Promise<BookingDocument> {
-  const booking = await Booking.findOne({ _id: id, businessId });
+/** The business's booking, and for a staff login only their own. */
+async function ownedBooking(id: string, businessId: string | undefined, staffScope?: string): Promise<BookingDocument> {
+  const booking = await Booking.findOne({ _id: id, businessId, ...(staffScope ? { staffId: staffScope } : {}) });
   if (!booking) {
     throw new NotFoundError("Booking not found");
   }
@@ -228,7 +229,7 @@ async function ownedBooking(id: string, businessId: string | undefined): Promise
 bookingMessagesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
-    const booking = await ownedBooking(req.params.id, req.businessId);
+    const booking = await ownedBooking(req.params.id, req.businessId, req.staffScope);
     const [messages, accessToken] = await Promise.all([
       Message.find({ bookingId: booking._id }).sort({ createdAt: 1 }),
       ensureAccessToken(booking),
@@ -246,7 +247,7 @@ bookingMessagesRouter.post(
       throw new UnauthorizedError();
     }
     const business = req.business;
-    const booking = await ownedBooking(req.params.id, req.businessId);
+    const booking = await ownedBooking(req.params.id, req.businessId, req.staffScope);
     const { body } = messageSchema.parse(req.body);
     const [message, accessToken] = await Promise.all([
       Message.create({ businessId: booking.businessId, bookingId: booking._id, customerId: booking.customerId, from: "business", body }),
@@ -282,13 +283,15 @@ conversationsRouter.use(requireAuth, requireBusiness);
 conversationsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
+    // A staff login only sees chats on their own bookings.
+    const ownBookingIds = req.staffScope ? await Booking.distinct("_id", { businessId: req.businessId, staffId: req.staffScope }) : null;
     const grouped = await Message.aggregate<{
       _id: unknown;
       last: Parameters<typeof Message.hydrate>[0];
       unread: number;
       written: number;
     }>([
-      { $match: { businessId: req.business?._id } },
+      { $match: { businessId: req.business?._id, ...(ownBookingIds ? { bookingId: { $in: ownBookingIds } } : {}) } },
       { $sort: { createdAt: -1 } },
       {
         $group: {

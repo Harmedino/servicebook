@@ -56,8 +56,10 @@ timeOffRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const filter: Record<string, unknown> = { businessId: req.businessId, endAt: { $gt: new Date(Date.now() - 30 * 86_400_000) } };
-    if (typeof req.query.staffId === "string") {
-      filter.$or = [{ staffId: objectIdField.parse(req.query.staffId) }, { staffId: null }];
+    // A staff login sees their own time off and business closures only.
+    const onlyStaff = req.staffScope ?? (typeof req.query.staffId === "string" ? objectIdField.parse(req.query.staffId) : undefined);
+    if (onlyStaff) {
+      filter.$or = [{ staffId: onlyStaff }, { staffId: null }];
     }
     const entries = await TimeOff.find(filter).sort({ startAt: 1 }).limit(200);
     const body: TimeOffListResponse = { timeOff: await toProfiles(entries) };
@@ -68,7 +70,8 @@ timeOffRouter.get(
 timeOffRouter.post(
   "/",
   asyncHandler(async (req, res) => {
-    const input = timeOffSchema.parse(req.body);
+    // Staff can only add time off for themselves.
+    const input = timeOffSchema.parse(req.staffScope ? { ...req.body, staffId: req.staffScope } : req.body);
     const business = req.business!;
     if (input.staffId && !(await Staff.exists({ _id: input.staffId, businessId: req.businessId }))) {
       throw new BadRequestError("Pick someone from your team");
@@ -126,7 +129,11 @@ timeOffRouter.post(
 timeOffRouter.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const result = await TimeOff.deleteOne({ _id: objectIdField.parse(req.params.id), businessId: req.businessId });
+    const result = await TimeOff.deleteOne({
+      _id: objectIdField.parse(req.params.id),
+      businessId: req.businessId,
+      ...(req.staffScope ? { staffId: req.staffScope } : {}),
+    });
     if (result.deletedCount === 0) throw new NotFoundError("Time off not found");
     res.status(204).end();
   }),

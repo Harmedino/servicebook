@@ -10,13 +10,15 @@ export interface ApiErrorBody {
   };
 }
 
-export type UserRole = "OWNER";
+export type UserRole = "OWNER" | "STAFF";
 
 export interface SafeUser {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  /** For STAFF: the staff member they sign in as. */
+  staffId?: string;
 }
 
 export interface AuthResponse {
@@ -91,6 +93,9 @@ export interface ServiceListResponse {
   services: ServiceProfile[];
 }
 
+/** owner = the business owner, active = has their own staff login. */
+export type StaffAccess = "owner" | "active" | "invited" | "none";
+
 export interface StaffProfile {
   id: string;
   businessId: string;
@@ -108,6 +113,8 @@ export interface StaffProfile {
   isActive: boolean;
   /** True for the business owner's own staff profile. */
   isOwner?: boolean;
+  /** How they sign in: as the owner, their own login, invited, or not at all. */
+  access?: StaffAccess;
   serviceIds: string[];
   /** Only populated on list responses — today's non-cancelled appointment count, in the business's timezone. */
   todayAppointmentCount?: number;
@@ -768,4 +775,25 @@ export interface UpcomingBirthday {
 /** GET /api/customers/birthdays */
 export interface UpcomingBirthdaysResponse {
   birthdays: UpcomingBirthday[];
+}
+
+// ---- Staff logins --------------------------------------------------------------
+
+/** POST /api/team/:staffId/invite */
+export interface StaffInviteResponse {
+  /** Open /join-team/:token to create the login. */
+  token: string;
+  expiresAt: string;
+}
+
+/** GET /api/auth/invites/:token */
+export interface StaffInviteInfoResponse {
+  businessName: string;
+  staffName: string;
+  email?: string;
+}
+
+export interface AcceptInviteInput {
+  email: string;
+  password: string;
 }
