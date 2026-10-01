@@ -1,14 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { Plus, Search } from "lucide-react";
 import type { BookingStatus } from "@servicebook/types";
-import { useBookings, useCreateBooking } from "../lib/bookings";
+import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useStaffList } from "../lib/staff";
 import { useMyBusiness } from "../lib/business";
-import { ApiError } from "../lib/apiClient";
-import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
-import { BookingDetailModal } from "../components/BookingDetailModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { STATUS_LABELS } from "../lib/bookingStatus";
 import { addDaysToKey } from "../lib/calendarDates";
@@ -79,36 +76,14 @@ export function BookingsPage() {
     staffId: staffFilter !== "all" ? staffFilter : undefined,
     q: debouncedSearch || undefined,
   });
-  const createBooking = useCreateBooking();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  // /bookings?new=1 (the mobile "+" button) opens the new-booking form straight away.
-  const [isFormOpen, setIsFormOpen] = useState(() => searchParams.get("new") === "1");
-  useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      setIsFormOpen(true);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const openBooking = useOpenBooking();
 
   const bookings = useMemo(() => data?.bookings ?? [], [data?.bookings]);
-  const selectedBooking = bookings.find((booking) => booking.id === selectedBookingId) ?? null;
 
   function openForm() {
-    setFormError(null);
-    setIsFormOpen(true);
-  }
-
-  async function handleCreate(values: BookingFormSubmitValues) {
-    setFormError(null);
-    try {
-      await createBooking.mutateAsync(values);
-      setIsFormOpen(false);
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
+    navigate("/bookings/new", { state: { from: "/bookings" } });
   }
 
   function dayLabel(dateKey: string): string {
@@ -258,7 +233,7 @@ export function BookingsPage() {
                     <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                     <button
                       type="button"
-                      onClick={() => setSelectedBookingId(booking.id)}
+                      onClick={() => openBooking(booking.id)}
                       className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                     >
                       <div className="flex min-w-0 items-center gap-3">
@@ -280,19 +255,6 @@ export function BookingsPage() {
             </div>
           ))}
       </div>
-
-      {isFormOpen && (
-        <BookingFormModal
-          isSubmitting={createBooking.isPending}
-          serverError={formError}
-          onSubmit={handleCreate}
-          onClose={() => setIsFormOpen(false)}
-        />
-      )}
-
-      {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} timezone={timezone} onClose={() => setSelectedBookingId(null)} />
-      )}
     </DashboardLayout>
   );
 }

@@ -152,7 +152,7 @@ publicBookingChatRouter.post(
       type: "cancellation",
       title: `${customer?.name ?? "A customer"} cancelled`,
       body: `${booking.serviceName ?? "Appointment"} · ${formatInTimeZone(booking.startTime, owner?.timezone ?? "UTC", "EEE d MMM, h:mm a")}`,
-      link: "/bookings",
+      link: `/bookings/${booking.id}`,
     });
     await Message.create({
       businessId: booking.businessId,

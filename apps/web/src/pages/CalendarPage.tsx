@@ -1,14 +1,12 @@
+import { useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { BookingProfile, BookingStatus } from "@servicebook/types";
-import { useBookings, useCreateBooking } from "../lib/bookings";
+import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useStaffList } from "../lib/staff";
 import { useBusinessHours } from "../lib/businessHours";
 import { useMyBusiness } from "../lib/business";
-import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
-import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
-import { BookingDetailModal } from "../components/BookingDetailModal";
 import { TimeGridView, type GridColumn } from "../components/TimeGridView";
 import { MonthGridView } from "../components/MonthGridView";
 import {
@@ -57,10 +55,7 @@ export function CalendarPage() {
   const [staffFilter, setStaffFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const [slotDate, setSlotDate] = useState<string | undefined>(undefined);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const openBooking = useOpenBooking();
 
   const { data: staffData } = useStaffList();
   const { data: businessHoursData } = useBusinessHours();
@@ -79,7 +74,7 @@ export function CalendarPage() {
     return { startDate: start, endDate: addDaysToKey(start, countDaysInMonth(start) - 1) };
   }, [view, anchorDate]);
 
-  const createBooking = useCreateBooking();
+  const goTo = useNavigate();
 
   const { data, isPending, isError, refetch } = useBookings({
     startDate,
@@ -89,7 +84,6 @@ export function CalendarPage() {
   });
 
   const bookings = useMemo(() => data?.bookings ?? [], [data?.bookings]);
-  const selectedBooking = bookings.find((booking) => booking.id === selectedBookingId) ?? null;
 
   function navigate(direction: -1 | 1) {
     if (view === "day") {
@@ -102,25 +96,11 @@ export function CalendarPage() {
   }
 
   function openSlotForm(dateKey: string) {
-    setFormError(null);
-    setSlotDate(dateKey);
-    setIsFormOpen(true);
+    goTo(`/bookings/new?date=${dateKey}`, { state: { from: "/calendar" } });
   }
 
   function openBlankForm() {
-    setFormError(null);
-    setSlotDate(undefined);
-    setIsFormOpen(true);
-  }
-
-  async function handleCreate(values: BookingFormSubmitValues) {
-    setFormError(null);
-    try {
-      await createBooking.mutateAsync(values);
-      setIsFormOpen(false);
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
+    goTo("/bookings/new", { state: { from: "/calendar" } });
   }
 
   const dayKeys = useMemo(() => {
@@ -330,7 +310,7 @@ export function CalendarPage() {
                   windowEndMinutes={displayWindow.end}
                   timezone={timezone}
                   onSlotClick={openSlotForm}
-                  onBookingClick={(booking) => setSelectedBookingId(booking.id)}
+                  onBookingClick={(booking) => openBooking(booking.id)}
                 />
               </div>
             )}
@@ -366,7 +346,7 @@ export function CalendarPage() {
                             <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                             <button
                               type="button"
-                              onClick={() => setSelectedBookingId(booking.id)}
+                              onClick={() => openBooking(booking.id)}
                               className="flex flex-1 items-center justify-between gap-2 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                             >
                               <div>
@@ -389,19 +369,6 @@ export function CalendarPage() {
         )}
       </div>
 
-      {isFormOpen && (
-        <BookingFormModal
-          isSubmitting={createBooking.isPending}
-          serverError={formError}
-          initialDate={slotDate}
-          onSubmit={handleCreate}
-          onClose={() => setIsFormOpen(false)}
-        />
-      )}
-
-      {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} timezone={timezone} onClose={() => setSelectedBookingId(null)} />
-      )}
     </DashboardLayout>
   );
 }

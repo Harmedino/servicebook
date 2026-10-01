@@ -100,7 +100,7 @@ function EnquiryCard({ enquiry, businessWhatsapp }: { enquiry: EnquiryProfile; b
         <a href={`tel:${enquiry.phone.replace(/\s/g, "")}`} className={buttonClassName("secondary", "sm")}>
           <Phone className="h-3.5 w-3.5" aria-hidden="true" /> Call
         </a>
-        <Link to="/bookings?new=1" className={buttonClassName("secondary", "sm")}>
+        <Link to="/bookings/new" className={buttonClassName("secondary", "sm")}>
           <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" /> Book
         </Link>
         <div className="ml-auto flex gap-1.5">
