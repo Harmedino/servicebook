@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { Logo } from "./Logo";
+import { PHOTOS } from "./marketing/photos";
 
 const POINTS = [
   "Your own booking link, live in five minutes",
@@ -7,8 +8,9 @@ const POINTS = [
   "One calendar for every staff member, no double bookings",
 ];
 
-/** The dark left panel shared by Login/Register, with a real product screenshot bleeding off the corner. */
+/** The dark left panel shared by Login/Register, with a photo of a barber at work tucked into the corner. */
 export function AuthBrandPanel({ headline, description }: { headline: string; description: string }) {
+  const photo = PHOTOS.barberFade;
   return (
     <div className="relative hidden overflow-hidden bg-ink-grid lg:flex lg:w-1/2 lg:flex-col lg:p-10 xl:p-14">
       <Logo tone="light" />
@@ -28,15 +30,24 @@ export function AuthBrandPanel({ headline, description }: { headline: string; de
         </ul>
       </div>
 
-      <div className="relative -mb-10 -mr-10 mt-auto pt-12 xl:-mb-14 xl:-mr-14">
+      <figure className="relative -mb-10 -mr-10 mt-auto pt-12 xl:-mb-14 xl:-mr-14">
         <img
-          src="/screens/dashboard.webp"
-          alt="The ServiceBook dashboard"
-          width={1440}
-          height={900}
-          className="w-[125%] max-w-none rounded-tl-xl border border-white/10 shadow-[0_-20px_60px_-20px_rgb(0_0_0/0.6)]"
+          src={photo.src}
+          srcSet={photo.srcSet}
+          sizes="(min-width: 1280px) 50vw, 512px"
+          alt={photo.alt}
+          width={photo.width}
+          height={photo.height}
+          className="block aspect-[3/2] w-full rounded-tl-2xl object-cover"
         />
-      </div>
+        <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-4 pb-3 pt-8 text-[11px] text-white/75">
+          Photo:{" "}
+          <a href={photo.credit.url} target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 underline-offset-2 hover:text-white">
+            {photo.credit.name}
+          </a>{" "}
+          on Pexels
+        </figcaption>
+      </figure>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useDemoLogin } from "../../lib/demo";
+import type { StockPhoto } from "./photos";
 
 /** Fades content up once as it scrolls into view. */
 export function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
@@ -78,6 +79,51 @@ export function PhoneFrame({ src, alt, className = "", bar = "light" }: { src: s
         <img src={src} alt={alt} loading="lazy" decoding="async" width={390} height={844} className="block w-full" />
       </div>
     </div>
+  );
+}
+
+/** A real photo, cropped by `imgClassName`'s aspect ratio, with its photographer credited underneath. */
+export function PhotoFigure({
+  photo,
+  sizes,
+  className = "",
+  imgClassName = "aspect-[4/3]",
+  eager = false,
+  onDark = false,
+}: {
+  photo: StockPhoto;
+  sizes: string;
+  className?: string;
+  imgClassName?: string;
+  eager?: boolean;
+  onDark?: boolean;
+}) {
+  return (
+    <figure className={className}>
+      <img
+        src={photo.src}
+        srcSet={photo.srcSet}
+        sizes={sizes}
+        alt={photo.alt}
+        width={photo.width}
+        height={photo.height}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        className={`block w-full rounded-2xl object-cover sm:rounded-3xl ${imgClassName}`}
+      />
+      <figcaption className={`mt-2.5 text-xs ${onDark ? "text-white/45" : "text-stone-500"}`}>
+        Photo:{" "}
+        <a
+          href={photo.credit.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`underline underline-offset-2 ${onDark ? "decoration-white/25 hover:text-white/80" : "decoration-stone-300 hover:text-stone-800"}`}
+        >
+          {photo.credit.name}
+        </a>{" "}
+        on Pexels
+      </figcaption>
+    </figure>
   );
 }
 
