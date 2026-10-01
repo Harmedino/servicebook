@@ -10,6 +10,7 @@ const NAV = [
   { to: "/solutions", label: "Solutions" },
   // { to: "/pricing", label: "Pricing" },
   { to: "/how-it-works", label: "How it works" },
+  { to: "/about", label: "About" },
   { to: "/demo", label: "Live demo" },
 ];
 
@@ -167,6 +168,7 @@ const FOOTER_COLUMNS = [
       { to: "/features", label: "Features" },
       // { to: "/pricing", label: "Pricing" },
       { to: "/how-it-works", label: "How it works" },
+      { to: "/about", label: "About ServiceBook" },
       { to: "/demo", label: "Live demo" },
       { to: "/roadmap", label: "Roadmap" },
       { to: "/design", label: "Design system" },
