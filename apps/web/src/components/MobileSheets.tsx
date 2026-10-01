@@ -105,7 +105,7 @@ export function QuickActionsSheet({
           <p className="px-1 text-sm font-medium text-stone-500">Create</p>
           <button
             type="button"
-            onClick={() => pick({ label: "New booking", note: "", icon: CalendarPlus, to: "/bookings?new=1" })}
+            onClick={() => pick({ label: "New booking", note: "", icon: CalendarPlus, to: "/bookings/new" })}
             className="mt-3 flex w-full items-center gap-4 rounded-2xl bg-ink px-4 py-4 text-left text-white active:scale-[0.99] dark:bg-brand-700"
           >
             <CalendarPlus className="h-6 w-6 shrink-0 text-highlight" strokeWidth={1.75} aria-hidden="true" />

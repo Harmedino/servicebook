@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { motion } from "motion/react";
 import {
@@ -19,14 +19,12 @@ import { useMyBusiness } from "../lib/business";
 import { useBusinessHours } from "../lib/businessHours";
 import { useCreateService, useServices } from "../lib/services";
 import { useCreateStaff, useStaffList } from "../lib/staff";
-import { useCreateBooking } from "../lib/bookings";
+import { useOpenBooking } from "../lib/bookings";
 import { useCreateCustomer } from "../lib/customers";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { InsightsSection } from "../components/InsightsSection";
-import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
-import { BookingDetailModal } from "../components/BookingDetailModal";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
 import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
 import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
@@ -76,35 +74,23 @@ export function DashboardPage() {
   const { data: staffData } = useStaffList();
   const { data: businessHoursData } = useBusinessHours();
 
-  const createBooking = useCreateBooking();
+  const navigate = useNavigate();
   const createCustomer = useCreateCustomer();
   const createService = useCreateService();
   const createStaff = useCreateStaff();
 
-  const [openModal, setOpenModal] = useState<"booking" | "customer" | "service" | "staff" | null>(null);
+  const [openModal, setOpenModal] = useState<"customer" | "service" | "staff" | null>(null);
   const [quickActionError, setQuickActionError] = useState<string | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const openBooking = useOpenBooking();
   const [copyFeedback, setCopyFeedback] = useState(false);
 
   const summary = data?.summary;
-  const selectedBooking = summary
-    ? [...summary.todayAppointments, ...summary.upcomingAppointments].find((booking) => booking.id === selectedBookingId) ?? null
-    : null;
 
   function closeQuickAction() {
     setOpenModal(null);
     setQuickActionError(null);
   }
 
-  async function handleCreateBooking(values: BookingFormSubmitValues) {
-    setQuickActionError(null);
-    try {
-      await createBooking.mutateAsync(values);
-      closeQuickAction();
-    } catch (error) {
-      setQuickActionError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
 
   async function handleCreateCustomer(values: CustomerFormSubmitValues) {
     setQuickActionError(null);
@@ -276,7 +262,7 @@ export function DashboardPage() {
           )}
         </div>
         {summary && (
-          <Button onClick={() => setOpenModal("booking")}>
+          <Button onClick={() => navigate("/bookings/new", { state: { from: "/dashboard" } })}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             New booking
           </Button>
@@ -372,7 +358,7 @@ export function DashboardPage() {
                   <p className="mt-1 text-sm text-stone-500">
                     Create an appointment or share your booking page with customers.
                   </p>
-                  <Button size="sm" className="mt-4" onClick={() => setOpenModal("booking")}>
+                  <Button size="sm" className="mt-4" onClick={() => navigate("/bookings/new", { state: { from: "/dashboard" } })}>
                     <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                     New booking
                   </Button>
@@ -400,7 +386,7 @@ export function DashboardPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setSelectedBookingId(booking.id)}
+                        onClick={() => openBooking(booking.id)}
                         className="mb-2 flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:bg-stone-50 hover:shadow-sm"
                       >
                         <div className="flex min-w-0 items-center gap-3">
@@ -432,7 +418,7 @@ export function DashboardPage() {
                       <li key={booking.id} className="border-t border-stone-100 first:border-t-0">
                         <button
                           type="button"
-                          onClick={() => setSelectedBookingId(booking.id)}
+                          onClick={() => openBooking(booking.id)}
                           className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
                         >
                           <div className="flex items-center gap-3">
@@ -477,7 +463,7 @@ export function DashboardPage() {
                       <button
                         key={action.key}
                         type="button"
-                        onClick={() => setOpenModal(action.key)}
+                        onClick={() => (action.key === "booking" ? navigate("/bookings/new", { state: { from: "/dashboard" } }) : setOpenModal(action.key))}
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
                       >
                         <action.icon className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
@@ -512,14 +498,6 @@ export function DashboardPage() {
         </div>
       )}
 
-      {openModal === "booking" && (
-        <BookingFormModal
-          isSubmitting={createBooking.isPending}
-          serverError={quickActionError}
-          onSubmit={handleCreateBooking}
-          onClose={closeQuickAction}
-        />
-      )}
       {openModal === "customer" && (
         <CustomerFormModal
           customer={null}
@@ -548,10 +526,6 @@ export function DashboardPage() {
           onSubmit={handleCreateStaff}
           onClose={closeQuickAction}
         />
-      )}
-
-      {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} timezone={timezone} onClose={() => setSelectedBookingId(null)} />
       )}
     </DashboardLayout>
   );

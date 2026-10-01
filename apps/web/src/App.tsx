@@ -36,6 +36,8 @@ const StaffPage = lazyPage(() => import("./pages/StaffPage").then((m) => ({ defa
 const StaffDetailPage = lazyPage(() => import("./pages/StaffDetailPage").then((m) => ({ default: m.StaffDetailPage })));
 const CustomersPage = lazyPage(() => import("./pages/CustomersPage").then((m) => ({ default: m.CustomersPage })));
 const CustomerDetailPage = lazyPage(() => import("./pages/CustomerDetailPage").then((m) => ({ default: m.CustomerDetailPage })));
+const BookingDetailPage = lazyPage(() => import("./pages/BookingDetailPage").then((m) => ({ default: m.BookingDetailPage })));
+const NewBookingPage = lazyPage(() => import("./pages/NewBookingPage").then((m) => ({ default: m.NewBookingPage })));
 const BookingsPage = lazyPage(() => import("./pages/BookingsPage").then((m) => ({ default: m.BookingsPage })));
 const CalendarPage = lazyPage(() => import("./pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const PublicBookingPage = lazyPage(() => import("./pages/PublicBookingPage").then((m) => ({ default: m.PublicBookingPage })));
@@ -192,6 +194,22 @@ export function App() {
         element={
           <OwnerRoute>
             <CustomerDetailPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/bookings/new"
+        element={
+          <OwnerRoute>
+            <NewBookingPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/bookings/:bookingId"
+        element={
+          <OwnerRoute>
+            <BookingDetailPage />
           </OwnerRoute>
         }
       />

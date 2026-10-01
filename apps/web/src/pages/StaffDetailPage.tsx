@@ -4,11 +4,10 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { BookingStatus } from "@servicebook/types";
 import { useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
-import { useBookings } from "../lib/bookings";
+import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { StaffAvailabilityEditor } from "../components/StaffAvailabilityEditor";
-import { BookingDetailModal } from "../components/BookingDetailModal";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
@@ -94,10 +93,9 @@ export function StaffDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const openBooking = useOpenBooking();
 
   const allBookings = useMemo(() => bookingsData?.bookings ?? [], [bookingsData?.bookings]);
-  const selectedBooking = allBookings.find((booking) => booking.id === selectedBookingId) ?? null;
 
   const upcoming = useMemo(() => {
     const now = Date.now();
@@ -239,7 +237,7 @@ export function StaffDetailPage() {
             <AppointmentList
               bookings={upcoming}
               timezone={timezone}
-              onSelect={setSelectedBookingId}
+              onSelect={openBooking}
               emptyLabel="No upcoming appointments for this staff member."
             />
           )}
@@ -253,7 +251,7 @@ export function StaffDetailPage() {
             <AppointmentList
               bookings={recent}
               timezone={timezone}
-              onSelect={setSelectedBookingId}
+              onSelect={openBooking}
               emptyLabel="No past appointments yet."
             />
           )}
@@ -269,10 +267,6 @@ export function StaffDetailPage() {
           onSubmit={handleSubmit}
           onClose={() => setIsEditOpen(false)}
         />
-      )}
-
-      {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} timezone={timezone} onClose={() => setSelectedBookingId(null)} />
       )}
     </DashboardLayout>
   );

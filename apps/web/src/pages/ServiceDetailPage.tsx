@@ -4,10 +4,9 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { BookingStatus } from "@servicebook/types";
 import { useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
-import { useBookings } from "../lib/bookings";
+import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
-import { BookingDetailModal } from "../components/BookingDetailModal";
 import { formatDuration, formatPrice } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
@@ -45,10 +44,9 @@ export function ServiceDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const openBooking = useOpenBooking();
 
   const allBookings = useMemo(() => bookingsData?.bookings ?? [], [bookingsData?.bookings]);
-  const selectedBooking = allBookings.find((booking) => booking.id === selectedBookingId) ?? null;
 
   const upcoming = useMemo(() => {
     const now = Date.now();
@@ -195,7 +193,7 @@ export function ServiceDetailPage() {
                   <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                   <button
                     type="button"
-                    onClick={() => setSelectedBookingId(booking.id)}
+                    onClick={() => openBooking(booking.id)}
                     className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
@@ -222,10 +220,6 @@ export function ServiceDetailPage() {
           onSubmit={handleSubmit}
           onClose={() => setIsEditOpen(false)}
         />
-      )}
-
-      {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} timezone={timezone} onClose={() => setSelectedBookingId(null)} />
       )}
     </DashboardLayout>
   );

@@ -459,7 +459,7 @@ publicBookingRouter.post(
       type: "booking",
       title: `New booking: ${service.name}`,
       body: `${customer.name} · ${formatInTimeZone(booking.startTime, business.timezone, "EEE d MMM, h:mm a")} · ${staff.name}`,
-      link: "/bookings",
+      link: `/bookings/${booking.id}`,
     });
     // Start the booking's chat with a reply, so the customer isn't left with silence.
     await postWelcomeMessage({

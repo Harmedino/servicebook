@@ -1,14 +1,12 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { Plus } from "lucide-react";
 import type { BookingStatus } from "@servicebook/types";
 import { useCustomer, useUpdateCustomer } from "../lib/customers";
-import { useBookings, useCreateBooking } from "../lib/bookings";
+import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
-import { BookingFormModal, type BookingFormSubmitValues } from "../components/BookingFormModal";
-import { BookingDetailModal } from "../components/BookingDetailModal";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BookingStatusBadge } from "../components/ui/Badge";
@@ -29,7 +27,6 @@ export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const { data, isPending, isError } = useCustomer(customerId ?? "");
   const updateCustomer = useUpdateCustomer();
-  const createBooking = useCreateBooking();
 
   const { data: businessData } = useMyBusiness();
   const timezone = businessData?.business?.timezone ?? "UTC";
@@ -41,13 +38,11 @@ export function CustomerDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
-  const [bookingFormError, setBookingFormError] = useState<string | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const openBooking = useOpenBooking();
   const [historyFilter, setHistoryFilter] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
 
   const allBookings = useMemo(() => bookingsData?.bookings ?? [], [bookingsData?.bookings]);
-  const selectedBooking = allBookings.find((booking) => booking.id === selectedBookingId) ?? null;
 
   const now = Date.now();
 
@@ -130,15 +125,6 @@ export function CustomerDetailPage() {
     }
   }
 
-  async function handleCreateBooking(values: BookingFormSubmitValues) {
-    setBookingFormError(null);
-    try {
-      await createBooking.mutateAsync(values);
-      setIsBookingFormOpen(false);
-    } catch (error) {
-      setBookingFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
 
   return (
     <DashboardLayout>
@@ -163,8 +149,7 @@ export function CustomerDetailPage() {
           </Button>
           <Button
             onClick={() => {
-              setBookingFormError(null);
-              setIsBookingFormOpen(true);
+              navigate(`/bookings/new?customer=${customer.id}`, { state: { from: `/customers/${customer.id}` } });
             }}
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -235,7 +220,7 @@ export function CustomerDetailPage() {
               </p>
               <p className="text-sm text-stone-600">{formatDateTime(stats.nextAppointment.startTime)}</p>
             </div>
-            <Button size="sm" onClick={() => setSelectedBookingId(stats.nextAppointment!.id)}>
+            <Button size="sm" onClick={() => openBooking(stats.nextAppointment!.id)}>
               View appointment
             </Button>
           </div>
@@ -297,7 +282,7 @@ export function CustomerDetailPage() {
                   <span className={`w-0.5 shrink-0 self-stretch rounded-full ${STATUS_ACCENT[booking.status]}`} aria-hidden="true" />
                   <button
                     type="button"
-                    onClick={() => setSelectedBookingId(booking.id)}
+                    onClick={() => openBooking(booking.id)}
                     className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-stone-50"
                   >
                     <p className="truncate text-sm font-semibold text-stone-900">
@@ -322,19 +307,6 @@ export function CustomerDetailPage() {
         />
       )}
 
-      {isBookingFormOpen && (
-        <BookingFormModal
-          isSubmitting={createBooking.isPending}
-          serverError={bookingFormError}
-          initialCustomerId={customer.id}
-          onSubmit={handleCreateBooking}
-          onClose={() => setIsBookingFormOpen(false)}
-        />
-      )}
-
-      {selectedBooking && (
-        <BookingDetailModal booking={selectedBooking} timezone={timezone} onClose={() => setSelectedBookingId(null)} />
-      )}
     </DashboardLayout>
   );
 }

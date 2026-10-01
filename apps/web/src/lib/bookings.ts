@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type { AvailableSlotsResponse, BookingListResponse, BookingResponse, BookingStatus } from "@servicebook/types";
 import { apiRequest } from "./apiClient";
@@ -85,4 +87,23 @@ export function useUpdateBooking(): UseMutationResult<BookingResponse, unknown, 
       void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
+}
+
+export function useBooking(id: string): UseQueryResult<BookingResponse> {
+  return useQuery({
+    queryKey: ["bookings", "detail", id],
+    queryFn: () => apiRequest<BookingResponse>(`/api/bookings/${id}`),
+    enabled: Boolean(id),
+    retry: false,
+  });
+}
+
+/** Opens a booking's page, remembering where you came from for its back button. */
+export function useOpenBooking(): (id: string) => void {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return useCallback(
+    (id: string) => navigate(`/bookings/${id}`, { state: { from: `${location.pathname}${location.search}` } }),
+    [navigate, location.pathname, location.search],
+  );
 }
