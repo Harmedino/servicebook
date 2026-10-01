@@ -12,6 +12,7 @@ import { isDemoSlug } from "../lib/demo";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { DemoBar } from "../components/DemoBar";
 import { LogoMark } from "../components/Logo";
+import { brandSolid, brandStyle } from "../lib/brand";
 
 function UpcomingCard({ appointment, timezone, index }: { appointment: CustomerPortalAppointment; timezone: string; index: number }) {
   const start = new Date(appointment.startTime);
@@ -120,9 +121,9 @@ export function CustomerPortalPage() {
   const next = upcoming.find((appointment) => appointment.status !== "CANCELLED");
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-14">
+    <div className="min-h-screen bg-stone-50 pb-14" style={brandStyle(business.brandColor)}>
       {isDemoSlug(business.slug) && <DemoBar />}
-      <header className="relative overflow-hidden bg-ink text-white">
+      <header className={`relative overflow-hidden ${brandSolid(business.brandColor, "bg-ink text-white")}`}>
         {business.coverImageUrl && (
           <>
             <img src={imageSrc(business.coverImageUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" />

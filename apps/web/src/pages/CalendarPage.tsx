@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { BookingProfile, BookingStatus } from "@servicebook/types";
@@ -20,8 +20,8 @@ import {
 } from "../lib/calendarDates";
 import { timeToMinutes } from "../lib/timeMath";
 import { STATUS_LABELS } from "../lib/bookingStatus";
-import { Plus } from "lucide-react";
-import { Button } from "../components/ui/Button";
+import { Plus, Monitor } from "lucide-react";
+import { Button, buttonClassName } from "../components/ui/Button";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -204,10 +204,15 @@ export function CalendarPage() {
         title="Calendar"
         description="Your appointment schedule."
         actions={
-          <Button onClick={openBlankForm}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New booking
-          </Button>
+          <>
+            <Link to="/front-desk" className={buttonClassName("secondary", "md")}>
+              <Monitor className="h-4 w-4" aria-hidden="true" /> Front desk view
+            </Link>
+            <Button onClick={openBlankForm}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New booking
+            </Button>
+          </>
         }
       />
 

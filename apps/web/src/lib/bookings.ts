@@ -45,10 +45,11 @@ function buildQueryString(params: Record<string, string | undefined>): string {
   return query ? `?${query}` : "";
 }
 
-export function useBookings(filters?: BookingFilters): UseQueryResult<BookingListResponse> {
+export function useBookings(filters?: BookingFilters, options?: { refetchInterval?: number }): UseQueryResult<BookingListResponse> {
   return useQuery({
     queryKey: ["bookings", "list", filters ?? {}],
     queryFn: () => apiRequest<BookingListResponse>(`/api/bookings${buildQueryString({ ...filters })}`),
+    refetchInterval: options?.refetchInterval,
   });
 }
 

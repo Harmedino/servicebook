@@ -1,5 +1,7 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useMyBusiness, useUpdateBusiness } from "../lib/business";
+import { BRAND_PRESETS, inkOn } from "../lib/brand";
 import { ApiError } from "../lib/apiClient";
 import { Toggle } from "./Toggle";
 import { Card } from "./ui/Card";
@@ -10,6 +12,8 @@ export function BookingPageSection() {
   const updateBusiness = useUpdateBusiness();
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // While dragging the custom picker, preview here and save once on release.
+  const [draftColor, setDraftColor] = useState<string | null>(null);
 
   const business = data?.business;
   const bookingUrl = business ? `${window.location.origin}/book/${business.slug}` : "";
@@ -40,6 +44,17 @@ export function BookingPageSection() {
     return <p className="text-sm text-stone-500">Loading…</p>;
   }
 
+  const shownColor = draftColor ?? business.brandColor ?? BRAND_PRESETS[0];
+
+  async function saveColor(color: string) {
+    setError(null);
+    try {
+      await updateBusiness.mutateAsync({ brandColor: color });
+    } catch {
+      setError("Couldn't save the colour. Please try again.");
+    }
+  }
+
   return (
     <Card className="max-w-lg divide-y divide-stone-200">
       <div className="p-5">
@@ -53,6 +68,53 @@ export function BookingPageSection() {
           <a href={bookingUrl} target="_blank" rel="noreferrer" className={buttonClassName("primary", "sm")}>
             Open page
           </a>
+          <Link to="/poster" className={buttonClassName("secondary", "sm")}>
+            Print a poster
+          </Link>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <p className="section-label">Your colour</p>
+        <p className="mt-1 text-sm text-stone-500">Used on your booking page, your customers&apos; pages and your printed poster.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {BRAND_PRESETS.map((color) => {
+            const active = (business.brandColor ?? BRAND_PRESETS[0]).toLowerCase() === color;
+            return (
+              <button
+                key={color}
+                type="button"
+                onClick={() => void saveColor(color === BRAND_PRESETS[0] ? "" : color)}
+                disabled={updateBusiness.isPending}
+                aria-label={`Use ${color}`}
+                aria-pressed={active}
+                className={`h-9 w-9 rounded-full ring-offset-2 ring-offset-surface transition ${active ? "ring-2 ring-stone-900" : "hover:scale-110"}`}
+                style={{ backgroundColor: color }}
+              />
+            );
+          })}
+          <label className="relative inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border border-stone-300 px-3 text-sm font-medium text-stone-700 hover:bg-stone-50">
+            <span className="h-4 w-4 rounded-full border border-stone-300" style={{ backgroundColor: shownColor }} />
+            Custom
+            <input
+              type="color"
+              value={shownColor}
+              onChange={(event) => setDraftColor(event.target.value)}
+              onBlur={() => {
+                if (draftColor && draftColor !== business.brandColor) void saveColor(draftColor);
+                setDraftColor(null);
+              }}
+              className="absolute inset-0 cursor-pointer opacity-0"
+              aria-label="Pick any colour"
+            />
+          </label>
+        </div>
+        <div
+          className="mt-4 flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold"
+          style={{ backgroundColor: shownColor, color: inkOn(shownColor) }}
+        >
+          {business.name}
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs">Book now</span>
         </div>
       </div>
 
