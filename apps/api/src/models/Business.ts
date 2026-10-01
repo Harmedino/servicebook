@@ -49,6 +49,8 @@ const businessSchema = new Schema(
     logoUrl: { type: String, trim: true },
     /** Wide banner photo shown at the top of the public booking page. */
     coverImageUrl: { type: String, trim: true },
+    // The colour used on the booking page, customer pages and poster (#rrggbb). Unset = ServiceBook green-black.
+    brandColor: { type: String, trim: true, match: [/^#[0-9a-fA-F]{6}$/, "Use a colour like #1f6f5c"] },
     /** ISO 4217 code used to display prices, e.g. "NGN". */
     currency: { type: String, uppercase: true, trim: true, default: "USD" },
     // Whether the owner has answered "do you also take appointments yourself?",

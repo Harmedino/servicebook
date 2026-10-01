@@ -238,6 +238,7 @@ publicBookingRouter.get(
         address: business.address ?? undefined,
         website: business.website ?? undefined,
         socials: publicSocials(business),
+        brandColor: business.brandColor || undefined,
       },
       services: services.map((service) => ({
         id: service.id,

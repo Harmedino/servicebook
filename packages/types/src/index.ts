@@ -48,6 +48,8 @@ export interface BusinessProfile {
   timezone: string;
   logoUrl?: string;
   coverImageUrl?: string;
+  /** #rrggbb used on the booking page, customer pages and poster. */
+  brandColor?: string;
   currency: string;
   isPublicBookingEnabled: boolean;
   emailNotificationsEnabled: boolean;
@@ -297,6 +299,7 @@ export interface PublicBusinessProfile {
   address?: string;
   website?: string;
   socials: SocialLinks;
+  brandColor?: string;
 }
 
 export interface PublicServiceProfile {
@@ -643,6 +646,7 @@ export interface CustomerPortalResponse {
     slug: string;
     logoUrl?: string;
     coverImageUrl?: string;
+    brandColor?: string;
     phone?: string;
     address?: string;
     timezone: string;
