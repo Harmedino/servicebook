@@ -19,6 +19,8 @@ import { Staff } from "../models/Staff";
 import { Customer, type CustomerDocument } from "../models/Customer";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, isDuplicateKeyError } from "../lib/errors";
 import { Booking } from "../models/Booking";
+import { TimeOff } from "../models/TimeOff";
+import { ensureBusinessHours } from "../lib/businessHours";
 import { Enquiry } from "../models/Enquiry";
 import { SOCIAL_CHANNELS, toSocialLinks } from "../lib/socials";
 import { ensureAccessToken, postWelcomeMessage, ensureCustomerToken } from "../lib/bookingChat";
@@ -213,9 +215,14 @@ publicBookingRouter.get(
     const bookingEnabled = business.isPublicBookingEnabled;
     // Booking is still off even if this list were non-empty — don't bother
     // fetching services the customer won't be able to book anyway.
-    const services = bookingEnabled
-      ? await Service.find({ businessId: business.id, isActive: true }).sort({ name: 1 })
-      : [];
+    const now = new Date();
+    const [services, hours, closures] = await Promise.all([
+      bookingEnabled ? Service.find({ businessId: business.id, isActive: true }).sort({ name: 1 }) : Promise.resolve([]),
+      ensureBusinessHours(business.id),
+      TimeOff.find({ businessId: business.id, staffId: null, endAt: { $gt: now }, startAt: { $lt: new Date(now.getTime() + 60 * 86_400_000) } }).sort({
+        startAt: 1,
+      }),
+    ]);
 
     const body: PublicBusinessResponse = {
       business: {
@@ -241,6 +248,21 @@ publicBookingRouter.get(
         price: service.price,
       })),
       bookingEnabled,
+      hours: [...hours]
+        .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+        .map((entry) => ({
+          dayOfWeek: entry.dayOfWeek,
+          isClosed: Boolean(entry.isClosed),
+          openTime: entry.isClosed ? undefined : (entry.openTime ?? undefined),
+          closeTime: entry.isClosed ? undefined : (entry.closeTime ?? undefined),
+        })),
+      closures: closures.map((entry) => ({
+        allDay: entry.allDay ?? true,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        startTime: entry.startTime ?? undefined,
+        endTime: entry.endTime ?? undefined,
+      })),
     };
     res.json(body);
   }),

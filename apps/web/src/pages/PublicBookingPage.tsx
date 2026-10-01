@@ -38,7 +38,8 @@ import { DemoBar } from "../components/DemoBar";
 import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
 import { usePublicShowcase } from "../lib/showcase";
 import { useCustomerPortal } from "../lib/customerPortal";
-import { PublicShowcase, type BookIntent } from "../components/showcase/PublicShowcase";
+import { PublicShowcase, type BookIntent, type ShowcaseSection } from "../components/showcase/PublicShowcase";
+import { BusinessInfo } from "../components/showcase/BusinessInfo";
 import { RatingBadge } from "../components/showcase/Stars";
 
 type Step = "service" | "datetime" | "details" | "review" | "confirmation";
@@ -154,7 +155,7 @@ export function PublicBookingPage() {
   // Set by "Book with Tunde" on the team section: narrows the services to theirs.
   const [preferredStaff, setPreferredStaff] = useState<ShowcaseStaff | null>(null);
   const bookingCard = useRef<HTMLDivElement>(null);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const embedded = isEmbedded();
 
   const { data: staffData, isPending: isStaffPending } = usePublicStaff(slug, serviceId ?? undefined);
@@ -168,6 +169,16 @@ export function PublicBookingPage() {
   const business = businessData?.business;
   const bookingEnabled = businessData?.bookingEnabled ?? true;
   const { data: showcase } = usePublicShowcase(slug);
+  type Tab = "book" | ShowcaseSection | "info";
+  const requestedTab = searchParams.get("tab") as Tab | null;
+  const tab: Tab = requestedTab && ["book", "team", "work", "reviews", "info"].includes(requestedTab) ? requestedTab : "book";
+  function openTab(next: Tab) {
+    const params = new URLSearchParams(searchParams);
+    if (next === "book") params.delete("tab");
+    else params.set("tab", next);
+    setSearchParams(params, { replace: true });
+    window.scrollTo({ top: Math.min(window.scrollY, 220), behavior: "smooth" });
+  }
   // Arriving from the customer's own page (?c=token): we already know who they are.
   const customerToken = searchParams.get("c");
   const { data: portal } = useCustomerPortal(customerToken);
@@ -219,7 +230,9 @@ export function PublicBookingPage() {
       setPreferredStaff(member ?? null);
       setStep("service");
     }
-    bookingCard.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    openTab("book");
+    // The booking card only exists on the Book tab, so wait for it to render.
+    setTimeout(() => bookingCard.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   }
 
   // Fill in a returning customer's details once.
@@ -380,7 +393,14 @@ export function PublicBookingPage() {
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-extrabold text-stone-900 sm:text-3xl">{business.name}</h1>
               {showcase && showcase.summary.count > 0 && (
-                <a href="#reviews" className="mt-1 inline-flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900">
+                <a
+                  href="?tab=reviews"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openTab("reviews");
+                  }}
+                  className="mt-1 inline-flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900"
+                >
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />
                   <span className="font-semibold text-stone-900">{showcase.summary.rating.toFixed(1)}</span>
                   <span className="underline decoration-stone-300 underline-offset-2">{showcase.summary.count} reviews</span>
@@ -441,13 +461,55 @@ export function PublicBookingPage() {
           </div>
         </motion.div>
 
-        {!bookingEnabled ? (
+        <nav className="no-scrollbar sticky top-0 z-20 -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-stone-50/90 px-4 py-2.5 backdrop-blur" aria-label="Sections">
+          {(
+            [
+              { key: "book", label: "Book", show: true },
+              { key: "team", label: "Team", show: (showcase?.staff.length ?? 0) > 0, count: showcase?.staff.length },
+              { key: "work", label: "Our work", show: (showcase?.posts.length ?? 0) > 0, count: showcase?.posts.length },
+              { key: "reviews", label: "Reviews", show: (showcase?.reviews.length ?? 0) > 0, count: showcase?.summary.count },
+              { key: "info", label: "Info", show: true },
+            ] as Array<{ key: Tab; label: string; show: boolean; count?: number }>
+          )
+            .filter((entry) => entry.show)
+            .map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                onClick={() => openTab(entry.key)}
+                aria-current={tab === entry.key ? "page" : undefined}
+                className={`relative inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors ${
+                  tab === entry.key ? "text-white dark:text-ink" : "text-stone-600 hover:bg-stone-200/60 hover:text-stone-900"
+                }`}
+              >
+                {tab === entry.key && (
+                  <motion.span layoutId="public-tab" className="absolute inset-0 rounded-full bg-ink dark:bg-highlight" transition={{ type: "spring", stiffness: 480, damping: 38 }} />
+                )}
+                <span className="relative">{entry.label}</span>
+                {entry.count ? <span className={`relative text-xs ${tab === entry.key ? "opacity-70" : "text-stone-400"}`}>{entry.count}</span> : null}
+              </button>
+            ))}
+        </nav>
+
+        {tab === "info" ? (
+          <div className="mt-4">
+            <BusinessInfo
+              data={businessData}
+              todayDayOfWeek={Number(formatInTimeZone(new Date(), timezone, "i")) % 7}
+              onChat={chatChannels.length > 0 ? () => setIsChatOpen(true) : undefined}
+            />
+          </div>
+        ) : tab !== "book" ? (
+          <div className="mt-4">
+            <PublicShowcase slug={slug} section={tab} onBook={bookingEnabled ? bookFromShowcase : () => undefined} />
+          </div>
+        ) : !bookingEnabled ? (
           <div className="mt-6 rounded-3xl border border-stone-200 bg-surface p-10 text-center">
             <h2 className="text-lg font-bold text-stone-900">Online booking is paused</h2>
             <p className="mt-2 text-sm text-stone-500">Please contact the business directly to book an appointment.</p>
           </div>
         ) : (
-          <div ref={bookingCard} className="mt-6 grid scroll-mt-4 gap-6 lg:grid-cols-[1fr_320px]">
+          <div ref={bookingCard} className="mt-4 grid scroll-mt-20 gap-6 lg:grid-cols-[1fr_320px]">
             <div className="min-w-0">
               {step !== "confirmation" && (
                 <div className="mb-4 flex items-center gap-3">
@@ -862,8 +924,6 @@ export function PublicBookingPage() {
             )}
           </div>
         )}
-
-        <PublicShowcase slug={slug} onBook={bookingEnabled ? bookFromShowcase : () => undefined} />
 
         <AnimatePresence>
           {isChatOpen && <ChatSheet slug={slug} business={business} services={services} onClose={() => setIsChatOpen(false)} />}

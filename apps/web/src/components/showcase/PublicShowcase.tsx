@@ -283,7 +283,22 @@ function StaffSheet({
 }
 
 /** Team, portfolio and reviews under the booking card. Renders nothing for a business with none of them. */
-export function PublicShowcase({ slug, onBook }: { slug: string; onBook: (intent: BookIntent, member?: ShowcaseStaff) => void }) {
+export type ShowcaseSection = "team" | "work" | "reviews";
+
+/**
+ * Team, portfolio and reviews. With `section`, only that part (one tab of
+ * the booking page); without, all three stacked. Renders nothing a business
+ * has none of.
+ */
+export function PublicShowcase({
+  slug,
+  onBook,
+  section,
+}: {
+  slug: string;
+  onBook: (intent: BookIntent, member?: ShowcaseStaff) => void;
+  section?: ShowcaseSection;
+}) {
   const { data } = usePublicShowcase(slug);
   const [staffId, setStaffId] = useState<string | null>(null);
   const [post, setPost] = useState<WorkPostProfile | null>(null);
@@ -291,7 +306,8 @@ export function PublicShowcase({ slug, onBook }: { slug: string; onBook: (intent
   if (!data) return null;
 
   const { posts, staff, reviews, summary } = data;
-  const showTeam = staff.length > 1 || staff.some((member) => member.bio || member.reviewCount);
+  const show = (part: ShowcaseSection) => !section || section === part;
+  const showTeam = show("team") && (Boolean(section) || staff.length > 1 || staff.some((member) => member.bio || member.reviewCount));
   const book = (intent: BookIntent) => {
     setPost(null);
     setStaffId(null);
@@ -303,19 +319,25 @@ export function PublicShowcase({ slug, onBook }: { slug: string; onBook: (intent
   };
 
   return (
-    <div className="mt-12 space-y-12">
+    <div className={section ? "" : "mt-12 space-y-12"}>
       {showTeam && (
         <section aria-labelledby="team-heading">
           <div id="team-heading">
-            <SectionTitle title="Meet the team" note="Tap someone to see their work" />
+            <SectionTitle title="Meet the team" note="Tap someone to see their work, hours and reviews" />
           </div>
-          <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+          <div
+            className={
+              section
+                ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                : "no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4"
+            }
+          >
             {staff.map((member) => (
               <button
                 key={member.id}
                 type="button"
                 onClick={() => setStaffId(member.id)}
-                className="w-60 shrink-0 snap-start rounded-2xl border border-stone-200 bg-surface p-4 text-left transition hover:border-stone-300 hover:shadow-[0_10px_30px_-18px_rgb(12_26_20/0.4)] sm:w-auto"
+                className={`${section ? "w-full" : "w-60 shrink-0 snap-start sm:w-auto"} rounded-2xl border border-stone-200 bg-surface p-4 text-left transition hover:border-stone-300 hover:shadow-[0_10px_30px_-18px_rgb(12_26_20/0.4)]`}
               >
                 <div className="flex items-center gap-3">
                   <Avatar name={member.name} src={member.avatarUrl} size="md" />
@@ -334,7 +356,7 @@ export function PublicShowcase({ slug, onBook }: { slug: string; onBook: (intent
         </section>
       )}
 
-      {posts.length > 0 && (
+      {show("work") && posts.length > 0 && (
         <section>
           <SectionTitle title="Our work" note={`${posts.length} style${posts.length === 1 ? "" : "s"}`} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
@@ -345,7 +367,7 @@ export function PublicShowcase({ slug, onBook }: { slug: string; onBook: (intent
         </section>
       )}
 
-      {reviews.length > 0 && (
+      {show("reviews") && reviews.length > 0 && (
         <section id="reviews" className="scroll-mt-6">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
             <h2 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">What customers say</h2>
