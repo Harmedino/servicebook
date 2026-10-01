@@ -5,8 +5,9 @@ import { API_URL } from "../lib/apiClient";
 
 type State = "ok" | "waking" | "down";
 
-// Free hosting plans sleep when idle and the first request can take up to a
-// minute. Say so, instead of letting sign-up or loading silently fail.
+// The API is kept awake (see apps/api/src/services/keepAwake.ts), so this
+// rarely shows: only right after a deploy or restart, or on a very slow
+// connection. Customers see this too, so no talk of servers.
 export function ServerStatus() {
   const [state, setState] = useState<State>("ok");
 
@@ -14,7 +15,7 @@ export function ServerStatus() {
     let cancelled = false;
     let attempts = 0;
     let retry: ReturnType<typeof setTimeout> | undefined;
-    const slow = setTimeout(() => !cancelled && setState((s) => (s === "ok" ? "waking" : s)), 3500);
+    const slow = setTimeout(() => !cancelled && setState((s) => (s === "ok" ? "waking" : s)), 6000);
 
     async function check() {
       attempts += 1;
@@ -54,8 +55,8 @@ export function ServerStatus() {
           )}
           <p className="text-stone-700">
             {state === "waking"
-              ? "Connecting to the server. The first visit after a quiet spell can take up to a minute."
-              : "We can't reach the server right now. Please try again shortly."}
+              ? "Taking a little longer than usual. Hang on, it's almost ready."
+              : "Can't connect right now. Check your internet and try again."}
           </p>
         </motion.div>
       )}
