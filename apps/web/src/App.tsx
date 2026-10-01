@@ -1,6 +1,7 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from "react";
-import { useAuth } from "./lib/auth-context";
+import { useAuth, useIsStaff } from "./lib/auth-context";
+import { STAFF_HOME, staffCanOpen } from "./lib/staffMode";
 import { HomePage } from "./pages/marketing/HomePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BusinessGate } from "./components/BusinessGate";
@@ -58,6 +59,7 @@ const SolutionsPage = lazyPage(() => import("./pages/marketing/SolutionsPage").t
 const HowItWorksPage = lazyPage(() => import("./pages/marketing/HowItWorksPage").then((m) => ({ default: m.HowItWorksPage })));
 const JoinPage = lazyPage(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
 const CustomerPortalPage = lazyPage(() => import("./pages/CustomerPortalPage").then((m) => ({ default: m.CustomerPortalPage })));
+const JoinTeamPage = lazyPage(() => import("./pages/JoinTeamPage").then((m) => ({ default: m.JoinTeamPage })));
 const MyBookingPage = lazyPage(() => import("./pages/MyBookingPage").then((m) => ({ default: m.MyBookingPage })));
 const RoadmapPage = lazyPage(() => import("./pages/marketing/RoadmapPage").then((m) => ({ default: m.RoadmapPage })));
 const DesignPage = lazyPage(() => import("./pages/marketing/DesignPage").then((m) => ({ default: m.DesignPage })));
@@ -78,9 +80,19 @@ function PageSpinner() {
 function OwnerRoute({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute>
-      <BusinessGate requireBusiness>{children}</BusinessGate>
+      <StaffGate>
+        <BusinessGate requireBusiness>{children}</BusinessGate>
+      </StaffGate>
     </ProtectedRoute>
   );
+}
+
+/** Staff logins only reach their own schedule pages; the rest is the owner's. */
+function StaffGate({ children }: { children: ReactNode }) {
+  const isStaff = useIsStaff();
+  const { pathname } = useLocation();
+  if (isStaff && !staffCanOpen(pathname)) return <Navigate to={STAFF_HOME} replace />;
+  return <>{children}</>;
 }
 
 /** Keeps already-logged-in users off /login and /register — they land on the app instead. */
@@ -117,6 +129,7 @@ export function App() {
       <Route path="/demo/owner" element={<DemoOwnerPage />} />
       <Route path="/my-booking/:token" element={<MyBookingPage />} />
       <Route path="/c/:token" element={<CustomerPortalPage />} />
+      <Route path="/join-team/:token" element={<JoinTeamPage />} />
       <Route
         path="/login"
         element={

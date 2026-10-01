@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "../lib/theme";
+import { staffCanOpen } from "../lib/staffMode";
 import { imageSrc } from "../lib/images";
 import { InviteCustomersModal } from "./InviteCustomersModal";
 
@@ -165,6 +166,7 @@ export function MoreSheet({
   business,
   userName,
   onLogout,
+  staffOnly = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -172,6 +174,8 @@ export function MoreSheet({
   business?: { name: string; slug: string; logoUrl?: string };
   userName?: string;
   onLogout: () => void;
+  /** A staff login: only the pages they can open. */
+  staffOnly?: boolean;
 }) {
   const { theme, toggleTheme } = useTheme();
   const [copied, setCopied] = useState(false);
@@ -210,7 +214,7 @@ export function MoreSheet({
           )}
 
           <div className="mt-5 grid grid-cols-3 gap-2">
-            {DESTINATIONS.map((item) => {
+            {DESTINATIONS.filter((item) => !staffOnly || staffCanOpen(item.to)).map((item) => {
               const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
               return (
                 <Link

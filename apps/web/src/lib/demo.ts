@@ -9,6 +9,7 @@ export const DEMO_BOOKING_PATH = `/book/${DEMO_SLUG}`;
 export const DEMO_JOIN_PATH = `/join/${DEMO_SLUG}`;
 const DEMO_EMAIL = "demo@servicebook.app";
 const DEMO_PASSWORD = "password123";
+const DEMO_STAFF_EMAIL = "tunde@demo.servicebook.app";
 
 export function isDemoSlug(slug: string | undefined): boolean {
   return slug === DEMO_SLUG;
@@ -22,7 +23,7 @@ export function ownerDemoPath(next = "/dashboard"): string {
 /** True while the signed-in account is the shared demo owner. */
 export function useIsDemoAccount(): boolean {
   const { user } = useAuth();
-  return user?.email === DEMO_EMAIL;
+  return user?.email === DEMO_EMAIL || user?.email === DEMO_STAFF_EMAIL;
 }
 
 /** True when a page is shown inside the /demo page's phone preview. */
@@ -37,11 +38,12 @@ export function useDemoLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function start(next = "/dashboard") {
+  /** Signs in to the demo as the owner, or (asStaff) as Tunde with his own staff login. */
+  async function start(next = "/dashboard", asStaff = false) {
     setIsLoading(true);
     setError(null);
     try {
-      await login(DEMO_EMAIL, DEMO_PASSWORD);
+      await login(asStaff ? DEMO_STAFF_EMAIL : DEMO_EMAIL, DEMO_PASSWORD);
       navigate(next.startsWith("/") ? next : "/dashboard", { replace: true });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "The demo is waking up. Try again in a few seconds.");

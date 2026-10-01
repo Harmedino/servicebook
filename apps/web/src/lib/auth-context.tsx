@@ -11,6 +11,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  acceptInvite: (token: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -87,6 +88,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
+  /** Creates a staff login from an owner's invite link and signs straight in. */
+  async function acceptInvite(token: string, email: string, password: string) {
+    const data = await apiRequest<AuthResponse>(`/api/auth/invites/${token}/accept`, {
+      method: "POST",
+      body: { email, password },
+      auth: false,
+    });
+    setStoredToken(data.token);
+    setUser(data.user);
+  }
+
   function logout() {
     setStoredToken(null);
     setUser(null);
@@ -98,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     register,
+    acceptInvite,
     logout,
   };
 
@@ -110,4 +123,9 @@ export function useAuth(): AuthContextValue {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
+}
+
+/** True when signed in with a staff login (not the owner): the app shows only their own schedule. */
+export function useIsStaff(): boolean {
+  return useAuth().user?.role === "STAFF";
 }

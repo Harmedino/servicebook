@@ -16,8 +16,8 @@ import { Avatar } from "../components/ui/Avatar";
 
 const KEY = ["waitlist"] as const;
 
-export function useWaitlist() {
-  return useQuery({ queryKey: KEY, queryFn: () => apiRequest<WaitlistListResponse>("/api/waitlist"), refetchInterval: 60_000 });
+export function useWaitlist(enabled = true) {
+  return useQuery({ queryKey: KEY, queryFn: () => apiRequest<WaitlistListResponse>("/api/waitlist"), refetchInterval: 60_000, enabled });
 }
 
 /** /waitlist — people who want a fully booked day, grouped by that day. */
