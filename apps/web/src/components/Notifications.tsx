@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Bell, BellRing, CalendarCheck, CalendarX, MessageCircle, MessagesSquare, Star, UserPlus, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, BellRing, CalendarCheck, CalendarX, Loader2, MessageCircle, MessagesSquare, Send, Smartphone, Star, UserPlus, X, type LucideIcon } from "lucide-react";
 import type { NotificationProfile, NotificationType } from "@servicebook/types";
-import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "../lib/notifications";
+import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications, useSendTestNotification } from "../lib/notifications";
+import { hasPushSubscription, isIosBrowser, showLocalNotification, useDeviceAlerts } from "../lib/push";
+import { ApiError } from "../lib/apiClient";
 import { BottomSheet } from "./MobileSheets";
 
 const ICONS: Record<NotificationType, LucideIcon> = {
@@ -44,12 +46,69 @@ function NotificationRow({ item, onOpen }: { item: NotificationProfile; onOpen: 
   );
 }
 
+/** On/off for alerts on this phone or computer, including when ServiceBook is closed. */
+function DeviceAlerts() {
+  const { state, error, turnOn, turnOff } = useDeviceAlerts();
+  const [busy, setBusy] = useState(false);
+  const run = (action: () => Promise<void>) => async () => {
+    setBusy(true);
+    await action();
+    setBusy(false);
+  };
+
+  if (state === "loading") return null;
+
+  let icon = <BellRing className="h-4 w-4" aria-hidden="true" />;
+  let title = "Alerts on this device";
+  let note = "Get a ping for new bookings and messages, even when ServiceBook is closed.";
+  let action: ReactNode = (
+    <button type="button" onClick={run(turnOn)} disabled={busy} className="shrink-0 rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 dark:bg-highlight dark:text-ink">
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : "Turn on"}
+    </button>
+  );
+  if (state === "on") {
+    title = "Alerts are on for this device";
+    note = "You'll get a notification even when ServiceBook is closed.";
+    action = (
+      <button type="button" onClick={run(turnOff)} disabled={busy} className="shrink-0 rounded-full border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-100">
+        Turn off
+      </button>
+    );
+  } else if (state === "blocked") {
+    icon = <BellOff className="h-4 w-4" aria-hidden="true" />;
+    title = "Alerts are blocked";
+    note = "Allow notifications for this site in your browser settings (tap the icon left of the address bar), then reopen this.";
+    action = null;
+  } else if (state === "unsupported") {
+    icon = <Smartphone className="h-4 w-4" aria-hidden="true" />;
+    title = isIosBrowser() ? "Get alerts on your iPhone" : "This browser can't show alerts";
+    note = isIosBrowser()
+      ? "Tap Share, then \"Add to Home Screen\". Open ServiceBook from the home screen and turn alerts on there."
+      : "Try Chrome, Edge, Firefox or Safari to get booking alerts.";
+    action = null;
+  }
+
+  return (
+    <div className={`mx-1 mb-2 rounded-xl px-3 py-2.5 ${state === "on" ? "bg-brand-50 dark:bg-brand-500/10" : "bg-stone-50"}`}>
+      <div className="flex items-center gap-3">
+        <span className={`shrink-0 ${state === "on" ? "text-brand-700" : "text-stone-600"}`}>{icon}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-stone-900">{title}</span>
+          <span className="block text-xs text-stone-500">{note}</span>
+        </span>
+        {action}
+      </div>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 function PanelBody({ onClose }: { onClose: () => void }) {
-  const { data, isPending } = useNotifications();
+  const { data, isPending, isError, error, refetch, isRefetching } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
+  const sendTest = useSendTestNotification();
   const navigate = useNavigate();
-  const [permission, setPermission] = useState(() => ("Notification" in window ? Notification.permission : "denied"));
 
   function open(item: NotificationProfile) {
     if (!item.read) markRead.mutate(item.id);
@@ -69,19 +128,7 @@ function PanelBody({ onClose }: { onClose: () => void }) {
           </button>
         )}
       </div>
-      {permission === "default" && (
-        <button
-          type="button"
-          onClick={() => void Notification.requestPermission().then(setPermission)}
-          className="mx-1 mb-2 flex w-[calc(100%-0.5rem)] items-center gap-3 rounded-xl bg-stone-50 px-3 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-        >
-          <BellRing className="h-4 w-4 shrink-0 text-stone-600" aria-hidden="true" />
-          <span>
-            <span className="block font-medium text-stone-900">Get alerts on this device</span>
-            <span className="block text-xs text-stone-500">Even when ServiceBook is in another tab.</span>
-          </span>
-        </button>
-      )}
+      <DeviceAlerts />
       <div className="max-h-[60vh] overflow-y-auto">
         {isPending ? (
           <div className="space-y-2 p-3">
@@ -89,11 +136,48 @@ function PanelBody({ onClose }: { onClose: () => void }) {
               <div key={i} className="skeleton-shimmer h-12 rounded-xl bg-stone-100" />
             ))}
           </div>
+        ) : isError && !data ? (
+          <div className="px-4 py-8 text-center">
+            <AlertTriangle className="mx-auto h-5 w-5 text-amber-500" aria-hidden="true" />
+            <p className="mt-2 text-sm font-medium text-stone-900">Couldn&apos;t load notifications</p>
+            <p className="mt-1 text-xs text-stone-500">
+              {error instanceof ApiError && error.status === 404
+                ? "The server is running an older version. It should update within a few minutes of a deploy."
+                : error instanceof Error
+                  ? error.message
+                  : "Please try again."}
+            </p>
+            <button type="button" onClick={() => void refetch()} disabled={isRefetching} className="mt-3 text-xs font-semibold text-stone-900 underline underline-offset-4">
+              {isRefetching ? "Trying…" : "Try again"}
+            </button>
+          </div>
         ) : items.length === 0 ? (
-          <p className="px-3 py-10 text-center text-sm text-stone-500">New bookings, messages and sign-ups will show up here.</p>
+          <p className="px-4 py-10 text-center text-sm text-stone-500">
+            When a customer books, messages, cancels, joins your list or leaves a review, it shows up here. Bookings you add yourself don&apos;t.
+          </p>
         ) : (
           items.map((item) => <NotificationRow key={item.id} item={item} onOpen={open} />)
         )}
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-3 border-t border-stone-100 px-3 pt-2">
+        <span className="text-[11px] text-stone-400">
+          {sendTest.isSuccess
+            ? sendTest.data.devices > 0
+              ? `Sent to ${sendTest.data.devices} device${sendTest.data.devices === 1 ? "" : "s"}`
+              : "Added above. Turn on alerts to get it on this device too."
+            : sendTest.isError
+              ? "Couldn't send. Try again."
+              : "Check that alerts reach you"}
+        </span>
+        <button
+          type="button"
+          onClick={() => sendTest.mutate()}
+          disabled={sendTest.isPending}
+          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-60"
+        >
+          {sendTest.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Send className="h-3.5 w-3.5" aria-hidden="true" />}
+          Send a test
+        </button>
       </div>
     </div>
   );
@@ -187,8 +271,13 @@ export function NotificationToasts() {
     fresh.forEach((n) => seen.current?.add(n.id));
     if (fresh.length === 0) return;
     setToasts((current) => [...fresh.slice(0, 3), ...current].slice(0, 3));
-    if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-      for (const n of fresh.slice(0, 3)) new Notification(n.title, { body: n.body, tag: n.id, icon: "/favicon.svg" });
+    // In a background tab, show a system notification, unless this device
+    // already gets the same one by push from the server.
+    if (document.hidden) {
+      void hasPushSubscription().then((pushed) => {
+        if (pushed) return;
+        for (const n of fresh.slice(0, 3)) void showLocalNotification(n.title, { body: n.body, tag: n.id, link: n.link });
+      });
     }
   }, [data]);
 
