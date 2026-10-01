@@ -6,6 +6,7 @@ import type { BookingStatus } from "@servicebook/types";
 import { useCustomer } from "../lib/customers";
 import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
+import { CustomerPageShare } from "../components/CustomerPageShare";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -138,6 +139,10 @@ export function CustomerDetailPage() {
             New booking
           </Button>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <CustomerPageShare customer={customer} />
       </div>
 
       <Card className="mt-6 p-6">

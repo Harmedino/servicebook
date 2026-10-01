@@ -12,6 +12,7 @@ export interface CreateStaffInput {
   avatarUrl?: string;
   title?: string;
   bio?: string;
+  location?: string;
   serviceIds?: string[];
   isActive?: boolean;
 }
@@ -24,6 +25,7 @@ export interface UpdateStaffInput {
   avatarUrl?: string;
   title?: string;
   bio?: string;
+  location?: string;
   serviceIds?: string[];
   isActive?: boolean;
 }

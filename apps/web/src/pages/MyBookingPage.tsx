@@ -79,6 +79,14 @@ export function MyBookingPage() {
               {business.name}
             </Link>
           </div>
+          {data.customerToken && (
+            <Link
+              to={`/c/${data.customerToken}`}
+              className="ml-auto inline-flex h-9 shrink-0 items-center rounded-full border border-stone-300 bg-surface px-3.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
+            >
+              All my appointments
+            </Link>
+          )}
         </div>
 
         <section className="mt-5 rounded-3xl border border-stone-200 bg-surface p-5 sm:p-6">
