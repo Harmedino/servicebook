@@ -321,6 +321,10 @@ export interface PublicBusinessResponse {
   business: PublicBusinessProfile;
   services: PublicServiceProfile[];
   bookingEnabled: boolean;
+  /** Opening hours, Sunday (0) to Saturday (6). */
+  hours: Array<{ dayOfWeek: number; isClosed: boolean; openTime?: string; closeTime?: string }>;
+  /** Whole-business closures in the next 60 days. */
+  closures: Array<{ allDay: boolean; startDate: string; endDate: string; startTime?: string; endTime?: string }>;
 }
 
 export interface PublicStaffListResponse {
