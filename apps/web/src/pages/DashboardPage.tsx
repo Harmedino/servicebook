@@ -18,6 +18,7 @@ import { useAuth } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
 import { useBusinessHours } from "../lib/businessHours";
 import { useOpenBooking } from "../lib/bookings";
+import { BirthdaysCard } from "../components/BirthdaysCard";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { InsightsSection } from "../components/InsightsSection";
@@ -389,7 +390,8 @@ export function DashboardPage() {
             </div>
 
             {/* Right: business snapshot */}
-            <div className="lg:sticky lg:top-8 lg:self-start">
+            <div className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+              <BirthdaysCard />
               <Card className="divide-y divide-stone-200">
                 <div className="p-5">
                   <div className="flex items-center gap-2">

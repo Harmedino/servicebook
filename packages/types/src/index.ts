@@ -164,6 +164,8 @@ export interface CustomerProfile {
   email?: string;
   notes?: string;
   source?: CustomerSource;
+  /** "MM-DD" */
+  birthday?: string;
   createdAt: string;
   updatedAt: string;
   /** Only populated on list responses — total bookings ever made by this customer. */
@@ -345,6 +347,8 @@ export interface PublicCustomerSignupInput {
   phone: string;
   email?: string;
   notes?: string;
+  /** "MM-DD", optional. */
+  birthday?: string;
 }
 
 export interface PublicCustomerSignupResponse {
@@ -703,4 +707,65 @@ export interface TimeOffListResponse {
 export interface TimeOffCreatedResponse {
   timeOff: TimeOffProfile;
   clashes: Array<{ id: string; customerName: string; serviceName: string; staffName: string; startTime: string }>;
+}
+
+// ---- Calendar sync ---------------------------------------------------------------
+
+/** GET /api/calendar-feed */
+export interface CalendarFeedResponse {
+  /** Add `.ics` (and optionally `?staff=<id>`) to subscribe from Google, Apple or Outlook. */
+  token: string;
+}
+
+// ---- Waitlist ------------------------------------------------------------------
+
+export type WaitlistStatus = "waiting" | "booked" | "removed";
+
+export interface PublicWaitlistInput {
+  serviceId: string;
+  /** Omit for anyone. */
+  staffId?: string;
+  /** yyyy-MM-dd, the day they want. */
+  date: string;
+  customer: PublicBookingCustomerInput;
+  note?: string;
+}
+
+export interface PublicWaitlistResponse {
+  /** How many people are waiting for that day, including them. */
+  position: number;
+}
+
+export interface WaitlistEntryProfile {
+  id: string;
+  date: string;
+  status: WaitlistStatus;
+  customer: { id: string; name: string; phone: string };
+  serviceId: string;
+  serviceName: string;
+  staffId?: string;
+  staffName?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface WaitlistListResponse {
+  entries: WaitlistEntryProfile[];
+}
+
+// ---- Birthdays -----------------------------------------------------------------
+
+export interface UpcomingBirthday {
+  customerId: string;
+  name: string;
+  phone: string;
+  /** "MM-DD" */
+  birthday: string;
+  /** 0 = today. */
+  daysAway: number;
+}
+
+/** GET /api/customers/birthdays */
+export interface UpcomingBirthdaysResponse {
+  birthdays: UpcomingBirthday[];
 }

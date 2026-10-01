@@ -40,6 +40,7 @@ import { usePublicShowcase } from "../lib/showcase";
 import { useCustomerPortal } from "../lib/customerPortal";
 import { PublicShowcase, type BookIntent, type ShowcaseSection } from "../components/showcase/PublicShowcase";
 import { BusinessInfo } from "../components/showcase/BusinessInfo";
+import { WaitlistJoin } from "../components/showcase/WaitlistJoin";
 import { brandSolid, brandStyle } from "../lib/brand";
 import { RatingBadge } from "../components/showcase/Stars";
 
@@ -254,6 +255,13 @@ export function PublicBookingPage() {
     // selectService is stable enough here; this runs once when services first load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [services, preselected, searchParams]);
+
+  /** Regular weekly closing day (not a booked-up day), from the opening hours. */
+  function isClosedOn(dateKey: string): boolean {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    return businessData?.hours.find((entry) => entry.dayOfWeek === dow)?.isClosed ?? false;
+  }
 
   function selectStaff(id: string) {
     setStaffId(id);
@@ -651,6 +659,8 @@ export function PublicBookingPage() {
                               <button
                                 key={key}
                                 type="button"
+                                aria-label={dayLabel(key, "EEEE d MMMM")}
+                                aria-pressed={active}
                                 onClick={() => {
                                   setDate(key);
                                   setSelectedSlot(null);
@@ -698,10 +708,22 @@ export function PublicBookingPage() {
                                 ))}
                               </div>
                             ) : slots.length === 0 ? (
-                              <div className="mt-3 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center">
-                                <p className="font-semibold text-stone-700">Fully booked or closed</p>
-                                <p className="mt-1 text-sm text-stone-500">Try another day above.</p>
-                              </div>
+                              isClosedOn(date) ? (
+                                <div className="mt-3 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center">
+                                  <p className="font-semibold text-stone-700">Closed on {dayLabel(date, "EEEE")}s</p>
+                                  <p className="mt-1 text-sm text-stone-500">Try another day above.</p>
+                                </div>
+                              ) : (
+                                <WaitlistJoin
+                                  key={`${date}-${serviceId}-${staffId}`}
+                                  slug={slug}
+                                  serviceId={serviceId as string}
+                                  staffId={staffId && staffId !== ANY_STAFF ? staffId : undefined}
+                                  date={date}
+                                  dayLabel={dayLabel(date, "EEE d MMM")}
+                                  known={knownCustomer}
+                                />
+                              )
                             ) : (
                               <div className="mt-3 space-y-5">
                                 {groupSlotsByPeriod(slots, timezone).map((group) => (

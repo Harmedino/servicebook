@@ -163,6 +163,8 @@ export async function seedDemo(): Promise<void> {
         email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
         notes: i % 5 === 0 ? "Prefers afternoon appointments." : undefined,
         source: i % 4 === 1 ? "link" : i % 3 === 0 ? "booking" : "manual",
+        // Most customers shared a birthday; two fall this week so the dashboard card has something to show.
+        birthday: i === 2 ? dateKey(0).slice(5) : i === 7 ? dateKey(3).slice(5) : i % 3 === 2 ? undefined : `${String((i % 12) + 1).padStart(2, "0")}-${String(((i * 7) % 27) + 1).padStart(2, "0")}`,
       };
     }),
   );

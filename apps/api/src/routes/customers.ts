@@ -1,6 +1,8 @@
+import { formatInTimeZone } from "date-fns-tz";
 import { Router } from "express";
 import { z } from "zod";
-import type { CustomerListResponse, CustomerProfile, CustomerResponse, CustomerSource } from "@servicebook/types";
+import type {
+  UpcomingBirthdaysResponse, CustomerListResponse, CustomerProfile, CustomerResponse, CustomerSource } from "@servicebook/types";
 import { Customer, type CustomerDocument } from "../models/Customer";
 import { Booking } from "../models/Booking";
 import { ConflictError, NotFoundError } from "../lib/errors";
@@ -12,12 +14,15 @@ const nameField = z.string().trim().min(1, "Customer name is required").max(120,
 const phoneField = z.string().trim().min(1, "Phone number is required").max(30, "Phone number is too long");
 const emailField = z.string().trim().toLowerCase().email("Enter a valid email address");
 const notesField = z.string().trim().max(2000, "Notes are too long");
+// "" clears it.
+const birthdayField = z.union([z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Pick a day and month"), z.literal("")]);
 
 const createCustomerSchema = z.object({
   name: nameField,
   phone: phoneField,
   email: emailField.optional(),
   notes: notesField.optional(),
+  birthday: birthdayField.optional(),
 });
 
 const updateCustomerSchema = z
@@ -26,6 +31,7 @@ const updateCustomerSchema = z
     phone: phoneField.optional(),
     email: emailField.optional(),
     notes: notesField.optional(),
+    birthday: birthdayField.optional(),
   })
   .strict();
 
@@ -51,6 +57,7 @@ export function toCustomerProfile(customer: CustomerDocument, stats?: CustomerSt
     email: customer.email ?? undefined,
     notes: customer.notes ?? undefined,
     source: (customer.source as CustomerSource | undefined) ?? "manual",
+    birthday: customer.birthday ?? undefined,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
     appointmentCount: stats?.appointmentCount,
@@ -86,6 +93,7 @@ customersRouter.post(
       phone: payload.phone,
       email: payload.email,
       notes: payload.notes,
+      birthday: payload.birthday || undefined,
     });
 
     const body: CustomerResponse = { customer: toCustomerProfile(customer) };
@@ -206,6 +214,34 @@ customersRouter.get(
   }),
 );
 
+/** Customers with a birthday in the next ?days= (default 7, max 31), soonest first. */
+customersRouter.get(
+  "/birthdays",
+  asyncHandler(async (req, res) => {
+    const days = Math.min(31, Math.max(1, Number(req.query.days) || 7));
+    const timezone = req.business!.timezone;
+    const today = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+    const window = Array.from({ length: days }, (_, offset) => {
+      const date = new Date(`${today}T12:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + offset);
+      return date.toISOString().slice(5, 10);
+    });
+    const customers = await Customer.find({ businessId: req.businessId, birthday: { $in: window } }).select("name phone birthday").limit(200);
+    const body: UpcomingBirthdaysResponse = {
+      birthdays: customers
+        .map((customer) => ({
+          customerId: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          birthday: customer.birthday as string,
+          daysAway: window.indexOf(customer.birthday as string),
+        }))
+        .sort((a, b) => a.daysAway - b.daysAway),
+    };
+    res.json(body);
+  }),
+);
+
 customersRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -236,9 +272,10 @@ customersRouter.patch(
       }
     }
 
+    const { birthday, ...rest } = updates;
     const customer = await Customer.findOneAndUpdate(
       { _id: req.params.id, businessId: req.businessId },
-      { $set: updates },
+      birthday === "" ? { $set: rest, $unset: { birthday: 1 } } : { $set: updates },
       { new: true, runValidators: true },
     );
 
