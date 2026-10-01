@@ -80,3 +80,18 @@ export function scheduleDemoReply(params: { businessSlug: string; booking: Booki
     })().catch((error: unknown) => console.warn("Demo reply failed:", error));
   }, 2200).unref();
 }
+
+/** After a completed appointment, the booking chat asks the customer to rate it (once). */
+export async function askForReview(booking: BookingDocument): Promise<void> {
+  const already = await Message.exists({ bookingId: booking._id, automated: true, body: { $regex: /^How was your / } });
+  if (already) return;
+  await ensureAccessToken(booking);
+  await Message.create({
+    businessId: booking.businessId,
+    bookingId: booking._id,
+    customerId: booking.customerId,
+    from: "business",
+    automated: true,
+    body: `How was your ${booking.serviceName ?? "appointment"}${booking.staffName ? ` with ${booking.staffName.split(" ")[0]}` : ""}? Tap the stars on this page to rate it; it helps other customers choose.`,
+  });
+}

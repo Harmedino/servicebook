@@ -20,6 +20,7 @@ import {
   validateBookingWindow,
 } from "../lib/bookingEngine";
 import { notifyBookingCancelled, notifyBookingConfirmed, notifyBookingRescheduled } from "../services/notifications";
+import { askForReview } from "../lib/bookingChat";
 
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"] as const;
 type BookingStatusValue = (typeof BOOKING_STATUSES)[number];
@@ -421,6 +422,10 @@ bookingsRouter.patch(
           console.error(`Booking-update notification failed for booking ${confirmedBooking.id}:`, error);
         }
       })();
+    }
+
+    if (updates.status === "COMPLETED" && previousStatus !== "COMPLETED") {
+      await askForReview(confirmedBooking).catch((error: unknown) => console.warn("Review request failed:", error));
     }
 
     const [profile] = await toBookingProfiles([confirmedBooking]);

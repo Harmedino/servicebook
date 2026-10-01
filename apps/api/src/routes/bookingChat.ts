@@ -14,6 +14,8 @@ import { Booking, type BookingDocument } from "../models/Booking";
 import { Business } from "../models/Business";
 import { Customer } from "../models/Customer";
 import { Message } from "../models/Message";
+import { Review } from "../models/Review";
+import { publicName } from "../lib/ratings";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
@@ -58,10 +60,11 @@ publicBookingChatRouter.get(
   "/:token",
   asyncHandler(async (req, res) => {
     const booking = await bookingByToken(req.params.token);
-    const [business, customer, messages] = await Promise.all([
+    const [business, customer, messages, review] = await Promise.all([
       Business.findById(booking.businessId),
       Customer.findById(booking.customerId),
       Message.find({ bookingId: booking._id }).sort({ createdAt: 1 }),
+      Review.findOne({ bookingId: booking._id }).select("rating comment"),
     ]);
     if (!business) {
       throw new NotFoundError("This booking link isn't valid anymore");
@@ -80,6 +83,8 @@ publicBookingChatRouter.get(
         price: booking.price ?? undefined,
         customerName: customer?.name ?? "",
         canCancel: canCancel(booking),
+        canReview: booking.status === "COMPLETED" && !review,
+        review: review ? { rating: review.rating, comment: review.comment ?? undefined } : undefined,
       },
       business: {
         name: business.name,
@@ -158,6 +163,47 @@ publicBookingChatRouter.post(
       body: "I've cancelled this booking.",
     });
     res.json({ status: booking.status });
+  }),
+);
+
+const reviewSchema = z.object({
+  rating: z.number().int().min(1, "Pick a rating").max(5),
+  comment: z.string().trim().max(600, "Keep it under 600 characters").optional(),
+});
+
+publicBookingChatRouter.post(
+  "/:token/review",
+  chatRateLimit,
+  asyncHandler(async (req, res) => {
+    const booking = await bookingByToken(req.params.token);
+    if (booking.status !== "COMPLETED") {
+      throw new BadRequestError("You can rate this once the appointment is done.");
+    }
+    if (await Review.exists({ bookingId: booking._id })) {
+      throw new BadRequestError("You've already rated this appointment. Thank you!");
+    }
+    const { rating, comment } = reviewSchema.parse(req.body);
+    const customer = await Customer.findById(booking.customerId).select("name");
+    const review = await Review.create({
+      businessId: booking.businessId,
+      bookingId: booking._id,
+      staffId: booking.staffId,
+      serviceId: booking.serviceId,
+      customerId: booking.customerId,
+      customerName: publicName(customer?.name || "Customer"),
+      serviceName: booking.serviceName,
+      staffName: booking.staffName,
+      rating,
+      comment: comment || undefined,
+    });
+    await notify({
+      businessId: booking.businessId,
+      type: "review",
+      title: `${"★".repeat(rating)}${"☆".repeat(5 - rating)} from ${customer?.name ?? "a customer"}`,
+      body: comment ? (comment.length > 120 ? `${comment.slice(0, 117)}…` : comment) : `${booking.serviceName ?? "Appointment"} with ${booking.staffName ?? "your team"}`,
+      link: "/showcase?tab=reviews",
+    });
+    res.status(201).json({ review: { rating: review.rating, comment: review.comment ?? undefined } });
   }),
 );
 

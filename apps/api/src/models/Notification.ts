@@ -6,7 +6,7 @@ const notificationSchema = new Schema(
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     type: {
       type: String,
-      enum: ["booking", "cancellation", "message", "enquiry", "signup"],
+      enum: ["booking", "cancellation", "message", "enquiry", "signup", "review"],
       required: true,
     },
     title: { type: String, required: true, trim: true },

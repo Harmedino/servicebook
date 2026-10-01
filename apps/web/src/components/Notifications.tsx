@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Bell, BellRing, CalendarCheck, CalendarX, MessageCircle, MessagesSquare, UserPlus, X, type LucideIcon } from "lucide-react";
+import { Bell, BellRing, CalendarCheck, CalendarX, MessageCircle, MessagesSquare, Star, UserPlus, X, type LucideIcon } from "lucide-react";
 import type { NotificationProfile, NotificationType } from "@servicebook/types";
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "../lib/notifications";
 import { BottomSheet } from "./MobileSheets";
@@ -13,6 +13,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   message: MessageCircle,
   enquiry: MessagesSquare,
   signup: UserPlus,
+  review: Star,
 };
 
 function useIsDesktop(): boolean {
