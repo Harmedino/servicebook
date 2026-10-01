@@ -21,7 +21,7 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, isDuplic
 import { Booking } from "../models/Booking";
 import { Enquiry } from "../models/Enquiry";
 import { SOCIAL_CHANNELS, toSocialLinks } from "../lib/socials";
-import { ensureAccessToken, postWelcomeMessage } from "../lib/bookingChat";
+import { ensureAccessToken, postWelcomeMessage, ensureCustomerToken } from "../lib/bookingChat";
 import { notify } from "../lib/notify";
 import { formatInTimeZone } from "date-fns-tz";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -479,6 +479,7 @@ publicBookingRouter.post(
       customerEmail: customer.email ?? undefined,
       status: booking.status,
       accessToken,
+      customerToken: await ensureCustomerToken(customer),
     };
 
     const body: PublicBookingConfirmationResponse = { confirmation };

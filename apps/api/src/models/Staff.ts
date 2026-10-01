@@ -23,6 +23,8 @@ const staffSchema = new Schema(
     // Shown on the booking page's staff profile, e.g. "Senior barber" and a line about them.
     title: { type: String, trim: true, maxlength: 60 },
     bio: { type: String, trim: true, maxlength: 400 },
+    // Shown to customers when this person works somewhere other than the business address.
+    location: { type: String, trim: true, maxlength: 160 },
     // Set when this staff profile is the business owner themselves, so the
     // public booking page can default to them when a customer has no preference.
     userId: { type: Schema.Types.ObjectId, ref: "User", index: true },

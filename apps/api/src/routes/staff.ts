@@ -31,11 +31,13 @@ const serviceIdsField = z.array(objectIdField).max(200);
 
 const titleField = z.string().trim().max(60, "Keep the title under 60 characters");
 const bioField = z.string().trim().max(400, "Keep the bio under 400 characters");
+const locationField = z.string().trim().max(160, "Keep the location under 160 characters");
 
 const createStaffSchema = z.object({
   name: nameField,
   title: titleField.optional(),
   bio: bioField.optional(),
+  location: locationField.optional(),
   email: emailField.optional(),
   phone: phoneField.optional(),
   avatarUrl: imageRefField.optional(),
@@ -48,6 +50,7 @@ const updateStaffSchema = z
     name: nameField.optional(),
     title: titleField.optional(),
     bio: bioField.optional(),
+    location: locationField.optional(),
     email: emailField.optional(),
     phone: phoneField.optional(),
     avatarUrl: imageRefField.optional(),
@@ -90,6 +93,7 @@ function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number, ra
     avatarUrl: staff.avatarUrl || undefined,
     title: staff.title || undefined,
     bio: staff.bio || undefined,
+    location: staff.location || undefined,
     isActive: staff.isActive ?? true,
     isOwner: Boolean(staff.userId),
     serviceIds: staff.serviceIds.map((id) => id.toString()),
@@ -156,6 +160,7 @@ staffRouter.post(
       name: payload.name,
       title: payload.title || undefined,
       bio: payload.bio || undefined,
+      location: payload.location || undefined,
       email: payload.email,
       phone: payload.phone,
       avatarUrl: payload.avatarUrl || undefined,

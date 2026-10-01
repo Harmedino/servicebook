@@ -19,7 +19,7 @@ import { publicName } from "../lib/ratings";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
-import { ensureAccessToken, scheduleDemoReply, toChatMessage } from "../lib/bookingChat";
+import { ensureAccessToken, ensureCustomerToken, scheduleDemoReply, toChatMessage } from "../lib/bookingChat";
 import { emailsAllowed } from "../lib/demo";
 import { sendEmail } from "../services/email";
 import { newMessageEmail } from "../emails/message";
@@ -73,7 +73,9 @@ publicBookingChatRouter.get(
     // The customer has now seen everything the business sent.
     await Message.updateMany({ bookingId: booking._id, from: "business", readAt: null }, { $set: { readAt: new Date() } });
 
+    const customerToken = customer ? await ensureCustomerToken(customer) : "";
     const body: PublicBookingThreadResponse = {
+      customerToken,
       booking: {
         serviceName: booking.serviceName ?? "Appointment",
         staffName: booking.staffName ?? "",

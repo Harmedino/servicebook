@@ -51,6 +51,7 @@ const SolutionsPage = lazyPage(() => import("./pages/marketing/SolutionsPage").t
 // const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
 const HowItWorksPage = lazyPage(() => import("./pages/marketing/HowItWorksPage").then((m) => ({ default: m.HowItWorksPage })));
 const JoinPage = lazyPage(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
+const CustomerPortalPage = lazyPage(() => import("./pages/CustomerPortalPage").then((m) => ({ default: m.CustomerPortalPage })));
 const MyBookingPage = lazyPage(() => import("./pages/MyBookingPage").then((m) => ({ default: m.MyBookingPage })));
 const RoadmapPage = lazyPage(() => import("./pages/marketing/RoadmapPage").then((m) => ({ default: m.RoadmapPage })));
 const DesignPage = lazyPage(() => import("./pages/marketing/DesignPage").then((m) => ({ default: m.DesignPage })));
@@ -109,6 +110,7 @@ export function App() {
       <Route path="/design" element={<DesignPage />} />
       <Route path="/demo/owner" element={<DemoOwnerPage />} />
       <Route path="/my-booking/:token" element={<MyBookingPage />} />
+      <Route path="/c/:token" element={<CustomerPortalPage />} />
       <Route
         path="/login"
         element={

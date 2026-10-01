@@ -3,6 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { ChatMessage } from "@servicebook/types";
 import { Message, type MessageDocument } from "../models/Message";
 import { Booking, type BookingDocument } from "../models/Booking";
+import { Customer, type CustomerDocument } from "../models/Customer";
 import { DEMO_SLUG } from "./demo";
 
 export function toChatMessage(message: MessageDocument): ChatMessage {
@@ -94,4 +95,16 @@ export async function askForReview(booking: BookingDocument): Promise<void> {
     automated: true,
     body: `How was your ${booking.serviceName ?? "appointment"}${booking.staffName ? ` with ${booking.staffName.split(" ")[0]}` : ""}? Tap the stars on this page to rate it; it helps other customers choose.`,
   });
+}
+
+/** The customer's own page token, created the first time it's needed. */
+export async function ensureCustomerToken(customer: CustomerDocument): Promise<string> {
+  if (customer.portalToken) return customer.portalToken;
+  const token = randomBytes(18).toString("base64url");
+  // Only set it if no one else did in the meantime, then read back the winner.
+  await Customer.updateOne({ _id: customer._id, portalToken: { $exists: false } }, { $set: { portalToken: token } });
+  const saved = await Customer.findById(customer._id).select("portalToken");
+  const winner = saved?.portalToken ?? token;
+  customer.set("portalToken", winner);
+  return winner;
 }

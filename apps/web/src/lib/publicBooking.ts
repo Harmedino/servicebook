@@ -1,4 +1,4 @@
-import { useMutation, useQuery, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type {
   AvailableSlotsResponse,
   PublicBookingConfirmationResponse,
@@ -71,6 +71,7 @@ export function usePublicAvailableSlots(
 export function useCreatePublicBooking(
   slug: string,
 ): UseMutationResult<PublicBookingConfirmationResponse, unknown, CreatePublicBookingInput> {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreatePublicBookingInput) =>
       apiRequest<PublicBookingConfirmationResponse>(`/api/public/businesses/${slug}/bookings`, {
@@ -78,6 +79,8 @@ export function useCreatePublicBooking(
         body: input,
         auth: false,
       }),
+    // The customer's own page lists this booking now.
+    onSuccess: ({ confirmation }) => void queryClient.invalidateQueries({ queryKey: ["customer-portal", confirmation.customerToken] }),
   });
 }
 

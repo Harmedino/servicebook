@@ -13,6 +13,7 @@ export interface StaffFormSubmitValues {
   /** "" clears it when editing. */
   title?: string;
   bio?: string;
+  location?: string;
   serviceIds: string[];
   isActive: boolean;
 }
@@ -49,6 +50,7 @@ export function StaffForm({
   const [avatarUrl, setAvatarUrl] = useState(staff?.avatarUrl ?? "");
   const [title, setTitle] = useState(staff?.title ?? "");
   const [bio, setBio] = useState(staff?.bio ?? "");
+  const [location, setLocation] = useState(staff?.location ?? "");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(staff?.serviceIds ?? []);
   const [isActive, setIsActive] = useState(staff?.isActive ?? true);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -84,6 +86,7 @@ export function StaffForm({
       avatarUrl: staff ? avatarUrl : avatarUrl || undefined,
       title: staff ? title.trim() : title.trim() || undefined,
       bio: staff ? bio.trim() : bio.trim() || undefined,
+      location: staff ? location.trim() : location.trim() || undefined,
       serviceIds: selectedServiceIds,
       isActive,
     });
@@ -118,6 +121,7 @@ export function StaffForm({
       />
       <FormField label="Phone" type="tel" value={phone} onChange={setPhone} disabled={isSubmitting} />
       <FormField label="Title (shown to customers)" type="text" value={title} onChange={setTitle} disabled={isSubmitting} />
+      <FormField label="Where they work (if not your main address)" type="text" value={location} onChange={setLocation} disabled={isSubmitting} />
       <label className="block">
         <span className="text-sm font-medium text-stone-700">
           Short bio <span className="font-normal text-stone-400">· what they're best at</span>

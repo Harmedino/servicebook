@@ -12,6 +12,7 @@ import { Business } from "../models/Business";
 import { Staff, type StaffDocument } from "../models/Staff";
 import { Service } from "../models/Service";
 import { WorkPost } from "../models/WorkPost";
+import { StaffAvailability } from "../models/StaffAvailability";
 import { Review } from "../models/Review";
 import { BadRequestError, NotFoundError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -25,7 +26,11 @@ async function businessBySlug(slug: string) {
   return business;
 }
 
-async function toShowcaseStaff(members: StaffDocument[], ratings: Awaited<ReturnType<typeof staffRatings>>): Promise<ShowcaseStaff[]> {
+async function toShowcaseStaff(
+  members: StaffDocument[],
+  ratings: Awaited<ReturnType<typeof staffRatings>>,
+  businessAddress?: string | null,
+): Promise<ShowcaseStaff[]> {
   const services = await Service.find({ _id: { $in: members.flatMap((m) => m.serviceIds) }, isActive: true }).select("name");
   const nameById = new Map(services.map((service) => [service.id, service.name]));
   const activeIds = (member: StaffDocument) => member.serviceIds.map(String).filter((id) => nameById.has(id));
@@ -37,6 +42,7 @@ async function toShowcaseStaff(members: StaffDocument[], ratings: Awaited<Return
       avatarUrl: member.avatarUrl || undefined,
       title: member.title || undefined,
       bio: member.bio || undefined,
+      location: member.location || businessAddress || undefined,
       rating: rating?.rating,
       reviewCount: rating?.count ?? 0,
       services: activeIds(member).map((id) => nameById.get(id) as string),
@@ -62,7 +68,7 @@ publicShowcaseRouter.get(
     ]);
     const body: PublicShowcaseResponse = {
       posts: await toWorkPostProfiles(posts),
-      staff: await toShowcaseStaff(members, ratings),
+      staff: await toShowcaseStaff(members, ratings, business.address),
       reviews: reviews.map((review) => toReviewProfile(review)),
       summary,
     };
@@ -77,15 +83,25 @@ publicShowcaseRouter.get(
     const staffId = objectIdField.parse(req.params.staffId);
     const member = await Staff.findOne({ _id: staffId, businessId: business.id, isActive: true });
     if (!member) throw new NotFoundError("This person isn't taking bookings here anymore");
-    const [ratings, serviceRatings, posts, reviews] = await Promise.all([
+    const [ratings, serviceRatings, posts, reviews, availability] = await Promise.all([
       staffRatings(business.id),
       serviceRatingsForStaff(member.id),
       WorkPost.find({ staffId: member._id }).sort({ featured: -1, createdAt: -1 }).limit(30),
       Review.find({ staffId: member._id, hidden: false }).sort({ createdAt: -1 }).limit(20),
+      StaffAvailability.find({ staffId: member._id }),
     ]);
-    const [staff] = await toShowcaseStaff([member], ratings);
+    const [staff] = await toShowcaseStaff([member], ratings, business.address);
+    const byDay = new Map(availability.map((entry) => [entry.dayOfWeek, entry]));
+    const hours = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
+      const entry = byDay.get(dayOfWeek);
+      return entry && !entry.isOff
+        ? { dayOfWeek, isOff: false, startTime: entry.startTime ?? undefined, endTime: entry.endTime ?? undefined }
+        : { dayOfWeek, isOff: true };
+    });
     const body: PublicStaffDetailResponse = {
       staff,
+      hours,
+      timezone: business.timezone,
       serviceRatings,
       posts: await toWorkPostProfiles(posts),
       reviews: reviews.map((review) => toReviewProfile(review)),

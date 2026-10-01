@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { motion } from "motion/react";
-import { ChevronRight, MessageSquareQuote } from "lucide-react";
-import type { ReviewProfile, ShowcaseStaff, WorkPostProfile } from "@servicebook/types";
+import { ChevronRight, Clock, MapPin, MessageSquareQuote } from "lucide-react";
+import type { PublicStaffDetailResponse, ReviewProfile, ShowcaseStaff, WorkPostProfile } from "@servicebook/types";
 import { usePublicShowcase, usePublicStaffDetail } from "../../lib/showcase";
 import { imageSrc } from "../../lib/images";
 import { Avatar } from "../ui/Avatar";
@@ -15,6 +15,32 @@ export interface BookIntent {
 }
 
 const firstName = (name: string) => name.split(" ")[0];
+
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function clock(time?: string): string {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, "0")}` : ""} ${suffix}`;
+}
+
+/** "Mon–Sat 9 AM – 7 PM", "Sun Off": runs of days with the same hours, Monday first. */
+function weekSummary(hours: PublicStaffDetailResponse["hours"]): Array<{ days: string; time: string; off: boolean }> {
+  const order = [1, 2, 3, 4, 5, 6, 0].map((day) => hours.find((entry) => entry.dayOfWeek === day) ?? { dayOfWeek: day, isOff: true });
+  const rows: Array<{ from: number; to: number; key: string; off: boolean; time: string }> = [];
+  for (const entry of order) {
+    const time = entry.isOff ? "Off" : `${clock(entry.startTime)} – ${clock(entry.endTime)}`;
+    const last = rows.at(-1);
+    if (last && last.key === time) last.to = entry.dayOfWeek;
+    else rows.push({ from: entry.dayOfWeek, to: entry.dayOfWeek, key: time, off: entry.isOff, time });
+  }
+  return rows.map((row) => ({
+    days: row.from === row.to ? DAY_SHORT[row.from] : `${DAY_SHORT[row.from]}–${DAY_SHORT[row.to]}`,
+    time: row.time,
+    off: row.off,
+  }));
+}
 
 function SectionTitle({ title, note }: { title: string; note?: string }) {
   return (
@@ -150,6 +176,40 @@ function StaffSheet({
           </div>
 
           <div className="space-y-6 p-5">
+            {(member.location || (data && data.hours.some((entry) => !entry.isOff))) && (
+              <section className="grid gap-3 sm:grid-cols-2">
+                {data && data.hours.some((entry) => !entry.isOff) && (
+                  <div className="rounded-2xl border border-stone-200 p-4">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                      <Clock className="h-3.5 w-3.5" aria-hidden="true" /> When {firstName(member.name)} works
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm">
+                      {weekSummary(data.hours).map((row) => (
+                        <li key={row.days} className="flex justify-between gap-3">
+                          <span className="font-medium text-stone-800">{row.days}</span>
+                          <span className={row.off ? "text-stone-400" : "text-stone-600"}>{row.time}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {member.location && (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(member.location)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group rounded-2xl border border-stone-200 p-4 transition-colors hover:border-stone-300 hover:bg-stone-50"
+                  >
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                      <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Where
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-stone-800">{member.location}</p>
+                    <p className="mt-1 text-xs font-semibold text-brand-700 group-hover:underline">Get directions</p>
+                  </a>
+                )}
+              </section>
+            )}
+
             {data && data.serviceRatings.length > 0 && (
               <section>
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-400">How customers rate {firstName(member.name)}</h4>

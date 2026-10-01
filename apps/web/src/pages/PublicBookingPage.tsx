@@ -37,6 +37,7 @@ import { CustomerChat } from "../components/chat/CustomerChat";
 import { DemoBar } from "../components/DemoBar";
 import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
 import { usePublicShowcase } from "../lib/showcase";
+import { useCustomerPortal } from "../lib/customerPortal";
 import { PublicShowcase, type BookIntent } from "../components/showcase/PublicShowcase";
 import { RatingBadge } from "../components/showcase/Stars";
 
@@ -167,6 +168,11 @@ export function PublicBookingPage() {
   const business = businessData?.business;
   const bookingEnabled = businessData?.bookingEnabled ?? true;
   const { data: showcase } = usePublicShowcase(slug);
+  // Arriving from the customer's own page (?c=token): we already know who they are.
+  const customerToken = searchParams.get("c");
+  const { data: portal } = useCustomerPortal(customerToken);
+  const knownCustomer = portal && portal.business.slug === slug ? portal.customer : null;
+  const [editingDetails, setEditingDetails] = useState(false);
   const services = businessData?.services ?? [];
   const staff = staffData?.staff ?? [];
   const slots = slotsData?.slots ?? [];
@@ -215,6 +221,25 @@ export function PublicBookingPage() {
     }
     bookingCard.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  // Fill in a returning customer's details once.
+  useEffect(() => {
+    if (!knownCustomer) return;
+    setName((current) => current || knownCustomer.name);
+    setPhone((current) => current || knownCustomer.phone);
+    setEmail((current) => current || knownCustomer.email || "");
+  }, [knownCustomer]);
+
+  // "Book again" (?service=&staff=): jump straight to picking a time.
+  const [preselected, setPreselected] = useState(false);
+  useEffect(() => {
+    if (preselected || services.length === 0) return;
+    setPreselected(true);
+    const wanted = searchParams.get("service");
+    if (wanted && services.some((service) => service.id === wanted)) selectService(wanted, searchParams.get("staff") ?? undefined);
+    // selectService is stable enough here; this runs once when services first load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, preselected, searchParams]);
 
   function selectStaff(id: string) {
     setStaffId(id);
@@ -648,11 +673,26 @@ export function PublicBookingPage() {
                       <>
                         <StepHeader title="Your details" subtitle="So the business can confirm and remind you." onBack={goBack} />
                         <form onSubmit={handleContinueToReview} noValidate className="space-y-4">
-                          <FormField label="Full name" type="text" autoComplete="name" value={name} onChange={setName} error={fieldErrors.name} />
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            <FormField label="Phone" type="tel" autoComplete="tel" value={phone} onChange={setPhone} error={fieldErrors.phone} />
-                            <FormField label="Email (for confirmation)" type="email" autoComplete="email" value={email} onChange={setEmail} error={fieldErrors.email} />
-                          </div>
+                          {knownCustomer && !editingDetails ? (
+                            <div className="flex items-center gap-3 rounded-2xl bg-stone-50 p-4">
+                              <Avatar name={name} size="md" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold text-stone-900">Booking as {name}</span>
+                                <span className="block truncate text-sm text-stone-500">{[phone, email].filter(Boolean).join(" · ")}</span>
+                              </span>
+                              <button type="button" onClick={() => setEditingDetails(true)} className="shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-800">
+                                Change
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                            <FormField label="Full name" type="text" autoComplete="name" value={name} onChange={setName} error={fieldErrors.name} />
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <FormField label="Phone" type="tel" autoComplete="tel" value={phone} onChange={setPhone} error={fieldErrors.phone} />
+                              <FormField label="Email (for confirmation)" type="email" autoComplete="email" value={email} onChange={setEmail} error={fieldErrors.email} />
+                            </div>
+                            </>
+                          )}
                           <label className="block">
                             <span className="text-sm font-medium text-stone-700">Anything we should know? (optional)</span>
                             <textarea
@@ -739,6 +779,13 @@ export function PublicBookingPage() {
                             className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white hover:bg-ink-700 dark:bg-highlight dark:text-ink"
                           >
                             Open my booking page
+                          </Link>
+                          <Link
+                            to={`/c/${confirmation.customerToken}`}
+                            target={embedded ? "_top" : undefined}
+                            className="inline-flex h-10 items-center rounded-full border border-stone-300 px-4 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                          >
+                            All my appointments
                           </Link>
                           <a
                             href={googleCalendarUrl(
