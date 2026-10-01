@@ -23,7 +23,7 @@ import { WorkPost } from "../models/WorkPost";
 import { TimeOff } from "../models/TimeOff";
 import { publicName } from "../lib/ratings";
 
-import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_SLUG } from "../lib/demo";
+import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_SLUG, DEMO_STAFF_EMAIL } from "../lib/demo";
 
 export { DEMO_EMAIL, DEMO_PASSWORD };
 const TIMEZONE = "Africa/Lagos";
@@ -81,7 +81,10 @@ export async function seedDemo(): Promise<void> {
   if (existing) {
     const business = await Business.findOne({ ownerId: existing.id });
     if (business) {
-      const staffIds = (await Staff.find({ businessId: business.id }).select("_id")).map((s) => s._id);
+      const staffDocs = await Staff.find({ businessId: business.id }).select("_id userId");
+      const staffIds = staffDocs.map((s) => s._id);
+      // Staff logins belong to the demo too (never the owner's account, deleted below).
+      await User.deleteMany({ _id: { $in: staffDocs.flatMap((s) => (s.userId ? [s.userId] : [])) }, role: "STAFF" });
       await Promise.all([
         Booking.deleteMany({ businessId: business.id }),
         Customer.deleteMany({ businessId: business.id }),
@@ -146,6 +149,11 @@ export async function seedDemo(): Promise<void> {
       serviceIds: s.services.map((i) => services[i]._id),
     })),
   );
+  // Tunde has his own staff login, so visitors can see the staff view.
+  await User.deleteMany({ email: DEMO_STAFF_EMAIL, role: "STAFF" });
+  const tundeLogin = await User.create({ name: STAFF[0].name, email: DEMO_STAFF_EMAIL, passwordHash: await hashPassword(DEMO_PASSWORD), role: "STAFF" });
+  await Staff.updateOne({ _id: staff[0]._id }, { $set: { userId: tundeLogin._id } });
+
   for (const [i, s] of STAFF.entries()) {
     await Service.updateMany({ _id: { $in: s.services.map((j) => services[j]._id) } }, { $addToSet: { staffIds: staff[i]._id } });
     await StaffAvailability.insertMany(
@@ -350,14 +358,15 @@ export async function ensureDemo(): Promise<void> {
   const owner = await User.findOne({ email: DEMO_EMAIL });
   const business = owner ? await Business.findOne({ ownerId: owner.id }) : null;
   if (business) {
-    const [upcoming, services, reviewed] = await Promise.all([
+    const [upcoming, services, reviewed, staffLogin] = await Promise.all([
       Booking.exists({ businessId: business.id, startTime: { $gt: new Date(Date.now() + 3 * 86_400_000) } }),
       Service.countDocuments({ businessId: business.id, isActive: true }),
       Review.exists({ businessId: business.id }),
+      User.exists({ email: DEMO_STAFF_EMAIL, role: "STAFF" }),
     ]);
     const fresh = Date.now() - business.createdAt.getTime() < DEMO_MAX_AGE_MS;
     const intact = business.isPublicBookingEnabled && business.name === "Glow Studio Lekki" && business.slug === DEMO_SLUG;
-    if (fresh && intact && upcoming && reviewed && services >= 3) return;
+    if (fresh && intact && upcoming && reviewed && staffLogin && services >= 3) return;
   } else if (await Business.exists({ slug: DEMO_SLUG })) {
     return; // Someone else owns the demo's slug; leave their business alone.
   }
