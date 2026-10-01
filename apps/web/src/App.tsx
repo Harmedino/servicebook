@@ -57,6 +57,7 @@ const SolutionsPage = lazyPage(() => import("./pages/marketing/SolutionsPage").t
 // Pricing is on hold while everything is free in early access; /pricing redirects to How it works.
 // const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
 const HowItWorksPage = lazyPage(() => import("./pages/marketing/HowItWorksPage").then((m) => ({ default: m.HowItWorksPage })));
+const AboutPage = lazyPage(() => import("./pages/marketing/AboutPage").then((m) => ({ default: m.AboutPage })));
 const JoinPage = lazyPage(() => import("./pages/JoinPage").then((m) => ({ default: m.JoinPage })));
 const CustomerPortalPage = lazyPage(() => import("./pages/CustomerPortalPage").then((m) => ({ default: m.CustomerPortalPage })));
 const JoinTeamPage = lazyPage(() => import("./pages/JoinTeamPage").then((m) => ({ default: m.JoinTeamPage })));
@@ -123,6 +124,7 @@ export function App() {
       {/* <Route path="/pricing" element={<PricingPage />} /> */}
       <Route path="/pricing" element={<Navigate to="/how-it-works" replace />} />
       <Route path="/how-it-works" element={<HowItWorksPage />} />
+      <Route path="/about" element={<AboutPage />} />
       <Route path="/demo" element={<DemoPage />} />
       <Route path="/roadmap" element={<RoadmapPage />} />
       <Route path="/design" element={<DesignPage />} />
