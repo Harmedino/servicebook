@@ -32,3 +32,32 @@ export function rebookPath(slug: string, token: string, pick?: { serviceId?: str
   if (pick?.staffId) params.set("staff", pick.staffId);
   return `/book/${slug}?${params.toString()}`;
 }
+
+// The customer's own page token, remembered per business on this device, so
+// opening the booking link again shows their appointments. Storage can be
+// blocked (private mode), so every access is guarded.
+const rememberKey = (slug: string) => `servicebook:customer:${slug}`;
+
+export function rememberedCustomer(slug: string): string | null {
+  try {
+    return localStorage.getItem(rememberKey(slug));
+  } catch {
+    return null;
+  }
+}
+
+export function rememberCustomer(slug: string, token: string): void {
+  try {
+    localStorage.setItem(rememberKey(slug), token);
+  } catch {
+    // Not remembered; they can still use their link.
+  }
+}
+
+export function forgetCustomer(slug: string): void {
+  try {
+    localStorage.removeItem(rememberKey(slug));
+  } catch {
+    // Nothing to forget.
+  }
+}

@@ -5,7 +5,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { motion } from "motion/react";
 import { CalendarPlus, ChevronRight, MapPin, Phone, RotateCcw, Star } from "lucide-react";
 import type { CustomerPortalAppointment, CustomerPortalResponse } from "@servicebook/types";
-import { rebookPath, useCustomerPortal } from "../lib/customerPortal";
+import { rebookPath, rememberCustomer, useCustomerPortal } from "../lib/customerPortal";
 import { formatPrice, setDisplayCurrency } from "../lib/format";
 import { imageSrc } from "../lib/images";
 import { isDemoSlug } from "../lib/demo";
@@ -92,8 +92,11 @@ export function CustomerPortalPage() {
   const [showAllPast, setShowAllPast] = useState(false);
 
   useEffect(() => {
-    if (data) document.title = `Your appointments · ${data.business.name}`;
-  }, [data]);
+    if (!data) return;
+    document.title = `Your appointments · ${data.business.name}`;
+    // Next time they open the booking link on this phone, it knows them.
+    rememberCustomer(data.business.slug, token);
+  }, [data, token]);
 
   if (isPending) {
     return (
