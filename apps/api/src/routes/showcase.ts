@@ -13,6 +13,7 @@ import { Staff, type StaffDocument } from "../models/Staff";
 import { Service } from "../models/Service";
 import { WorkPost } from "../models/WorkPost";
 import { StaffAvailability } from "../models/StaffAvailability";
+import { findTimeOff } from "../lib/bookingEngine";
 import { Review } from "../models/Review";
 import { BadRequestError, NotFoundError } from "../lib/errors";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -83,12 +84,14 @@ publicShowcaseRouter.get(
     const staffId = objectIdField.parse(req.params.staffId);
     const member = await Staff.findOne({ _id: staffId, businessId: business.id, isActive: true });
     if (!member) throw new NotFoundError("This person isn't taking bookings here anymore");
-    const [ratings, serviceRatings, posts, reviews, availability] = await Promise.all([
+    const now = new Date();
+    const [ratings, serviceRatings, posts, reviews, availability, timeOff] = await Promise.all([
       staffRatings(business.id),
       serviceRatingsForStaff(member.id),
       WorkPost.find({ staffId: member._id }).sort({ featured: -1, createdAt: -1 }).limit(30),
       Review.find({ staffId: member._id, hidden: false }).sort({ createdAt: -1 }).limit(20),
       StaffAvailability.find({ staffId: member._id }),
+      findTimeOff({ businessId: business.id, staffId: member.id, from: now, to: new Date(now.getTime() + 60 * 86_400_000) }).sort({ startAt: 1 }),
     ]);
     const [staff] = await toShowcaseStaff([member], ratings, business.address);
     const byDay = new Map(availability.map((entry) => [entry.dayOfWeek, entry]));
@@ -102,6 +105,13 @@ publicShowcaseRouter.get(
       staff,
       hours,
       timezone: business.timezone,
+      away: timeOff.map((entry) => ({
+        allDay: entry.allDay ?? true,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        startTime: entry.startTime ?? undefined,
+        endTime: entry.endTime ?? undefined,
+      })),
       serviceRatings,
       posts: await toWorkPostProfiles(posts),
       reviews: reviews.map((review) => toReviewProfile(review)),
