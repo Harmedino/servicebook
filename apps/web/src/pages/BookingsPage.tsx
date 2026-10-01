@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { Plus, Search } from "lucide-react";
@@ -11,6 +11,7 @@ import { STATUS_LABELS } from "../lib/bookingStatus";
 import { addDaysToKey } from "../lib/calendarDates";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { BookingStatusBadge } from "../components/ui/Badge";
+import { useWaitlist } from "./WaitlistPage";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -78,6 +79,7 @@ export function BookingsPage() {
   });
 
   const navigate = useNavigate();
+  const { data: waitlist } = useWaitlist();
   const openBooking = useOpenBooking();
 
   const bookings = useMemo(() => data?.bookings ?? [], [data?.bookings]);
@@ -112,10 +114,18 @@ export function BookingsPage() {
         title="Bookings"
         description="Your appointments, all in one place."
         actions={
-          <Button onClick={openForm}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New booking
-          </Button>
+          <>
+            <Link to="/waitlist" className={buttonClassName("secondary", "md")}>
+              Waitlist
+              {(waitlist?.entries.length ?? 0) > 0 && (
+                <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800">{waitlist?.entries.length}</span>
+              )}
+            </Link>
+            <Button onClick={openForm}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New booking
+            </Button>
+          </>
         }
       />
 

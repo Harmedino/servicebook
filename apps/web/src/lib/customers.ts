@@ -29,6 +29,7 @@ export interface CreateCustomerInput {
   phone: string;
   email?: string;
   notes?: string;
+  birthday?: string;
 }
 
 export interface UpdateCustomerInput {
@@ -37,6 +38,7 @@ export interface UpdateCustomerInput {
   phone?: string;
   email?: string;
   notes?: string;
+  birthday?: string;
 }
 
 export function useCustomers(params: CustomerListParams = {}): UseQueryResult<CustomerListResponse> {

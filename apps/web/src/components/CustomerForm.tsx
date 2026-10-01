@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { CustomerProfile } from "@servicebook/types";
 import { FormField } from "./FormField";
+import { BirthdayPicker } from "./BirthdayPicker";
 import { Button } from "./ui/Button";
 
 export interface CustomerFormSubmitValues {
@@ -8,6 +9,8 @@ export interface CustomerFormSubmitValues {
   phone: string;
   email?: string;
   notes?: string;
+  /** "MM-DD"; "" clears it when editing. */
+  birthday?: string;
 }
 
 interface CustomerFormProps {
@@ -32,6 +35,7 @@ export function CustomerForm({ customer, isSubmitting, serverError, onSubmit, on
   const [phone, setPhone] = useState(customer?.phone ?? "");
   const [email, setEmail] = useState(customer?.email ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
+  const [birthday, setBirthday] = useState(customer?.birthday ?? "");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   function validate(): boolean {
@@ -60,6 +64,7 @@ export function CustomerForm({ customer, isSubmitting, serverError, onSubmit, on
       phone: phone.trim(),
       email: email.trim() || undefined,
       notes: notes.trim() || undefined,
+      birthday: customer ? birthday : birthday || undefined,
     });
   }
 
@@ -89,6 +94,18 @@ export function CustomerForm({ customer, isSubmitting, serverError, onSubmit, on
         error={fieldErrors.email}
         disabled={isSubmitting}
       />
+
+      <div>
+        <span className="text-sm font-medium text-stone-700">
+          Birthday <span className="font-normal text-stone-400">· optional, so you can send wishes</span>
+        </span>
+        <BirthdayPicker
+          value={birthday}
+          onChange={setBirthday}
+          disabled={isSubmitting}
+          className="w-full rounded-lg border border-stone-300 bg-surface px-3 py-2.5 text-base text-stone-900 sm:py-2 sm:text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+        />
+      </div>
 
       <label className="block">
         <span className="text-sm font-medium text-stone-700">Notes</span>

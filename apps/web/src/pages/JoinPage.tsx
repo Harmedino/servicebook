@@ -7,6 +7,7 @@ import { ApiError } from "../lib/apiClient";
 import { imageSrc } from "../lib/images";
 import { LogoMark } from "../components/Logo";
 import { DemoBar } from "../components/DemoBar";
+import { BirthdayPicker } from "../components/BirthdayPicker";
 import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,6 +56,7 @@ export function JoinPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const business = data?.business;
@@ -76,6 +78,7 @@ export function JoinPage() {
       phone: phone.trim(),
       email: email.trim() || undefined,
       notes: notes.trim() || undefined,
+      birthday: birthday || undefined,
     });
   }
 
@@ -220,6 +223,13 @@ export function JoinPage() {
                     className={inputClass(errors.email)}
                   />
                 </Field>
+                <div>
+                  <span className="flex items-baseline justify-between text-sm font-medium text-stone-800">
+                    Birthday
+                    <span className="text-xs font-normal text-stone-400">Optional · for a little something on the day</span>
+                  </span>
+                  <BirthdayPicker value={birthday} onChange={setBirthday} className={`${inputClass()} mt-0`} />
+                </div>
                 <Field label="Anything we should know?" hint="Optional">
                   <textarea
                     value={notes}

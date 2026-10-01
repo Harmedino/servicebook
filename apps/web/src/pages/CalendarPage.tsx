@@ -20,7 +20,7 @@ import {
 } from "../lib/calendarDates";
 import { timeToMinutes } from "../lib/timeMath";
 import { STATUS_LABELS } from "../lib/bookingStatus";
-import { Plus, Monitor } from "lucide-react";
+import { Plus, Monitor, RefreshCw } from "lucide-react";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -205,6 +205,9 @@ export function CalendarPage() {
         description="Your appointment schedule."
         actions={
           <>
+            <Link to="/calendar/sync" className={buttonClassName("secondary", "md")}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" /> Sync to your calendar
+            </Link>
             <Link to="/front-desk" className={buttonClassName("secondary", "md")}>
               <Monitor className="h-4 w-4" aria-hidden="true" /> Front desk view
             </Link>

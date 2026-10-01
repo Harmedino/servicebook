@@ -46,6 +46,8 @@ const TimeOffPage = lazyPage(() => import("./pages/TimeOffPage").then((m) => ({ 
 const NewTimeOffPage = lazyPage(() => import("./pages/TimeOffPage").then((m) => ({ default: m.NewTimeOffPage })));
 const PosterPage = lazyPage(() => import("./pages/PosterPage").then((m) => ({ default: m.PosterPage })));
 const FrontDeskPage = lazyPage(() => import("./pages/FrontDeskPage").then((m) => ({ default: m.FrontDeskPage })));
+const CalendarSyncPage = lazyPage(() => import("./pages/CalendarSyncPage").then((m) => ({ default: m.CalendarSyncPage })));
+const WaitlistPage = lazyPage(() => import("./pages/WaitlistPage").then((m) => ({ default: m.WaitlistPage })));
 const BookingsPage = lazyPage(() => import("./pages/BookingsPage").then((m) => ({ default: m.BookingsPage })));
 const CalendarPage = lazyPage(() => import("./pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const PublicBookingPage = lazyPage(() => import("./pages/PublicBookingPage").then((m) => ({ default: m.PublicBookingPage })));
@@ -300,6 +302,22 @@ export function App() {
         element={
           <OwnerRoute>
             <FrontDeskPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/calendar/sync"
+        element={
+          <OwnerRoute>
+            <CalendarSyncPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/waitlist"
+        element={
+          <OwnerRoute>
+            <WaitlistPage />
           </OwnerRoute>
         }
       />

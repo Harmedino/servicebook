@@ -6,6 +6,7 @@ import type { BookingStatus } from "@servicebook/types";
 import { useCustomer } from "../lib/customers";
 import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
+import { birthdayLabel } from "../components/BirthdayPicker";
 import { CustomerPageShare } from "../components/CustomerPageShare";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BookingStatusBadge } from "../components/ui/Badge";
@@ -167,6 +168,12 @@ export function CustomerDetailPage() {
               )}
             </dd>
           </div>
+          {customer.birthday && (
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Birthday</dt>
+              <dd className="mt-1 text-sm text-stone-900">{birthdayLabel(customer.birthday)}</dd>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">Notes</dt>
             <dd className="mt-1 whitespace-pre-wrap text-sm text-stone-700">{customer.notes || "No notes yet."}</dd>
