@@ -38,6 +38,10 @@ const CustomersPage = lazyPage(() => import("./pages/CustomersPage").then((m) =>
 const CustomerDetailPage = lazyPage(() => import("./pages/CustomerDetailPage").then((m) => ({ default: m.CustomerDetailPage })));
 const BookingDetailPage = lazyPage(() => import("./pages/BookingDetailPage").then((m) => ({ default: m.BookingDetailPage })));
 const NewBookingPage = lazyPage(() => import("./pages/NewBookingPage").then((m) => ({ default: m.NewBookingPage })));
+const CustomerFormPage = lazyPage(() => import("./pages/FormPages").then((m) => ({ default: m.CustomerFormPage })));
+const ServiceFormPage = lazyPage(() => import("./pages/FormPages").then((m) => ({ default: m.ServiceFormPage })));
+const StaffFormPage = lazyPage(() => import("./pages/FormPages").then((m) => ({ default: m.StaffFormPage })));
+const ShowcasePostPage = lazyPage(() => import("./pages/ShowcasePostPage").then((m) => ({ default: m.ShowcasePostPage })));
 const BookingsPage = lazyPage(() => import("./pages/BookingsPage").then((m) => ({ default: m.BookingsPage })));
 const CalendarPage = lazyPage(() => import("./pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const PublicBookingPage = lazyPage(() => import("./pages/PublicBookingPage").then((m) => ({ default: m.PublicBookingPage })));
@@ -194,6 +198,70 @@ export function App() {
         element={
           <OwnerRoute>
             <CustomerDetailPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/customers/new"
+        element={
+          <OwnerRoute>
+            <CustomerFormPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/customers/:customerId/edit"
+        element={
+          <OwnerRoute>
+            <CustomerFormPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/services/new"
+        element={
+          <OwnerRoute>
+            <ServiceFormPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/services/:serviceId/edit"
+        element={
+          <OwnerRoute>
+            <ServiceFormPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/staff/new"
+        element={
+          <OwnerRoute>
+            <StaffFormPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/staff/:staffId/edit"
+        element={
+          <OwnerRoute>
+            <StaffFormPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/showcase/new"
+        element={
+          <OwnerRoute>
+            <ShowcasePostPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/showcase/:postId/edit"
+        element={
+          <OwnerRoute>
+            <ShowcasePostPage />
           </OwnerRoute>
         }
       />

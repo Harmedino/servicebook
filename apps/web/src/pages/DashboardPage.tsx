@@ -17,17 +17,10 @@ import { useDashboardSummary } from "../lib/dashboard";
 import { useAuth } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
 import { useBusinessHours } from "../lib/businessHours";
-import { useCreateService, useServices } from "../lib/services";
-import { useCreateStaff, useStaffList } from "../lib/staff";
 import { useOpenBooking } from "../lib/bookings";
-import { useCreateCustomer } from "../lib/customers";
-import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { InsightsSection } from "../components/InsightsSection";
-import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
-import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
-import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -70,57 +63,14 @@ export function DashboardPage() {
   const timezone = businessData?.business?.timezone ?? "UTC";
 
   const { data, isPending, isError, refetch } = useDashboardSummary();
-  const { data: servicesData } = useServices();
-  const { data: staffData } = useStaffList();
   const { data: businessHoursData } = useBusinessHours();
 
   const navigate = useNavigate();
-  const createCustomer = useCreateCustomer();
-  const createService = useCreateService();
-  const createStaff = useCreateStaff();
 
-  const [openModal, setOpenModal] = useState<"customer" | "service" | "staff" | null>(null);
-  const [quickActionError, setQuickActionError] = useState<string | null>(null);
   const openBooking = useOpenBooking();
   const [copyFeedback, setCopyFeedback] = useState(false);
 
   const summary = data?.summary;
-
-  function closeQuickAction() {
-    setOpenModal(null);
-    setQuickActionError(null);
-  }
-
-
-  async function handleCreateCustomer(values: CustomerFormSubmitValues) {
-    setQuickActionError(null);
-    try {
-      await createCustomer.mutateAsync(values);
-      closeQuickAction();
-    } catch (error) {
-      setQuickActionError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
-
-  async function handleCreateService(values: ServiceFormSubmitValues) {
-    setQuickActionError(null);
-    try {
-      await createService.mutateAsync(values);
-      closeQuickAction();
-    } catch (error) {
-      setQuickActionError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
-
-  async function handleCreateStaff(values: StaffFormSubmitValues) {
-    setQuickActionError(null);
-    try {
-      await createStaff.mutateAsync(values);
-      closeQuickAction();
-    } catch (error) {
-      setQuickActionError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
 
   function formatTime(iso: string): string {
     return formatInTimeZone(new Date(iso), timezone, "h:mm a");
@@ -234,6 +184,7 @@ export function DashboardPage() {
       : [],
   );
 
+  const QUICK_ACTION_PATHS = { booking: "/bookings/new", customer: "/customers/new", service: "/services/new", staff: "/staff/new" } as const;
   const QUICK_ACTIONS: { key: "booking" | "customer" | "service" | "staff"; label: string; icon: LucideIcon }[] = [
     { key: "booking", label: "New booking", icon: CalendarClock },
     { key: "customer", label: "Add customer", icon: UserPlus },
@@ -307,7 +258,7 @@ export function DashboardPage() {
               </li>
             ))}
           </ul>
-          <Button className="mt-7" onClick={() => setOpenModal("service")}>
+          <Button className="mt-7" onClick={() => navigate("/services/new", { state: { from: "/dashboard" } })}>
             Continue setup
           </Button>
         </div>
@@ -463,7 +414,7 @@ export function DashboardPage() {
                       <button
                         key={action.key}
                         type="button"
-                        onClick={() => (action.key === "booking" ? navigate("/bookings/new", { state: { from: "/dashboard" } }) : setOpenModal(action.key))}
+                        onClick={() => navigate(QUICK_ACTION_PATHS[action.key], { state: { from: "/dashboard" } })}
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
                       >
                         <action.icon className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
@@ -498,35 +449,6 @@ export function DashboardPage() {
         </div>
       )}
 
-      {openModal === "customer" && (
-        <CustomerFormModal
-          customer={null}
-          isSubmitting={createCustomer.isPending}
-          serverError={quickActionError}
-          onSubmit={handleCreateCustomer}
-          onClose={closeQuickAction}
-        />
-      )}
-      {openModal === "service" && (
-        <ServiceFormModal
-          service={null}
-          availableStaff={staffData?.staff ?? []}
-          isSubmitting={createService.isPending}
-          serverError={quickActionError}
-          onSubmit={handleCreateService}
-          onClose={closeQuickAction}
-        />
-      )}
-      {openModal === "staff" && (
-        <StaffFormModal
-          staff={null}
-          availableServices={(servicesData?.services ?? []).filter((service) => service.isActive)}
-          isSubmitting={createStaff.isPending}
-          serverError={quickActionError}
-          onSubmit={handleCreateStaff}
-          onClose={closeQuickAction}
-        />
-      )}
     </DashboardLayout>
   );
 }

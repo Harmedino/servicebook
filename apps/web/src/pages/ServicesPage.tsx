@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import type { ServiceProfile } from "@servicebook/types";
-import { useCreateService, useDeactivateService, useServices, useUpdateService } from "../lib/services";
+import { useDeactivateService, useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
 import { ApiError } from "../lib/apiClient";
-import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { formatDuration, formatPrice } from "../lib/format";
 import { Button } from "../components/ui/Button";
@@ -14,23 +13,18 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { ServiceThumb } from "../components/ServiceThumb";
-import { useNewParam } from "../lib/useNewParam";
 
 type StatusFilter = "all" | "active" | "inactive";
 
 export function ServicesPage() {
   const { data, isPending, isError } = useServices();
   const { data: staffData } = useStaffList();
-  const createService = useCreateService();
   const updateService = useUpdateService();
   const deactivateService = useDeactivateService();
 
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // undefined = modal closed, null = creating, a ServiceProfile = editing
-  const [modalService, setModalService] = useState<ServiceProfile | null | undefined>(undefined);
-  const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -50,35 +44,14 @@ export function ServicesPage() {
     });
   }, [allServices, search, statusFilter]);
 
+  const navigate = useNavigate();
+
   function openCreateModal() {
-    setFormError(null);
-    setModalService(null);
+    navigate("/services/new", { state: { from: "/services" } });
   }
 
-  function openEditModal(service: ServiceProfile) {
-    setFormError(null);
-    setModalService(service);
-  }
-
-  function closeModal() {
-    setModalService(undefined);
-    setFormError(null);
-  }
-
-  async function handleSubmit(values: ServiceFormSubmitValues) {
-    setFormError(null);
-    try {
-      if (modalService) {
-        await updateService.mutateAsync({ id: modalService.id, ...values });
-        setSuccessMessage("Service updated.");
-      } else {
-        await createService.mutateAsync(values);
-        setSuccessMessage("Service created.");
-      }
-      closeModal();
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
+  function openEditModal(service: { id: string }) {
+    navigate(`/services/${service.id}/edit`, { state: { from: "/services" } });
   }
 
   async function handleDeactivate(service: ServiceProfile) {
@@ -111,7 +84,6 @@ export function ServicesPage() {
     return service.staffIds.map((id) => staffNameById.get(id) ?? "Unknown").join(", ");
   }
 
-  useNewParam(openCreateModal);
 
   return (
     <DashboardLayout>
@@ -298,16 +270,6 @@ export function ServicesPage() {
         )}
       </div>
 
-      {modalService !== undefined && (
-        <ServiceFormModal
-          service={modalService}
-          availableStaff={allStaff}
-          isSubmitting={createService.isPending || updateService.isPending}
-          serverError={formError}
-          onSubmit={handleSubmit}
-          onClose={closeModal}
-        />
-      )}
     </DashboardLayout>
   );
 }

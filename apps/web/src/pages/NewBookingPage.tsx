@@ -9,7 +9,6 @@ import { useAvailableSlots, useCreateBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { ApiError } from "../lib/apiClient";
 import { formatDuration, formatPrice } from "../lib/format";
-import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { BackLink } from "../components/ui/BackLink";
@@ -78,6 +77,57 @@ function Step({ index, title, done, children, aside }: { index: number; title: s
   );
 }
 
+/** Add a customer without leaving the booking: just a name and a number. */
+function QuickAddCustomer({
+  initialName,
+  initialPhone,
+  onCreated,
+  onCancel,
+}: {
+  initialName: string;
+  initialPhone: string;
+  onCreated: (id: string) => void;
+  onCancel: () => void;
+}) {
+  const create = useCreateCustomer();
+  const [name, setName] = useState(initialName);
+  const [phone, setPhone] = useState(initialPhone);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!name.trim()) return setError("Add their name");
+    if (phone.replace(/[^\d]/g, "").length < 7) return setError("Add a phone number");
+    setError(null);
+    try {
+      const result = await create.mutateAsync({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined });
+      onCreated(result.customer.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't add them. Please try again.");
+    }
+  }
+
+  const input =
+    "w-full rounded-xl border border-stone-300 bg-surface px-3.5 py-2.5 text-base text-stone-900 placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 sm:text-sm";
+  return (
+    <div className="space-y-2.5 rounded-2xl border border-stone-200 bg-stone-50 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">New customer</p>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" aria-label="Full name" autoComplete="off" className={input} autoFocus />
+      <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" aria-label="Phone number" type="tel" inputMode="tel" className={input} />
+      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" aria-label="Email" type="email" inputMode="email" className={input} />
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex justify-end gap-2 pt-1">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="button" size="sm" onClick={() => void save()} isLoading={create.isPending}>
+          Add and select
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const chip = (active: boolean) =>
   `rounded-2xl border text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
     active ? "border-brand-600 bg-brand-50 ring-1 ring-brand-600 dark:bg-brand-500/10" : "border-stone-200 hover:border-stone-300"
@@ -91,7 +141,6 @@ function NewBookingForm({ isSubmitting, serverError, initialDate, initialCustome
   const { data: customersData } = useCustomers({ limit: 200 });
   const { data: servicesData } = useServices();
   const { data: staffData } = useStaffList();
-  const createCustomer = useCreateCustomer();
 
   const customers = customersData?.customers ?? [];
   const activeServices = (servicesData?.services ?? []).filter((service) => service.isActive);
@@ -107,7 +156,6 @@ function NewBookingForm({ isSubmitting, serverError, initialDate, initialCustome
   const [notes, setNotes] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
-  const [newCustomerError, setNewCustomerError] = useState<string | null>(null);
 
   const customer = customers.find((entry) => entry.id === customerId);
   const service = activeServices.find((entry) => entry.id === serviceId);
@@ -164,18 +212,6 @@ function NewBookingForm({ isSubmitting, serverError, initialDate, initialCustome
     onSubmit({ customerId, serviceId, staffId, startTime: selectedSlot, notes: notes.trim() || undefined });
   }
 
-  async function handleCreateCustomer(values: CustomerFormSubmitValues) {
-    setNewCustomerError(null);
-    try {
-      const result = await createCustomer.mutateAsync(values);
-      setCustomerId(result.customer.id);
-      setQuery("");
-      setIsNewCustomerOpen(false);
-    } catch (error) {
-      setNewCustomerError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
-
   const summary = [
     service?.name,
     staffMember?.name.split(" ")[0],
@@ -205,7 +241,18 @@ function NewBookingForm({ isSubmitting, serverError, initialDate, initialCustome
               </button>
             }
           >
-            {customer ? (
+            {isNewCustomerOpen && !customer ? (
+              <QuickAddCustomer
+                initialName={/\d/.test(query) ? "" : query}
+                initialPhone={/\d/.test(query) ? query : ""}
+                onCreated={(id) => {
+                  setCustomerId(id);
+                  setQuery("");
+                  setIsNewCustomerOpen(false);
+                }}
+                onCancel={() => setIsNewCustomerOpen(false)}
+              />
+            ) : customer ? (
               <div className="flex items-center gap-3 rounded-2xl border border-brand-600 bg-brand-50 p-3 ring-1 ring-brand-600 dark:bg-brand-500/10">
                 <Avatar name={customer.name} size="sm" />
                 <span className="min-w-0 flex-1">
@@ -424,18 +471,6 @@ function NewBookingForm({ isSubmitting, serverError, initialDate, initialCustome
         </div>
       </div>
 
-      {isNewCustomerOpen && (
-        <CustomerFormModal
-          customer={null}
-          isSubmitting={createCustomer.isPending}
-          serverError={newCustomerError}
-          onSubmit={handleCreateCustomer}
-          onClose={() => {
-            setIsNewCustomerOpen(false);
-            setNewCustomerError(null);
-          }}
-        />
-      )}
     </>
   );
 }

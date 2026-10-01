@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import { RatingBadge } from "../components/showcase/Stars";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import type { ServiceProfile, StaffProfile } from "@servicebook/types";
-import { useCreateStaff, useStaffList, useUpdateStaff } from "../lib/staff";
+import { useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
 import { ApiError } from "../lib/apiClient";
-import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/ui/Button";
 import { ActiveBadge } from "../components/ui/Badge";
@@ -15,7 +14,6 @@ import { OwnerStaffPrompt } from "../components/OwnerStaffPrompt";
 import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
-import { useNewParam } from "../lib/useNewParam";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -30,15 +28,11 @@ function resolveServiceNames(serviceIds: string[], services: ServiceProfile[]): 
 export function StaffPage() {
   const { data, isPending, isError } = useStaffList();
   const { data: servicesData } = useServices();
-  const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
 
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // undefined = modal closed, null = adding, a StaffProfile = editing
-  const [modalStaff, setModalStaff] = useState<StaffProfile | null | undefined>(undefined);
-  const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -61,35 +55,14 @@ export function StaffPage() {
     });
   }, [allStaffMembers, search, statusFilter]);
 
+  const navigate = useNavigate();
+
   function openAddModal() {
-    setFormError(null);
-    setModalStaff(null);
+    navigate("/staff/new", { state: { from: "/staff" } });
   }
 
-  function openEditModal(staff: StaffProfile) {
-    setFormError(null);
-    setModalStaff(staff);
-  }
-
-  function closeModal() {
-    setModalStaff(undefined);
-    setFormError(null);
-  }
-
-  async function handleSubmit(values: StaffFormSubmitValues) {
-    setFormError(null);
-    try {
-      if (modalStaff) {
-        await updateStaff.mutateAsync({ id: modalStaff.id, ...values });
-        setSuccessMessage("Staff member updated.");
-      } else {
-        await createStaff.mutateAsync(values);
-        setSuccessMessage("Staff member added.");
-      }
-      closeModal();
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
+  function openEditModal(staff: { id: string }) {
+    navigate(`/staff/${staff.id}/edit`, { state: { from: "/staff" } });
   }
 
   async function handleDeactivate(staff: StaffProfile) {
@@ -120,11 +93,6 @@ export function StaffPage() {
   // Active services plus anything the currently-edited staff member already has,
   // so an existing assignment to a since-deactivated service is never hidden and
   // silently dropped when the form is saved.
-  const assignableServices = allServices.filter(
-    (service) => service.isActive || (modalStaff?.serviceIds.includes(service.id) ?? false),
-  );
-
-  useNewParam(openAddModal);
 
   return (
     <DashboardLayout>
@@ -327,16 +295,6 @@ export function StaffPage() {
         )}
       </div>
 
-      {modalStaff !== undefined && (
-        <StaffFormModal
-          staff={modalStaff}
-          availableServices={assignableServices}
-          isSubmitting={createStaff.isPending || updateStaff.isPending}
-          serverError={formError}
-          onSubmit={handleSubmit}
-          onClose={closeModal}
-        />
-      )}
     </DashboardLayout>
   );
 }

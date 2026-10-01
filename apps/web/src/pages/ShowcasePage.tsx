@@ -1,5 +1,5 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import { motion } from "motion/react";
 import { Camera, Eye, EyeOff, ExternalLink, ImagePlus, MessageSquareReply, Pencil, Star, Trash2 } from "lucide-react";
@@ -11,94 +11,14 @@ import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
 import { Button, buttonClassName } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { FormField } from "../components/FormField";
-import { ImageUpload } from "../components/ImageUpload";
 import { Stars } from "../components/showcase/Stars";
 import { useStaffList } from "../lib/staff";
-import { useServices } from "../lib/services";
 import { useMyBusiness } from "../lib/business";
-import { useDeleteWorkPost, useReviews, useSaveWorkPost, useUpdateReview, useWorkPosts, type WorkPostInput } from "../lib/showcase";
-import { useEscapeToClose } from "../lib/useEscapeToClose";
-import { useNewParam } from "../lib/useNewParam";
+import { useDeleteWorkPost, useReviews, useSaveWorkPost, useUpdateReview, useWorkPosts } from "../lib/showcase";
 import { imageSrc } from "../lib/images";
-import { ApiError } from "../lib/apiClient";
 
 const selectClass =
   "mt-1 w-full rounded-lg border border-stone-300 bg-surface px-3 py-2.5 text-base text-stone-900 sm:py-2 sm:text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40";
-
-function PostFormModal({ post, onClose }: { post: WorkPostProfile | null; onClose: () => void }) {
-  useEscapeToClose(onClose);
-  const { data: staffData } = useStaffList();
-  const { data: serviceData } = useServices();
-  const save = useSaveWorkPost();
-  const staff = (staffData?.staff ?? []).filter((member) => member.isActive || member.id === post?.staff.id);
-  const [imageUrl, setImageUrl] = useState(post?.imageUrl ?? "");
-  const [title, setTitle] = useState(post?.title ?? "");
-  const [caption, setCaption] = useState(post?.caption ?? "");
-  const [staffId, setStaffId] = useState(post?.staff.id ?? (staff.length === 1 ? staff[0].id : ""));
-  const [serviceId, setServiceId] = useState(post?.service?.id ?? "");
-  const [featured, setFeatured] = useState(post?.featured ?? false);
-  const [error, setError] = useState<string | null>(null);
-
-  const member = staff.find((entry) => entry.id === staffId);
-  const services = (serviceData?.services ?? []).filter((service) => service.isActive && (!member || member.serviceIds.includes(service.id)));
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!imageUrl) return setError("Add a photo of the finished look");
-    if (title.trim().length < 2) return setError("Give the style a name, like \"Low taper fade\"");
-    if (!staffId) return setError("Who did it?");
-    setError(null);
-    const input: WorkPostInput = { imageUrl, title: title.trim(), caption: caption.trim() || undefined, staffId, serviceId: serviceId || undefined, featured };
-    save.mutate(
-      { id: post?.id, ...input },
-      { onSuccess: onClose, onError: (err) => setError(err instanceof ApiError ? err.message : "Couldn't save. Please try again.") },
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-8">
-      <div className="animate-fade-in-up w-full max-w-md rounded-xl border border-stone-200 bg-surface p-6 shadow-[var(--shadow-elevated)]">
-        <h2 className="text-lg font-semibold text-stone-900">{post ? "Edit style" : "Add a style"}</h2>
-        <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
-          <ImageUpload label="Photo" hint="The finished look. Good light, face the camera." value={imageUrl} onChange={setImageUrl} shape="card" maxSize={1600} disabled={save.isPending} />
-          <FormField label="Style name" type="text" value={title} onChange={setTitle} disabled={save.isPending} />
-          <label className="block">
-            <span className="text-sm font-medium text-stone-700">Done by</span>
-            <select value={staffId} onChange={(e) => { setStaffId(e.target.value); setServiceId(""); }} className={selectClass}>
-              <option value="">Choose a staff member</option>
-              {staff.map((entry) => (
-                <option key={entry.id} value={entry.id}>{entry.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-stone-700">Service <span className="font-normal text-stone-400">· lets customers book this style</span></span>
-            <select value={serviceId} onChange={(e) => setServiceId(e.target.value)} className={selectClass}>
-              <option value="">None</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>{service.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-stone-700">Caption <span className="font-normal text-stone-400">· optional</span></span>
-            <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={2} maxLength={300} placeholder="Products used, how long it lasts, who it suits…" className={`${selectClass} resize-none`} />
-          </label>
-          <label className="flex items-center gap-2.5 text-sm text-stone-700">
-            <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="h-4 w-4 rounded border-stone-300 accent-brand-600" />
-            Pin to the front of the gallery
-          </label>
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="submit" isLoading={save.isPending}>{post ? "Save" : "Add to showcase"}</Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 function Portfolio({ onAdd, onEdit }: { onAdd: () => void; onEdit: (post: WorkPostProfile) => void }) {
   const { data, isPending } = useWorkPosts();
@@ -339,8 +259,8 @@ export function ShowcasePage() {
   const { data: businessData } = useMyBusiness();
   const { data: postData } = useWorkPosts();
   const { data: reviewData } = useReviews();
-  const [editing, setEditing] = useState<WorkPostProfile | null | "new">(null);
-  useNewParam(() => setEditing("new"));
+  const navigate = useNavigate();
+  const addStyle = () => navigate("/showcase/new", { state: { from: "/showcase" } });
   const slug = businessData?.business?.slug;
 
   const tabs = [
@@ -360,7 +280,7 @@ export function ShowcasePage() {
                 <ExternalLink className="h-4 w-4" aria-hidden="true" /> View as customer
               </Link>
             )}
-            <Button onClick={() => setEditing("new")}>
+            <Button onClick={addStyle}>
               <ImagePlus className="h-4 w-4" aria-hidden="true" /> Add a style
             </Button>
           </>
@@ -381,8 +301,7 @@ export function ShowcasePage() {
           </button>
         ))}
       </div>
-      {tab === "portfolio" ? <Portfolio onAdd={() => setEditing("new")} onEdit={setEditing} /> : <Reviews />}
-      {editing && <PostFormModal post={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
+      {tab === "portfolio" ? <Portfolio onAdd={addStyle} onEdit={(post) => navigate(`/showcase/${post.id}/edit`, { state: { from: "/showcase" } })} /> : <Reviews />}
     </DashboardLayout>
   );
 }

@@ -70,11 +70,11 @@ interface QuickAction {
 }
 
 const SECONDARY_ACTIONS: QuickAction[] = [
-  { label: "Add a customer", note: "Save a name and number", icon: UserPlus, to: "/customers?new=1" },
+  { label: "Add a customer", note: "Save a name and number", icon: UserPlus, to: "/customers/new" },
   { label: "Share booking link", note: "WhatsApp, copy or QR", icon: Send, invite: "book" },
   { label: "Invite to client list", note: "They add their own details", icon: QrCode, invite: "join" },
-  { label: "Add a service", note: "Name, price, duration", icon: Scissors, to: "/services?new=1" },
-  { label: "Add staff", note: "Services and hours", icon: UserRound, to: "/staff?new=1" },
+  { label: "Add a service", note: "Name, price, duration", icon: Scissors, to: "/services/new" },
+  { label: "Add staff", note: "Services and hours", icon: UserRound, to: "/staff/new" },
 ];
 
 /** What the mobile + button opens. */
