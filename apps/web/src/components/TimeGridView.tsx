@@ -8,6 +8,10 @@ export interface GridColumn {
   label: string;
   dateKey: string;
   bookings: BookingProfile[];
+  /** Time off on this column's day, drawn behind the bookings. */
+  blocks?: Array<{ key: string; startMinutes: number; endMinutes: number; label: string }>;
+  /** Short notes under the column heading, e.g. "Amaka off". */
+  notes?: string[];
 }
 
 interface PositionedBooking {
@@ -112,6 +116,11 @@ export function TimeGridView({
             }`}
           >
             {column.label}
+            {column.notes?.map((note) => (
+              <span key={note} className="mt-0.5 block truncate text-[10px] font-semibold normal-case tracking-normal text-amber-700">
+                {note}
+              </span>
+            ))}
           </div>
         ))}
       </div>
@@ -147,6 +156,22 @@ export function TimeGridView({
                   style={{ top: `${((minute - windowStartMinutes) / windowRange) * 100}%` }}
                 />
               ))}
+
+              {column.blocks?.map((block) => {
+                const start = Math.max(block.startMinutes, windowStartMinutes);
+                const end = Math.min(block.endMinutes, windowEndMinutes);
+                if (end <= start) return null;
+                return (
+                  <div
+                    key={block.key}
+                    className="pointer-events-none absolute inset-x-0 overflow-hidden border-y border-stone-200 bg-[repeating-linear-gradient(135deg,rgb(120_113_108/0.10)_0,rgb(120_113_108/0.10)_6px,transparent_6px,transparent_12px)]"
+                    style={{ top: `${((start - windowStartMinutes) / windowRange) * 100}%`, height: `${((end - start) / windowRange) * 100}%` }}
+                    aria-label={block.label}
+                  >
+                    <span className="m-1 inline-block rounded bg-surface/90 px-1.5 py-0.5 text-[11px] font-medium text-stone-500">{block.label}</span>
+                  </div>
+                );
+              })}
 
               {showNowLine && (
                 <div

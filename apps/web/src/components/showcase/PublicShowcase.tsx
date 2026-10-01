@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { ChevronRight, Clock, MapPin, MessageSquareQuote } from "lucide-react";
 import type { PublicStaffDetailResponse, ReviewProfile, ShowcaseStaff, WorkPostProfile } from "@servicebook/types";
 import { usePublicShowcase, usePublicStaffDetail } from "../../lib/showcase";
+import { describeTimeOff } from "../../lib/timeOff";
 import { imageSrc } from "../../lib/images";
 import { Avatar } from "../ui/Avatar";
 import { RatingBadge, Stars } from "./Stars";
@@ -176,7 +177,7 @@ function StaffSheet({
           </div>
 
           <div className="space-y-6 p-5">
-            {(member.location || (data && data.hours.some((entry) => !entry.isOff))) && (
+            {(member.location || (data && (data.away.length > 0 || data.hours.some((entry) => !entry.isOff)))) && (
               <section className="grid gap-3 sm:grid-cols-2">
                 {data && data.hours.some((entry) => !entry.isOff) && (
                   <div className="rounded-2xl border border-stone-200 p-4">
@@ -189,6 +190,16 @@ function StaffSheet({
                           <span className="font-medium text-stone-800">{row.days}</span>
                           <span className={row.off ? "text-stone-400" : "text-stone-600"}>{row.time}</span>
                         </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {data && data.away.length > 0 && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:col-span-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">Away</p>
+                    <ul className="mt-1.5 space-y-0.5 text-sm text-stone-800">
+                      {data.away.map((entry) => (
+                        <li key={`${entry.startDate}-${entry.startTime ?? ""}`}>{describeTimeOff(entry)}</li>
                       ))}
                     </ul>
                   </div>

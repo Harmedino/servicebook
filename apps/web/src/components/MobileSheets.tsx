@@ -21,6 +21,7 @@ import {
   UserRound,
   Users,
   Images,
+  CalendarOff,
   type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "../lib/theme";
@@ -149,6 +150,7 @@ const DESTINATIONS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/services", label: "Services", icon: Scissors },
   { to: "/staff", label: "Staff", icon: UserRound },
   { to: "/showcase", label: "Showcase", icon: Images },
+  { to: "/time-off", label: "Time off", icon: CalendarOff },
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/roadmap", label: "Roadmap", icon: MapIcon },
 ];

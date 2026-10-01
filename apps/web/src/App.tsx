@@ -42,6 +42,8 @@ const CustomerFormPage = lazyPage(() => import("./pages/FormPages").then((m) => 
 const ServiceFormPage = lazyPage(() => import("./pages/FormPages").then((m) => ({ default: m.ServiceFormPage })));
 const StaffFormPage = lazyPage(() => import("./pages/FormPages").then((m) => ({ default: m.StaffFormPage })));
 const ShowcasePostPage = lazyPage(() => import("./pages/ShowcasePostPage").then((m) => ({ default: m.ShowcasePostPage })));
+const TimeOffPage = lazyPage(() => import("./pages/TimeOffPage").then((m) => ({ default: m.TimeOffPage })));
+const NewTimeOffPage = lazyPage(() => import("./pages/TimeOffPage").then((m) => ({ default: m.NewTimeOffPage })));
 const BookingsPage = lazyPage(() => import("./pages/BookingsPage").then((m) => ({ default: m.BookingsPage })));
 const CalendarPage = lazyPage(() => import("./pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const PublicBookingPage = lazyPage(() => import("./pages/PublicBookingPage").then((m) => ({ default: m.PublicBookingPage })));
@@ -264,6 +266,22 @@ export function App() {
         element={
           <OwnerRoute>
             <ShowcasePostPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/time-off"
+        element={
+          <OwnerRoute>
+            <TimeOffPage />
+          </OwnerRoute>
+        }
+      />
+      <Route
+        path="/time-off/new"
+        element={
+          <OwnerRoute>
+            <NewTimeOffPage />
           </OwnerRoute>
         }
       />
