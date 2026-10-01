@@ -18,6 +18,9 @@ import { Booking, type BookingStatus } from "../models/Booking";
 import { Enquiry } from "../models/Enquiry";
 import { Message } from "../models/Message";
 import { Notification } from "../models/Notification";
+import { Review } from "../models/Review";
+import { WorkPost } from "../models/WorkPost";
+import { publicName } from "../lib/ratings";
 
 import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_SLUG } from "../lib/demo";
 
@@ -35,10 +38,26 @@ const SERVICES = [
 
 // Which services each staff member performs (indexes into SERVICES).
 const STAFF = [
-  { name: "Tunde Bakare", email: "tunde@glowstudio.ng", phone: "+234 803 555 0101", services: [0, 1] },
-  { name: "Amaka Obi", email: "amaka@glowstudio.ng", phone: "+234 803 555 0102", services: [2, 4] },
-  { name: "Zainab Musa", email: "zainab@glowstudio.ng", phone: "+234 803 555 0103", services: [3, 4] },
-  { name: "Kelechi Nwosu", email: "kelechi@glowstudio.ng", phone: "+234 803 555 0104", services: [5, 0] },
+  {
+    name: "Tunde Bakare", email: "tunde@glowstudio.ng", phone: "+234 803 555 0101", services: [0, 1],
+    title: "Senior barber",
+    bio: "Nine years on the clippers. Clean fades, sharp line-ups and beards that grow in the right direction.",
+  },
+  {
+    name: "Amaka Obi", email: "amaka@glowstudio.ng", phone: "+234 803 555 0102", services: [2, 4],
+    title: "Braids & bridal",
+    bio: "Knotless, boho and cornrows that don't pull. Books out on Saturdays, so plan ahead for weddings.",
+  },
+  {
+    name: "Zainab Musa", email: "zainab@glowstudio.ng", phone: "+234 803 555 0103", services: [3, 4],
+    title: "Nail tech & makeup",
+    bio: "Gel sets that last three weeks and soft glam that photographs well.",
+  },
+  {
+    name: "Kelechi Nwosu", email: "kelechi@glowstudio.ng", phone: "+234 803 555 0104", services: [5, 0],
+    title: "Massage therapist",
+    bio: "Deep tissue and sports massage. Also cuts on busy days.",
+  },
 ];
 
 const FIRST = ["Chioma", "Emeka", "Funmi", "Ibrahim", "Ngozi", "Seyi", "Aisha", "Tobi", "Kemi", "Daniel", "Halima", "Uche", "Bola", "Yemi", "Ada", "Femi", "Nneka", "Sadiq", "Lola", "Chidi"];
@@ -66,6 +85,8 @@ export async function seedDemo(): Promise<void> {
         Customer.deleteMany({ businessId: business.id }),
         Enquiry.deleteMany({ businessId: business.id }),
         Message.deleteMany({ businessId: business.id }),
+        Review.deleteMany({ businessId: business.id }),
+        WorkPost.deleteMany({ businessId: business.id }),
         Notification.deleteMany({ businessId: business.id }),
         Service.deleteMany({ businessId: business.id }),
         StaffAvailability.deleteMany({ staffId: { $in: staffIds } }),
@@ -116,6 +137,8 @@ export async function seedDemo(): Promise<void> {
       name: s.name,
       email: s.email,
       phone: s.phone,
+      title: s.title,
+      bio: s.bio,
       serviceIds: s.services.map((i) => services[i]._id),
     })),
   );
@@ -179,6 +202,47 @@ export async function seedDemo(): Promise<void> {
     }
   }
   await Booking.insertMany(bookings);
+
+  // Reviews on most recent completed appointments, so ratings and the showcase have something real in them.
+  // Comments that fit the service, so a makeup review never talks about a fade.
+  const PRAISE: Record<string, string[]> = {
+    "Signature Haircut": ["Best fade I've had in Lagos. He took his time with the line-up.", "Came with a reference photo and it came out exactly like it."],
+    "Beard Sculpt & Line-up": ["Beard has never looked this even. The hot towel is a nice touch.", "Sharp line-up, in and out in 30 minutes."],
+    "Knotless Braids": ["Neat, fast and no pulling. I'm booking again next month.", "Parts are so clean. Still looks fresh after three weeks."],
+    "Gel Manicure": ["Very gentle and the place was spotless.", "Two weeks in and not a single chip."],
+    "Full Glam Makeup": ["Soft glam exactly like I asked. Lasted the whole wedding.", "Skin looked like skin, not cake. Loved it."],
+    "Deep Tissue Massage": ["Firm pressure, found every knot in my shoulders.", "Walked out feeling ten years younger."],
+  };
+  const MIXED: Record<number, string[]> = {
+    4: ["Great result, I just waited about 15 minutes to start.", "Lovely work. Parking was a bit tight.", ""],
+    3: ["Good, but not quite what I asked for."],
+  };
+  const completed = await Booking.find({ businessId: business.id, status: "COMPLETED" }).sort({ startTime: -1 }).limit(60);
+  const reviewDocs = completed
+    .filter(() => rand() < 0.7)
+    .map((booking) => {
+      const roll = rand();
+      const rating = roll < 0.72 ? 5 : roll < 0.94 ? 4 : 3;
+      const customer = customers.find((entry) => entry._id.equals(booking.customerId));
+      // Left a few hours after the appointment, but never in the future.
+      const createdAt = new Date(Math.min(booking.endTime.getTime() + (1 + Math.floor(rand() * 20)) * 3_600_000, Date.now() - 10 * 60_000));
+      return {
+        businessId: business.id,
+        bookingId: booking._id,
+        staffId: booking.staffId,
+        serviceId: booking.serviceId,
+        customerId: booking.customerId,
+        customerName: publicName(customer?.name ?? "Customer"),
+        serviceName: booking.serviceName,
+        staffName: booking.staffName,
+        rating,
+        comment: (rating === 5 ? pick([...(PRAISE[booking.serviceName ?? ""] ?? []), ""]) : pick(MIXED[rating])) || undefined,
+        reply: rating < 5 && rand() < 0.6 ? "Thank you for the honest feedback, we're on it." : undefined,
+        createdAt,
+        updatedAt: createdAt,
+      };
+    });
+  await Review.insertMany(reviewDocs, { timestamps: false } as never);
 
   // A few booking chats: the automatic welcome, the customer's question and, for some, the salon's reply.
   const inserted = await Booking.find({ businessId: business.id, startTime: { $gt: new Date() }, status: { $in: ["PENDING", "CONFIRMED"] } })
@@ -264,13 +328,14 @@ export async function ensureDemo(): Promise<void> {
   const owner = await User.findOne({ email: DEMO_EMAIL });
   const business = owner ? await Business.findOne({ ownerId: owner.id }) : null;
   if (business) {
-    const [upcoming, services] = await Promise.all([
+    const [upcoming, services, reviewed] = await Promise.all([
       Booking.exists({ businessId: business.id, startTime: { $gt: new Date(Date.now() + 3 * 86_400_000) } }),
       Service.countDocuments({ businessId: business.id, isActive: true }),
+      Review.exists({ businessId: business.id }),
     ]);
     const fresh = Date.now() - business.createdAt.getTime() < DEMO_MAX_AGE_MS;
     const intact = business.isPublicBookingEnabled && business.name === "Glow Studio Lekki" && business.slug === DEMO_SLUG;
-    if (fresh && intact && upcoming && services >= 3) return;
+    if (fresh && intact && upcoming && reviewed && services >= 3) return;
   } else if (await Business.exists({ slug: DEMO_SLUG })) {
     return; // Someone else owns the demo's slug; leave their business alone.
   }
