@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { connectDatabase, disconnectDatabase } from "./lib/database";
 import { startReminderScheduler, stopReminderScheduler } from "./services/reminderScheduler";
 import { startBirthdayNotices, stopBirthdayNotices } from "./services/birthdayNotices";
+import { startKeepAwake, stopKeepAwake } from "./services/keepAwake";
 import { ensureDemo } from "./scripts/seed";
 import { ensureRoadmap } from "./lib/roadmapSeed";
 
@@ -27,11 +28,13 @@ async function main() {
 
   startReminderScheduler();
   startBirthdayNotices();
+  startKeepAwake();
 
   async function shutdown(signal: string) {
     console.log(`${signal} received, shutting down`);
     stopReminderScheduler();
     stopBirthdayNotices();
+    stopKeepAwake();
     server.close();
     await disconnectDatabase();
     process.exit(0);
