@@ -25,6 +25,8 @@ export interface UpdateBusinessInput {
   timezone?: string;
   logoUrl?: string;
   coverImageUrl?: string;
+  /** "" resets to the default colour. */
+  brandColor?: string;
   currency?: string;
   isPublicBookingEnabled?: boolean;
   emailNotificationsEnabled?: boolean;

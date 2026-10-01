@@ -40,6 +40,7 @@ import { usePublicShowcase } from "../lib/showcase";
 import { useCustomerPortal } from "../lib/customerPortal";
 import { PublicShowcase, type BookIntent, type ShowcaseSection } from "../components/showcase/PublicShowcase";
 import { BusinessInfo } from "../components/showcase/BusinessInfo";
+import { brandSolid, brandStyle } from "../lib/brand";
 import { RatingBadge } from "../components/showcase/Stars";
 
 type Step = "service" | "datetime" | "details" | "review" | "confirmation";
@@ -354,13 +355,15 @@ export function PublicBookingPage() {
   }
 
   const chatChannels = activeChannels(business.socials);
+  // The owner's colour, if they picked one (Settings → Booking page).
+  const brand = business.brandColor;
   const confirmation = createBooking.data?.confirmation;
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-16">
+    <div className="min-h-screen bg-stone-50 pb-16" style={brandStyle(brand)}>
       {isDemoSlug(business.slug) && <DemoBar />}
       {/* Branded header */}
-      <header className="relative h-40 overflow-hidden bg-ink text-white sm:h-56">
+      <header className={`relative h-40 overflow-hidden sm:h-56 ${brandSolid(brand, "bg-ink text-white")}`}>
         {business.coverImageUrl && (
           <>
             <motion.img
@@ -386,7 +389,7 @@ export function PublicBookingPage() {
             {business.logoUrl ? (
               <img src={imageSrc(business.logoUrl)} alt={`${business.name} logo`} className="h-16 w-16 rounded-2xl bg-surface object-cover shadow-lg ring-4 ring-surface sm:h-20 sm:w-20" />
             ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-ink text-2xl font-bold text-highlight shadow-lg sm:h-20 sm:w-20 sm:text-3xl">
+              <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-bold shadow-lg sm:h-20 sm:w-20 sm:text-3xl ${brandSolid(brand, "bg-ink text-highlight")}`}>
                 {business.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -442,7 +445,7 @@ export function PublicBookingPage() {
               <button
                 type="button"
                 onClick={() => setIsChatOpen(true)}
-                className="group inline-flex items-center justify-center gap-3 rounded-xl bg-ink py-2 pl-4 pr-2 text-sm font-semibold text-white transition hover:bg-ink-700 dark:bg-highlight dark:text-ink"
+                className={`group inline-flex items-center justify-center gap-3 rounded-xl py-2 pl-4 pr-2 text-sm font-semibold transition hover:opacity-90 ${brandSolid(brand)}`}
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" /> Chat with us
                 <span className="flex -space-x-1.5">
@@ -479,11 +482,11 @@ export function PublicBookingPage() {
                 onClick={() => openTab(entry.key)}
                 aria-current={tab === entry.key ? "page" : undefined}
                 className={`relative inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors ${
-                  tab === entry.key ? "text-white dark:text-ink" : "text-stone-600 hover:bg-stone-200/60 hover:text-stone-900"
+                  tab === entry.key ? (brand ? "text-[var(--accent-ink)]" : "text-white dark:text-ink") : "text-stone-600 hover:bg-stone-200/60 hover:text-stone-900"
                 }`}
               >
                 {tab === entry.key && (
-                  <motion.span layoutId="public-tab" className="absolute inset-0 rounded-full bg-ink dark:bg-highlight" transition={{ type: "spring", stiffness: 480, damping: 38 }} />
+                  <motion.span layoutId="public-tab" className={`absolute inset-0 rounded-full ${brandSolid(brand, "bg-ink dark:bg-highlight")}`} transition={{ type: "spring", stiffness: 480, damping: 38 }} />
                 )}
                 <span className="relative">{entry.label}</span>
                 {entry.count ? <span className={`relative text-xs ${tab === entry.key ? "opacity-70" : "text-stone-400"}`}>{entry.count}</span> : null}
@@ -515,7 +518,7 @@ export function PublicBookingPage() {
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex flex-1 gap-1.5" aria-hidden="true">
                     {STEPS.map((entry, index) => (
-                      <span key={entry.key} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${index <= stepIndex ? "bg-brand-600" : "bg-stone-200"}`} />
+                      <span key={entry.key} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${index <= stepIndex ? (brand ? "bg-[var(--accent)]" : "bg-brand-600") : "bg-stone-200"}`} />
                     ))}
                   </div>
                   <span className="shrink-0 text-xs font-medium text-stone-500">
@@ -654,7 +657,9 @@ export function PublicBookingPage() {
                                 }}
                                 className={`flex w-16 shrink-0 snap-start flex-col items-center rounded-2xl border py-2.5 transition-all ${
                                   active
-                                    ? "border-brand-600 bg-brand-600 text-white shadow-[0_10px_20px_-10px_rgb(15_130_80/0.8)]"
+                                    ? brand
+                                      ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                                      : "border-brand-600 bg-brand-600 text-white shadow-[0_10px_20px_-10px_rgb(15_130_80/0.8)]"
                                     : "border-stone-200 text-stone-700 hover:border-brand-300"
                                 }`}
                               >

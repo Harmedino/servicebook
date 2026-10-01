@@ -64,6 +64,8 @@ const updateBusinessSchema = z
     timezone: timezoneField.optional(),
     logoUrl: imageRefField.optional(),
     coverImageUrl: imageRefField.optional(),
+    // "" resets to the default colour.
+    brandColor: z.union([z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #1f6f5c"), z.literal("")]).optional(),
     currency: currencyField.optional(),
     isPublicBookingEnabled: z.boolean().optional(),
     emailNotificationsEnabled: z.boolean().optional(),
@@ -137,6 +139,7 @@ function toBusinessProfile(business: BusinessDocument): BusinessProfile {
     timezone: business.timezone,
     logoUrl: business.logoUrl || undefined,
     coverImageUrl: business.coverImageUrl || undefined,
+    brandColor: business.brandColor || undefined,
     currency: business.currency ?? "USD",
     isPublicBookingEnabled: business.isPublicBookingEnabled ?? true,
     emailNotificationsEnabled: business.emailNotificationsEnabled ?? true,
@@ -205,9 +208,11 @@ businessRouter.patch(
   asyncHandler(async (req, res) => {
     const updates = updateBusinessSchema.parse(req.body);
 
+    // An empty brand colour means "back to the default", so remove it rather than store "".
+    const { brandColor, ...rest } = updates;
     const business = await Business.findByIdAndUpdate(
       req.businessId,
-      { $set: updates },
+      brandColor === "" ? { $set: rest, $unset: { brandColor: 1 } } : { $set: updates },
       { new: true, runValidators: true },
     );
 

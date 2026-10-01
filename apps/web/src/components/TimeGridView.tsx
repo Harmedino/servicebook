@@ -62,6 +62,8 @@ interface TimeGridViewProps {
   timezone: string;
   onSlotClick: (dateKey: string, time: string) => void;
   onBookingClick: (booking: BookingProfile) => void;
+  /** Taller rows and bigger text, for a tablet at the front desk. */
+  large?: boolean;
 }
 
 export function TimeGridView({
@@ -71,6 +73,7 @@ export function TimeGridView({
   timezone,
   onSlotClick,
   onBookingClick,
+  large = false,
 }: TimeGridViewProps) {
   const windowRange = Math.max(1, windowEndMinutes - windowStartMinutes);
 
@@ -106,7 +109,7 @@ export function TimeGridView({
 
   return (
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-surface">
-      <div className="flex border-b border-stone-200 text-xs font-medium uppercase tracking-wide text-stone-500">
+      <div className={`flex border-b border-stone-200 font-medium uppercase tracking-wide text-stone-500 ${large ? "text-sm" : "text-xs"}`}>
         <div className="w-14 shrink-0 py-2" />
         {columns.map((column) => (
           <div
@@ -125,7 +128,7 @@ export function TimeGridView({
         ))}
       </div>
 
-      <div className="relative flex" style={{ height: `${Math.max(360, windowRange * 1.2)}px` }}>
+      <div className="relative flex" style={{ height: `${Math.max(360, windowRange * (large ? 2.4 : 1.2))}px` }}>
         <div className="relative w-14 shrink-0">
           {hourMarks.map((minute) => (
             <span
@@ -199,7 +202,7 @@ export function TimeGridView({
                       event.stopPropagation();
                       onBookingClick(booking);
                     }}
-                    className={`absolute overflow-hidden rounded-r-md border-l-2 px-1.5 py-1 text-left text-xs leading-tight transition-opacity hover:opacity-80 ${STATUS_BLOCK_STYLES[booking.status]}`}
+                    className={`absolute overflow-hidden rounded-r-md border-l-2 px-1.5 py-1 text-left leading-tight ${large ? "border-l-4 px-2.5 py-1.5 text-sm" : "text-xs"} transition-opacity hover:opacity-80 ${STATUS_BLOCK_STYLES[booking.status]}`}
                     style={{
                       top: `${top}%`,
                       height: `${height}%`,

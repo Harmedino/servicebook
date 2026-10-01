@@ -53,6 +53,7 @@ publicCustomerPortalRouter.get(
         slug: business.slug,
         logoUrl: business.logoUrl || undefined,
         coverImageUrl: business.coverImageUrl || undefined,
+        brandColor: business.brandColor || undefined,
         phone: business.phone ?? undefined,
         address: business.address ?? undefined,
         timezone: business.timezone,
