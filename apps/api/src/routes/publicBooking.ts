@@ -1,3 +1,4 @@
+import { staffRatings } from "../lib/ratings";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
@@ -262,9 +263,13 @@ publicBookingRouter.get(
       isActive: true,
       serviceIds: query.serviceId,
     }).sort({ name: 1 });
+    const ratings = await staffRatings(business.id);
 
     const body: PublicStaffListResponse = {
-      staff: staff.map((member) => ({ id: member.id, name: member.name, avatarUrl: member.avatarUrl || undefined })),
+      staff: staff.map((member) => {
+        const rating = ratings.get(member.id);
+        return { id: member.id, name: member.name, avatarUrl: member.avatarUrl || undefined, title: member.title || undefined, rating: rating?.rating, reviewCount: rating?.count ?? 0 };
+      }),
     };
     res.json(body);
   }),

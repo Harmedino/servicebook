@@ -1,3 +1,4 @@
+import { staffRatings } from "../lib/ratings";
 import { Router } from "express";
 import { z } from "zod";
 import { imageRefField } from "../lib/validation";
@@ -9,6 +10,7 @@ import type {
   OwnerStaffResponse,
   StaffProfile,
   StaffResponse,
+  RatingSummary,
 } from "@servicebook/types";
 import { Staff, type StaffDocument } from "../models/Staff";
 import { Service } from "../models/Service";
@@ -27,8 +29,13 @@ const emailField = z.string().trim().toLowerCase().email("Enter a valid email ad
 const phoneField = z.string().trim().max(30, "Phone number is too long");
 const serviceIdsField = z.array(objectIdField).max(200);
 
+const titleField = z.string().trim().max(60, "Keep the title under 60 characters");
+const bioField = z.string().trim().max(400, "Keep the bio under 400 characters");
+
 const createStaffSchema = z.object({
   name: nameField,
+  title: titleField.optional(),
+  bio: bioField.optional(),
   email: emailField.optional(),
   phone: phoneField.optional(),
   avatarUrl: imageRefField.optional(),
@@ -39,6 +46,8 @@ const createStaffSchema = z.object({
 const updateStaffSchema = z
   .object({
     name: nameField.optional(),
+    title: titleField.optional(),
+    bio: bioField.optional(),
     email: emailField.optional(),
     phone: phoneField.optional(),
     avatarUrl: imageRefField.optional(),
@@ -71,7 +80,7 @@ async function assertServiceIdsBelongToBusiness(serviceIds: string[], businessId
   }
 }
 
-function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number): StaffProfile {
+function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number, rating?: RatingSummary): StaffProfile {
   return {
     id: staff.id,
     businessId: staff.businessId.toString(),
@@ -79,10 +88,14 @@ function toStaffProfile(staff: StaffDocument, todayAppointmentCount?: number): S
     email: staff.email ?? undefined,
     phone: staff.phone ?? undefined,
     avatarUrl: staff.avatarUrl || undefined,
+    title: staff.title || undefined,
+    bio: staff.bio || undefined,
     isActive: staff.isActive ?? true,
     isOwner: Boolean(staff.userId),
     serviceIds: staff.serviceIds.map((id) => id.toString()),
     todayAppointmentCount,
+    rating: rating?.rating,
+    reviewCount: rating?.count ?? 0,
     createdAt: staff.createdAt.toISOString(),
     updatedAt: staff.updatedAt.toISOString(),
   };
@@ -141,6 +154,8 @@ staffRouter.post(
     const staff = await Staff.create({
       businessId: req.businessId,
       name: payload.name,
+      title: payload.title || undefined,
+      bio: payload.bio || undefined,
       email: payload.email,
       phone: payload.phone,
       avatarUrl: payload.avatarUrl || undefined,
@@ -189,8 +204,9 @@ staffRouter.get(
       todayCounts.map((entry) => [(entry._id as { toString(): string }).toString(), entry.count]),
     );
 
+    const ratings = await staffRatings(req.business.id);
     const body: StaffListResponse = {
-      staff: staff.map((member) => toStaffProfile(member, todayCountByStaffId.get(member.id) ?? 0)),
+      staff: staff.map((member) => toStaffProfile(member, todayCountByStaffId.get(member.id) ?? 0, ratings.get(member.id))),
     };
     res.json(body);
   }),

@@ -20,6 +20,7 @@ import {
   Sun,
   UserRound,
   Users,
+  Images,
 } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { useMyBusiness } from "../lib/business";
@@ -56,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/customers", label: "Customers", icon: Users },
       { to: "/services", label: "Services", icon: Scissors },
       { to: "/staff", label: "Staff", icon: UserRound },
+      { to: "/showcase", label: "Showcase", icon: Images },
     ],
   },
   {

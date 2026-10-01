@@ -96,6 +96,11 @@ export interface StaffProfile {
   email?: string;
   phone?: string;
   avatarUrl?: string;
+  title?: string;
+  bio?: string;
+  /** Average customer rating (1–5) and how many reviews it's based on. */
+  rating?: number;
+  reviewCount?: number;
   isActive: boolean;
   /** True for the business owner's own staff profile. */
   isOwner?: boolean;
@@ -305,6 +310,9 @@ export interface PublicStaffProfile {
   id: string;
   name: string;
   avatarUrl?: string;
+  title?: string;
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface PublicBusinessResponse {
@@ -437,6 +445,9 @@ export interface PublicBookingThreadResponse {
     price?: number;
     customerName: string;
     canCancel: boolean;
+    /** Completed and not yet reviewed. */
+    canReview: boolean;
+    review?: { rating: number; comment?: string };
   };
   business: {
     name: string;
@@ -508,7 +519,7 @@ export interface IdeaResponse {
 
 // ---- Notifications -----------------------------------------------------------
 
-export type NotificationType = "booking" | "cancellation" | "message" | "enquiry" | "signup";
+export type NotificationType = "booking" | "cancellation" | "message" | "enquiry" | "signup" | "review";
 
 export interface NotificationProfile {
   id: string;
@@ -524,4 +535,67 @@ export interface NotificationProfile {
 export interface NotificationListResponse {
   notifications: NotificationProfile[];
   unread: number;
+}
+
+// ---- Showcase and reviews ------------------------------------------------------
+
+export interface WorkPostProfile {
+  id: string;
+  imageUrl: string;
+  title: string;
+  caption?: string;
+  featured: boolean;
+  staff: { id: string; name: string; avatarUrl?: string };
+  service?: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface ReviewProfile {
+  id: string;
+  rating: number;
+  comment?: string;
+  reply?: string;
+  customerName: string;
+  staffId: string;
+  staffName?: string;
+  serviceName?: string;
+  createdAt: string;
+  hidden?: boolean;
+}
+
+export interface RatingSummary {
+  rating: number;
+  count: number;
+}
+
+export interface ShowcaseStaff extends PublicStaffProfile {
+  bio?: string;
+  /** Names of the active services they do, for display. */
+  services: string[];
+  serviceIds: string[];
+}
+
+/** GET /api/public/businesses/:slug/showcase */
+export interface PublicShowcaseResponse {
+  posts: WorkPostProfile[];
+  staff: ShowcaseStaff[];
+  reviews: ReviewProfile[];
+  summary: RatingSummary;
+}
+
+/** GET /api/public/businesses/:slug/staff/:staffId */
+export interface PublicStaffDetailResponse {
+  staff: ShowcaseStaff;
+  serviceRatings: Array<{ serviceId: string; serviceName: string } & RatingSummary>;
+  posts: WorkPostProfile[];
+  reviews: ReviewProfile[];
+}
+
+export interface WorkPostListResponse {
+  posts: WorkPostProfile[];
+}
+
+export interface ReviewListResponse {
+  reviews: ReviewProfile[];
+  summary: RatingSummary;
 }
