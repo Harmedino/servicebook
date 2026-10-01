@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import type { BookingStatus } from "@servicebook/types";
 import { useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
 import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
-import { ServiceFormModal, type ServiceFormSubmitValues } from "../components/ServiceFormModal";
 import { formatDuration, formatPrice } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
@@ -28,6 +27,7 @@ export function ServiceDetailPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
   const { data: servicesData, isPending, isError } = useServices();
   const { data: staffData } = useStaffList();
+  const navigate = useNavigate();
   const updateService = useUpdateService();
 
   const { data: businessData } = useMyBusiness();
@@ -41,8 +41,6 @@ export function ServiceDetailPage() {
     serviceId: serviceId ?? undefined,
   });
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const openBooking = useOpenBooking();
 
@@ -74,16 +72,6 @@ export function ServiceDetailPage() {
         </Link>
       </DashboardLayout>
     );
-  }
-
-  async function handleSubmit(values: ServiceFormSubmitValues) {
-    setFormError(null);
-    try {
-      await updateService.mutateAsync({ id: service!.id, ...values });
-      setIsEditOpen(false);
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
   }
 
   async function handleToggleActive() {
@@ -118,8 +106,7 @@ export function ServiceDetailPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              setFormError(null);
-              setIsEditOpen(true);
+              navigate(`/services/${service.id}/edit`, { state: { from: `/services/${service.id}` } });
             }}
           >
             Edit
@@ -211,16 +198,6 @@ export function ServiceDetailPage() {
         </div>
       </div>
 
-      {isEditOpen && (
-        <ServiceFormModal
-          service={service}
-          availableStaff={allStaff}
-          isSubmitting={updateService.isPending}
-          serverError={formError}
-          onSubmit={handleSubmit}
-          onClose={() => setIsEditOpen(false)}
-        />
-      )}
     </DashboardLayout>
   );
 }

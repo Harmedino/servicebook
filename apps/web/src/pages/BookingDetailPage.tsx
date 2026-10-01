@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatDistanceToNowStrict } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import { CalendarClock, CalendarX, Check, ChevronRight, Loader2, Mail, MessageCircle, Phone, Scissors, UserX, X } from "lucide-react";
+import { CalendarClock, CalendarX, Check, ChevronRight, Loader2, Mail, MessageCircle, Phone, UserX, X } from "lucide-react";
 import type { BookingProfile, BookingStatus } from "@servicebook/types";
 import { useBooking, useUpdateBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
@@ -218,9 +218,7 @@ function BookingView({ booking, timezone }: { booking: BookingProfile; timezone:
             )}
             <div className="mt-4 divide-y divide-stone-100 border-t border-stone-100">
               <Row label="Service">
-                <span className="inline-flex items-center gap-1.5">
-                  <Scissors className="h-3.5 w-3.5 text-stone-400" aria-hidden="true" /> {booking.serviceName}
-                </span>
+                {booking.serviceName}
               </Row>
               <Row label="With">
                 <span className="inline-flex items-center gap-2">

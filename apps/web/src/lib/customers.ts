@@ -80,7 +80,11 @@ export function useUpdateCustomer(): UseMutationResult<CustomerResponse, unknown
   return useMutation({
     mutationFn: ({ id, ...input }: UpdateCustomerInput) =>
       apiRequest<CustomerResponse>(`/api/customers/${id}`, { method: "PATCH", body: input }),
-    onSuccess: () => {
+    onSuccess: (data, { id }) => {
+      // Show the saved details at once on their page; lists refetch in the background.
+      queryClient.setQueryData(customerDetailQueryKey(id), (current: CustomerResponse | undefined) =>
+        current ? { ...current, customer: { ...current.customer, ...data.customer } } : current,
+      );
       void queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });

@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { ChevronRight, Link2, MessageCircle, Plus, Share2 } from "lucide-react";
-import type { CustomerAppointmentFilter, CustomerProfile, CustomerSort } from "@servicebook/types";
-import { useCreateCustomer, useCustomers, useUpdateCustomer } from "../lib/customers";
+import type { CustomerAppointmentFilter, CustomerSort } from "@servicebook/types";
+import { useCustomers } from "../lib/customers";
 import { useMyBusiness } from "../lib/business";
-import { ApiError } from "../lib/apiClient";
-import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/ui/Button";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -14,7 +12,6 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { CardListSkeleton } from "../components/ui/Skeleton";
 import { Avatar } from "../components/ui/Avatar";
 import { InviteCustomersModal } from "../components/InviteCustomersModal";
-import { useNewParam } from "../lib/useNewParam";
 
 const PAGE_SIZE = 25;
 
@@ -61,55 +58,27 @@ export function CustomersPage() {
     sort,
     filter,
   });
-  const createCustomer = useCreateCustomer();
-  const updateCustomer = useUpdateCustomer();
 
-  // undefined = modal closed, null = adding, a CustomerProfile = editing
-  const [modalCustomer, setModalCustomer] = useState<CustomerProfile | null | undefined>(undefined);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const customers = data?.customers ?? [];
   const pagination = data?.pagination;
   const isSearching = debouncedSearch.length > 0;
   const hasActiveFilters = isSearching || filter !== "all";
 
+  const navigate = useNavigate();
+
   function openAddModal() {
-    setFormError(null);
-    setModalCustomer(null);
+    navigate("/customers/new", { state: { from: "/customers" } });
   }
 
-  function openEditModal(customer: CustomerProfile) {
-    setFormError(null);
-    setModalCustomer(customer);
-  }
-
-  function closeModal() {
-    setModalCustomer(undefined);
-    setFormError(null);
-  }
-
-  async function handleSubmit(values: CustomerFormSubmitValues) {
-    setFormError(null);
-    try {
-      if (modalCustomer) {
-        await updateCustomer.mutateAsync({ id: modalCustomer.id, ...values });
-        setSuccessMessage("Customer updated.");
-      } else {
-        await createCustomer.mutateAsync(values);
-        setSuccessMessage("Customer added.");
-      }
-      closeModal();
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
+  function openEditModal(customer: { id: string }) {
+    navigate(`/customers/${customer.id}/edit`, { state: { from: "/customers" } });
   }
 
   function formatLastAppointment(iso?: string): string {
     return iso ? formatInTimeZone(new Date(iso), timezone, "MMM d, yyyy") : "—";
   }
 
-  useNewParam(openAddModal);
 
   return (
     <DashboardLayout>
@@ -183,11 +152,6 @@ export function CustomersPage() {
       </div>
 
       <div className="mt-6">
-        {successMessage && (
-          <p role="status" className="animate-fade-in-up mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-            {successMessage}
-          </p>
-        )}
 
         {isPending && <CardListSkeleton />}
 
@@ -319,15 +283,6 @@ export function CustomersPage() {
         <InviteCustomersModal slug={business.slug} businessName={business.name} onClose={() => setIsInviteOpen(false)} />
       )}
 
-      {modalCustomer !== undefined && (
-        <CustomerFormModal
-          customer={modalCustomer}
-          isSubmitting={createCustomer.isPending || updateCustomer.isPending}
-          serverError={formError}
-          onSubmit={handleSubmit}
-          onClose={closeModal}
-        />
-      )}
     </DashboardLayout>
   );
 }

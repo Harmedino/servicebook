@@ -3,11 +3,9 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import { Plus } from "lucide-react";
 import type { BookingStatus } from "@servicebook/types";
-import { useCustomer, useUpdateCustomer } from "../lib/customers";
+import { useCustomer } from "../lib/customers";
 import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
-import { CustomerFormModal, type CustomerFormSubmitValues } from "../components/CustomerFormModal";
-import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BookingStatusBadge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -26,7 +24,6 @@ const STATUS_ACCENT: Record<BookingStatus, string> = {
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const { data, isPending, isError } = useCustomer(customerId ?? "");
-  const updateCustomer = useUpdateCustomer();
 
   const { data: businessData } = useMyBusiness();
   const timezone = businessData?.business?.timezone ?? "UTC";
@@ -35,9 +32,6 @@ export function CustomerDetailPage() {
     customerId: customerId ?? undefined,
   });
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const openBooking = useOpenBooking();
   const [historyFilter, setHistoryFilter] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
@@ -114,17 +108,6 @@ export function CustomerDetailPage() {
 
   const customer = data.customer;
 
-  async function handleSubmit(values: CustomerFormSubmitValues) {
-    setFormError(null);
-    try {
-      await updateCustomer.mutateAsync({ id: customer.id, ...values });
-      setIsEditOpen(false);
-      setSuccessMessage("Customer updated.");
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
-
 
   return (
     <DashboardLayout>
@@ -141,8 +124,7 @@ export function CustomerDetailPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              setFormError(null);
-              setIsEditOpen(true);
+              navigate(`/customers/${customer.id}/edit`, { state: { from: `/customers/${customer.id}` } });
             }}
           >
             Edit
@@ -157,12 +139,6 @@ export function CustomerDetailPage() {
           </Button>
         </div>
       </div>
-
-      {successMessage && (
-        <p role="status" className="animate-fade-in-up mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          {successMessage}
-        </p>
-      )}
 
       <Card className="mt-6 p-6">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -297,15 +273,6 @@ export function CustomerDetailPage() {
         </div>
       </div>
 
-      {isEditOpen && (
-        <CustomerFormModal
-          customer={customer}
-          isSubmitting={updateCustomer.isPending}
-          serverError={formError}
-          onSubmit={handleSubmit}
-          onClose={() => setIsEditOpen(false)}
-        />
-      )}
 
     </DashboardLayout>
   );

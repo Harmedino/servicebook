@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { formatInTimeZone } from "date-fns-tz";
 import type { BookingStatus } from "@servicebook/types";
 import { useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
 import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
-import { StaffFormModal, type StaffFormSubmitValues } from "../components/StaffFormModal";
 import { StaffAvailabilityEditor } from "../components/StaffAvailabilityEditor";
 import { ApiError } from "../lib/apiClient";
 import { DashboardLayout } from "../components/DashboardLayout";
@@ -78,6 +77,7 @@ export function StaffDetailPage() {
   const { staffId } = useParams<{ staffId: string }>();
   const { data: staffData, isPending, isError } = useStaffList();
   const { data: servicesData } = useServices();
+  const navigate = useNavigate();
   const updateStaff = useUpdateStaff();
 
   const { data: businessData } = useMyBusiness();
@@ -90,8 +90,6 @@ export function StaffDetailPage() {
     staffId: staffId ?? undefined,
   });
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const openBooking = useOpenBooking();
 
@@ -134,17 +132,6 @@ export function StaffDetailPage() {
   }
 
   const assignedServices = services.filter((service) => staff.serviceIds.includes(service.id));
-  const assignableServices = services.filter((service) => service.isActive || staff.serviceIds.includes(service.id));
-
-  async function handleSubmit(values: StaffFormSubmitValues) {
-    setFormError(null);
-    try {
-      await updateStaff.mutateAsync({ id: staff!.id, ...values });
-      setIsEditOpen(false);
-    } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
-    }
-  }
 
   async function handleToggleActive() {
     if (staff!.isActive && !window.confirm(`Deactivate "${staff!.name}"? They won't be assignable to new bookings.`)) {
@@ -181,8 +168,7 @@ export function StaffDetailPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              setFormError(null);
-              setIsEditOpen(true);
+              navigate(`/staff/${staff.id}/edit`, { state: { from: `/staff/${staff.id}` } });
             }}
           >
             Edit
@@ -258,16 +244,6 @@ export function StaffDetailPage() {
         </div>
       </div>
 
-      {isEditOpen && (
-        <StaffFormModal
-          staff={staff}
-          availableServices={assignableServices}
-          isSubmitting={updateStaff.isPending}
-          serverError={formError}
-          onSubmit={handleSubmit}
-          onClose={() => setIsEditOpen(false)}
-        />
-      )}
     </DashboardLayout>
   );
 }
