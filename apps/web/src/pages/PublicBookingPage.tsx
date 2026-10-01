@@ -37,7 +37,8 @@ import { CustomerChat } from "../components/chat/CustomerChat";
 import { DemoBar } from "../components/DemoBar";
 import { isDemoSlug, isEmbedded, ownerDemoPath } from "../lib/demo";
 import { usePublicShowcase } from "../lib/showcase";
-import { useCustomerPortal } from "../lib/customerPortal";
+import { forgetCustomer, rememberCustomer, rememberedCustomer, useCustomerPortal } from "../lib/customerPortal";
+import { YourAppointments } from "../components/showcase/YourAppointments";
 import { PublicShowcase, type BookIntent, type ShowcaseSection } from "../components/showcase/PublicShowcase";
 import { BusinessInfo } from "../components/showcase/BusinessInfo";
 import { WaitlistJoin } from "../components/showcase/WaitlistJoin";
@@ -181,10 +182,35 @@ export function PublicBookingPage() {
     setSearchParams(params, { replace: true });
     window.scrollTo({ top: Math.min(window.scrollY, 220), behavior: "smooth" });
   }
-  // Arriving from the customer's own page (?c=token): we already know who they are.
-  const customerToken = searchParams.get("c");
-  const { data: portal } = useCustomerPortal(customerToken);
-  const knownCustomer = portal && portal.business.slug === slug ? portal.customer : null;
+  // We know who they are when they arrive from their own page (?c=token), or
+  // when they've booked or opened that page on this phone before.
+  const [savedToken, setSavedToken] = useState(() => rememberedCustomer(slug));
+  useEffect(() => setSavedToken(rememberedCustomer(slug)), [slug]);
+  const customerToken = searchParams.get("c") ?? savedToken;
+  const { data: portal, isError: portalFailed } = useCustomerPortal(customerToken);
+  const knownPortal = portal && portal.business.slug === slug ? portal : null;
+  const knownCustomer = knownPortal?.customer ?? null;
+  useEffect(() => {
+    if (knownPortal && customerToken) rememberCustomer(slug, customerToken);
+  }, [knownPortal, customerToken, slug]);
+  useEffect(() => {
+    // A remembered link that no longer works (customer removed): drop it quietly.
+    if (portalFailed && customerToken && customerToken === savedToken) {
+      forgetCustomer(slug);
+      setSavedToken(null);
+    }
+  }, [portalFailed, customerToken, savedToken, slug]);
+  function notMe() {
+    forgetCustomer(slug);
+    setSavedToken(null);
+    const params = new URLSearchParams(searchParams);
+    params.delete("c");
+    setSearchParams(params, { replace: true });
+    setName("");
+    setPhone("");
+    setEmail("");
+    setEditingDetails(false);
+  }
   const [editingDetails, setEditingDetails] = useState(false);
   const services = businessData?.services ?? [];
   const staff = staffData?.staff ?? [];
@@ -300,13 +326,17 @@ export function PublicBookingPage() {
     if (!serviceId || !selectedSlot) return;
 
     try {
-      await createBooking.mutateAsync({
+      const { confirmation: booked } = await createBooking.mutateAsync({
         serviceId,
         staffId: staffId && staffId !== ANY_STAFF ? staffId : undefined,
         startTime: selectedSlot,
         customer: { name: name.trim(), phone: phone.trim(), email: email.trim() || undefined },
         notes: notes.trim() || undefined,
       });
+      if (booked.customerToken) {
+        rememberCustomer(slug, booked.customerToken);
+        setSavedToken(booked.customerToken);
+      }
       setStep("confirmation");
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
@@ -520,6 +550,19 @@ export function PublicBookingPage() {
             <p className="mt-2 text-sm text-stone-500">Please contact the business directly to book an appointment.</p>
           </div>
         ) : (
+          <>
+            {knownPortal && customerToken && step === "service" && (
+              <YourAppointments
+                data={knownPortal}
+                token={customerToken}
+                canRebook={(id) => services.some((service) => service.id === id)}
+                onBookAgain={(serviceForBooking, staffForBooking) => {
+                  selectService(serviceForBooking, staffForBooking);
+                  setTimeout(() => bookingCard.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+                }}
+                onForget={notMe}
+              />
+            )}
           <div ref={bookingCard} className="mt-4 grid scroll-mt-20 gap-6 lg:grid-cols-[1fr_320px]">
             <div className="min-w-0">
               {step !== "confirmation" && (
@@ -950,6 +993,7 @@ export function PublicBookingPage() {
               </aside>
             )}
           </div>
+          </>
         )}
 
         <AnimatePresence>
