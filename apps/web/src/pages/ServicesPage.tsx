@@ -5,6 +5,7 @@ import type { ServiceProfile } from "@servicebook/types";
 import { useDeactivateService, useServices, useUpdateService } from "../lib/services";
 import { useStaffList } from "../lib/staff";
 import { ApiError } from "../lib/apiClient";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { formatDuration, formatPrice } from "../lib/format";
 import { Button } from "../components/ui/Button";
@@ -26,6 +27,7 @@ export function ServicesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [toDeactivate, setToDeactivate] = useState<ServiceProfile | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const allServices = data?.services ?? [];
@@ -54,10 +56,11 @@ export function ServicesPage() {
     navigate(`/services/${service.id}/edit`, { state: { from: "/services" } });
   }
 
-  async function handleDeactivate(service: ServiceProfile) {
-    if (!window.confirm(`Deactivate "${service.name}"? Customers won't be able to book it anymore.`)) {
-      return;
-    }
+  function handleDeactivate(service: ServiceProfile) {
+    setToDeactivate(service);
+  }
+
+  async function confirmDeactivate(service: ServiceProfile) {
     setActionError(null);
     setSuccessMessage(null);
     try {
@@ -270,6 +273,18 @@ export function ServicesPage() {
         )}
       </div>
 
+      {toDeactivate && (
+        <ConfirmDialog
+          title={`Deactivate ${toDeactivate.name}?`}
+          confirmLabel="Deactivate"
+          destructive
+          isConfirming={deactivateService.isPending}
+          onConfirm={() => void confirmDeactivate(toDeactivate).finally(() => setToDeactivate(null))}
+          onCancel={() => setToDeactivate(null)}
+        >
+          <p>Customers won&apos;t be able to book it anymore.</p>
+        </ConfirmDialog>
+      )}
     </DashboardLayout>
   );
 }

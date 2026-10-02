@@ -35,6 +35,7 @@ import { useEnquiries } from "../lib/enquiries";
 import { useConversations } from "../lib/bookingChat";
 import { useIsDemoAccount } from "../lib/demo";
 import { STAFF_HOME } from "../lib/staffMode";
+import { useCopyLink } from "./CopyLinkDialog";
 
 interface NavItem {
   to: string;
@@ -177,23 +178,18 @@ function SidebarNav({
 }
 
 function BookingLinkCard({ slug, enabled, businessName }: { slug?: string; enabled?: boolean; businessName?: string }) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink, dialog: copyDialog } = useCopyLink();
   const [isShareOpen, setIsShareOpen] = useState(false);
   if (!slug) return null;
   const url = `${window.location.origin}/book/${slug}`;
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Copy your booking link", url);
-    }
+    await copyLink(url, "Copy your booking link");
   }
 
   return (
     <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-white">
+      {copyDialog}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Your booking page</p>
         <a href={url} target="_blank" rel="noreferrer" aria-label="Open booking page" className="rounded-md p-1 text-white/50 transition hover:bg-white/10 hover:text-white">

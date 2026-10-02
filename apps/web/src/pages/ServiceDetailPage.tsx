@@ -8,6 +8,7 @@ import { useBookings, useOpenBooking } from "../lib/bookings";
 import { useMyBusiness } from "../lib/business";
 import { formatDuration, formatPrice } from "../lib/format";
 import { ApiError } from "../lib/apiClient";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -42,6 +43,7 @@ export function ServiceDetailPage() {
   });
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isConfirmingDeactivate, setIsConfirmingDeactivate] = useState(false);
   const openBooking = useOpenBooking();
 
   const allBookings = useMemo(() => bookingsData?.bookings ?? [], [bookingsData?.bookings]);
@@ -74,13 +76,18 @@ export function ServiceDetailPage() {
     );
   }
 
-  async function handleToggleActive() {
-    if (service!.isActive && !window.confirm(`Deactivate "${service!.name}"? Customers won't be able to book it anymore.`)) {
+  function handleToggleActive() {
+    if (service!.isActive) {
+      setIsConfirmingDeactivate(true);
       return;
     }
+    void setActive(true);
+  }
+
+  async function setActive(isActive: boolean) {
     setActionError(null);
     try {
-      await updateService.mutateAsync({ id: service!.id, isActive: !service!.isActive });
+      await updateService.mutateAsync({ id: service!.id, isActive });
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
     }
@@ -198,6 +205,18 @@ export function ServiceDetailPage() {
         </div>
       </div>
 
+      {isConfirmingDeactivate && (
+        <ConfirmDialog
+          title={`Deactivate ${service.name}?`}
+          confirmLabel="Deactivate"
+          destructive
+          isConfirming={updateService.isPending}
+          onConfirm={() => void setActive(false).finally(() => setIsConfirmingDeactivate(false))}
+          onCancel={() => setIsConfirmingDeactivate(false)}
+        >
+          <p>Customers won&apos;t be able to book it anymore.</p>
+        </ConfirmDialog>
+      )}
     </DashboardLayout>
   );
 }

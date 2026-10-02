@@ -98,30 +98,6 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="bg-surface">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.8fr_1.2fr] lg:px-8">
-          <h2 className="text-3xl font-semibold leading-tight tracking-tight text-stone-900 sm:text-4xl">Why I built this</h2>
-          <Reveal>
-            <div className="space-y-4 text-lg leading-relaxed text-stone-700">
-              <p>
-                I build software for small businesses. A lot of them, salons and barbers especially, run the whole day from WhatsApp and a notebook: someone
-                asks for Saturday, three messages later there&apos;s a time, and nobody else on the team knows about it.
-              </p>
-              <p>
-                ServiceBook is the tool I wanted to hand them. One link customers can book from, a diary the whole team can see, and a client list that
-                doesn&apos;t live in one person&apos;s phone. It&apos;s free while it&apos;s in early access, and what gets built next comes from the people using it.
-              </p>
-            </div>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <p className="font-medium text-stone-900">Damilola Adebowale, builder of ServiceBook</p>
-              <Link to="/roadmap" className="text-sm font-semibold text-stone-900 underline decoration-stone-300 underline-offset-4 hover:decoration-stone-900">
-                See what&apos;s coming next
-              </Link>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
       <CtaBand />
     </MarketingLayout>
   );

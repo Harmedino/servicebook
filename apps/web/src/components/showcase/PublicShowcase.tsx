@@ -177,6 +177,18 @@ function StaffSheet({
           </div>
 
           <div className="space-y-6 p-5">
+            {member.services.length > 0 && (
+              <section>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-400">What {firstName(member.name)} does</h4>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {member.services.map((service) => (
+                    <li key={service} className="rounded-full bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-700">
+                      {service}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {(member.location || (data && (data.away.length > 0 || data.hours.some((entry) => !entry.isOff)))) && (
               <section className="grid gap-3 sm:grid-cols-2">
                 {data && data.hours.some((entry) => !entry.isOff) && (
@@ -346,9 +358,18 @@ export function PublicShowcase({
                     {member.title && <p className="truncate text-xs text-stone-500">{member.title}</p>}
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
+                {member.services.length > 0 && (
+                  <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={`What ${firstName(member.name)} does`}>
+                    {member.services.slice(0, 3).map((service) => (
+                      <li key={service} className="max-w-full truncate rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+                        {service}
+                      </li>
+                    ))}
+                    {member.services.length > 3 && <li className="px-1 py-1 text-xs font-medium text-stone-500">+{member.services.length - 3} more</li>}
+                  </ul>
+                )}
+                <div className="mt-3">
                   {member.reviewCount ? <RatingBadge rating={member.rating} count={member.reviewCount} /> : <span className="text-xs text-stone-400">New</span>}
-                  <span className="truncate text-xs text-stone-400">{member.services.slice(0, 2).join(", ")}</span>
                 </div>
               </button>
             ))}

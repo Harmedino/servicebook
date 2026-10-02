@@ -1,15 +1,15 @@
-import { useState } from "react";
 import { Check, Copy, ExternalLink, MessageCircle } from "lucide-react";
 import type { CustomerProfile } from "@servicebook/types";
 import { customerPageUrl, useCustomerPortalLink } from "../lib/customerPortal";
 import { useMyBusiness } from "../lib/business";
 import { whatsappNumberFor } from "../lib/socials";
+import { useCopyLink } from "./CopyLinkDialog";
 
 /** On a customer's profile: the private link to their own page, ready to copy or send on WhatsApp. */
 export function CustomerPageShare({ customer }: { customer: CustomerProfile }) {
   const { data } = useCustomerPortalLink(customer.id);
   const { data: businessData } = useMyBusiness();
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink, dialog: copyDialog } = useCopyLink();
   const business = businessData?.business;
   if (!data || !business) return <div className="skeleton-shimmer h-28 rounded-2xl bg-stone-100" />;
 
@@ -19,17 +19,12 @@ export function CustomerPageShare({ customer }: { customer: CustomerProfile }) {
   const whatsapp = customer.phone ? whatsappNumberFor(customer.phone, business.socials?.whatsapp) : "";
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Their page", url);
-    }
+    await copyLink(url, "Their page link");
   }
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-surface p-5">
+      {copyDialog}
       <p className="font-semibold text-stone-900">{firstName}&apos;s page</p>
       <p className="mt-1 text-sm text-stone-500">
         A private link where {firstName} sees past and upcoming appointments and books again without typing their details.
