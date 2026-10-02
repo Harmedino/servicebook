@@ -7,6 +7,7 @@ import { useStaffList } from "../lib/staff";
 import { FormPage } from "./FormPages";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Avatar } from "../components/ui/Avatar";
+import { useCopyLink } from "../components/CopyLinkDialog";
 
 const KEY = ["calendar-feed"] as const;
 
@@ -15,24 +16,19 @@ function feedUrl(token: string, staffId?: string) {
 }
 
 function FeedRow({ title, subtitle, url, avatar }: { title: string; subtitle: string; url: string; avatar?: string }) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink, dialog: copyDialog } = useCopyLink();
   const webcal = url.replace(/^https?:\/\//, "webcal://");
   const google = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`;
   const outlook = `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(url)}&name=${encodeURIComponent(title)}`;
   const button = "inline-flex h-9 items-center rounded-full border border-stone-300 px-3 text-sm font-medium text-stone-700 hover:bg-stone-50";
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Calendar link", url);
-    }
+    await copyLink(url, "Calendar link");
   }
 
   return (
     <li className="py-4">
+      {copyDialog}
       <div className="flex items-center gap-3">
         {avatar && <Avatar name={avatar} size="sm" />}
         <div className="min-w-0">

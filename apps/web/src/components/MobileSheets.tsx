@@ -29,6 +29,7 @@ import { useTheme } from "../lib/theme";
 import { staffCanOpen } from "../lib/staffMode";
 import { imageSrc } from "../lib/images";
 import { InviteCustomersModal } from "./InviteCustomersModal";
+import { useCopyLink } from "./CopyLinkDialog";
 
 /** A bottom sheet that can be dragged down to close. */
 export function BottomSheet({ open, onClose, children, label }: { open: boolean; onClose: () => void; children: ReactNode; label: string }) {
@@ -178,22 +179,17 @@ export function MoreSheet({
   staffOnly?: boolean;
 }) {
   const { theme, toggleTheme } = useTheme();
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink, dialog: copyDialog } = useCopyLink();
   const [invite, setInvite] = useState(false);
   const bookingUrl = business ? `${window.location.origin}/book/${business.slug}` : "";
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(bookingUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      window.prompt("Copy your booking link", bookingUrl);
-    }
+    await copyLink(bookingUrl, "Copy your booking link");
   }
 
   return (
     <>
+      {copyDialog}
       <BottomSheet open={open} onClose={onClose} label="More">
         <div className="px-4 pb-4 pt-2">
           {business && (

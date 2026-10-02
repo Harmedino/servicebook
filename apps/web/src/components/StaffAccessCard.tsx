@@ -8,6 +8,7 @@ import { whatsappNumberFor } from "../lib/socials";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { useCopyLink } from "./CopyLinkDialog";
 
 /** Owner, on a staff member's page: give them their own login by invite link, or take it away. */
 export function StaffAccessCard({ staff }: { staff: StaffProfile }) {
@@ -15,7 +16,7 @@ export function StaffAccessCard({ staff }: { staff: StaffProfile }) {
   const { data: businessData } = useMyBusiness();
   const business = businessData?.business;
   const [invite, setInvite] = useState<StaffInviteResponse | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink, dialog: copyDialog } = useCopyLink();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["staff"] });
 
@@ -42,17 +43,12 @@ export function StaffAccessCard({ staff }: { staff: StaffProfile }) {
   const whatsapp = staff.phone ? whatsappNumberFor(staff.phone, business?.socials?.whatsapp) : "";
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Invite link", url);
-    }
+    await copyLink(url, "Invite link");
   }
 
   return (
     <Card className="p-5">
+      {copyDialog}
       <div className="flex items-start gap-3">
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${staff.access === "active" ? "bg-brand-50 text-brand-700" : "bg-stone-100 text-stone-500"}`}>
           {staff.access === "active" ? <ShieldCheck className="h-4 w-4" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}

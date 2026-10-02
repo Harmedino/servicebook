@@ -10,6 +10,7 @@ import { StaffAvailabilityEditor } from "../components/StaffAvailabilityEditor";
 import { StaffTimeOff } from "../components/StaffTimeOff";
 import { StaffAccessCard } from "../components/StaffAccessCard";
 import { ApiError } from "../lib/apiClient";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { ActiveBadge, BookingStatusBadge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -93,6 +94,7 @@ export function StaffDetailPage() {
   });
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isConfirmingDeactivate, setIsConfirmingDeactivate] = useState(false);
   const openBooking = useOpenBooking();
 
   const allBookings = useMemo(() => bookingsData?.bookings ?? [], [bookingsData?.bookings]);
@@ -135,13 +137,18 @@ export function StaffDetailPage() {
 
   const assignedServices = services.filter((service) => staff.serviceIds.includes(service.id));
 
-  async function handleToggleActive() {
-    if (staff!.isActive && !window.confirm(`Deactivate "${staff!.name}"? They won't be assignable to new bookings.`)) {
+  function handleToggleActive() {
+    if (staff!.isActive) {
+      setIsConfirmingDeactivate(true);
       return;
     }
+    void setActive(true);
+  }
+
+  async function setActive(isActive: boolean) {
     setActionError(null);
     try {
-      await updateStaff.mutateAsync({ id: staff!.id, isActive: !staff!.isActive });
+      await updateStaff.mutateAsync({ id: staff!.id, isActive });
     } catch (error) {
       setActionError(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
     }
@@ -254,6 +261,18 @@ export function StaffDetailPage() {
         </div>
       </div>
 
+      {isConfirmingDeactivate && (
+        <ConfirmDialog
+          title={`Deactivate ${staff.name}?`}
+          confirmLabel="Deactivate"
+          destructive
+          isConfirming={updateStaff.isPending}
+          onConfirm={() => void setActive(false).finally(() => setIsConfirmingDeactivate(false))}
+          onCancel={() => setIsConfirmingDeactivate(false)}
+        >
+          <p>They won&apos;t be assignable to new bookings.</p>
+        </ConfirmDialog>
+      )}
     </DashboardLayout>
   );
 }

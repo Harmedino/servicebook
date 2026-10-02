@@ -13,6 +13,7 @@ import { BookingStatusBadge } from "../components/ui/Badge";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { LogoMark } from "../components/Logo";
 import { ReviewForm } from "../components/showcase/ReviewForm";
+import { useCopyLink } from "../components/CopyLinkDialog";
 
 function googleCalendarUrl(title: string, start: string, end: string, location?: string): string {
   const fmt = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -27,7 +28,7 @@ export function MyBookingPage() {
   const { data, isPending, isError } = usePublicThread(token);
   const cancel = useCancelPublicBooking(token);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyText, dialog: copyDialog } = useCopyLink();
 
   if (isPending) {
     return (
@@ -54,17 +55,12 @@ export function MyBookingPage() {
   const start = new Date(booking.startTime);
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Copy this link", window.location.href);
-    }
+    await copyText(window.location.href, "Copy this link");
   }
 
   return (
     <div className="min-h-screen bg-stone-50 pb-12">
+      {copyDialog}
       {isDemoSlug(business.slug) && <DemoBar />}
       <div className="mx-auto max-w-2xl px-4 pt-6 sm:pt-10">
         <div className="flex items-center gap-3">

@@ -6,6 +6,7 @@ import type { ServiceProfile, StaffProfile } from "@servicebook/types";
 import { useStaffList, useUpdateStaff } from "../lib/staff";
 import { useServices } from "../lib/services";
 import { ApiError } from "../lib/apiClient";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { Button } from "../components/ui/Button";
 import { ActiveBadge } from "../components/ui/Badge";
@@ -34,6 +35,7 @@ export function StaffPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [toDeactivate, setToDeactivate] = useState<StaffProfile | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const allStaffMembers = data?.staff ?? [];
@@ -65,10 +67,11 @@ export function StaffPage() {
     navigate(`/staff/${staff.id}/edit`, { state: { from: "/staff" } });
   }
 
-  async function handleDeactivate(staff: StaffProfile) {
-    if (!window.confirm(`Deactivate "${staff.name}"? They won't be assignable to new bookings.`)) {
-      return;
-    }
+  function handleDeactivate(staff: StaffProfile) {
+    setToDeactivate(staff);
+  }
+
+  async function confirmDeactivate(staff: StaffProfile) {
     setActionError(null);
     setSuccessMessage(null);
     try {
@@ -295,6 +298,18 @@ export function StaffPage() {
         )}
       </div>
 
+      {toDeactivate && (
+        <ConfirmDialog
+          title={`Deactivate ${toDeactivate.name}?`}
+          confirmLabel="Deactivate"
+          destructive
+          isConfirming={updateStaff.isPending}
+          onConfirm={() => void confirmDeactivate(toDeactivate).finally(() => setToDeactivate(null))}
+          onCancel={() => setToDeactivate(null)}
+        >
+          <p>They won&apos;t be assignable to new bookings.</p>
+        </ConfirmDialog>
+      )}
     </DashboardLayout>
   );
 }

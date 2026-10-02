@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CalendarCheck, Check, Copy, Download, ExternalLink, MessageCircle, Share2, UserPlus, X } from "lucide-react";
 import { useEscapeToClose } from "../lib/useEscapeToClose";
+import { useCopyLink } from "./CopyLinkDialog";
 
 type LinkKind = "join" | "book";
 
@@ -36,7 +37,7 @@ interface InviteCustomersModalProps {
 /** Share a business's join or booking link: copy, WhatsApp, native share sheet, or a printable QR code. */
 export function InviteCustomersModal({ slug, businessName, initialKind = "join", onClose }: InviteCustomersModalProps) {
   const [kind, setKind] = useState<LinkKind>(initialKind);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyLink, dialog: copyDialog } = useCopyLink();
   const [qr, setQr] = useState<string | null>(null);
   useEscapeToClose(onClose);
 
@@ -58,13 +59,7 @@ export function InviteCustomersModal({ slug, businessName, initialKind = "join",
   }, [url]);
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Copy this link", url);
-    }
+    await copyLink(url, "Copy this link");
   }
 
   async function nativeShare() {
@@ -77,6 +72,7 @@ export function InviteCustomersModal({ slug, businessName, initialKind = "join",
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+      {copyDialog}
       <motion.div className="absolute inset-0 bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} />
       <motion.div
         initial={{ y: 40, opacity: 0 }}
