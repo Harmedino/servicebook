@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { type ClientSession } from "mongoose";
 import { env } from "../config/env";
 
 mongoose.set("strictQuery", true);
@@ -17,7 +17,7 @@ export function connectDatabase(): Promise<typeof mongoose> {
       .then(async (connection) => {
         const { host, name } = connection.connection;
         console.log(`MongoDB connected: ${host}/${name}`);
-        await warnIfNotReplicaSet();
+        if (env.DB_TRANSACTIONS === "on") await warnIfNotReplicaSet();
         return connection;
       })
       .catch((error: unknown) => {
@@ -43,6 +43,23 @@ async function warnIfNotReplicaSet(): Promise<void> {
     }
   } catch {
     // Not fatal: some managed users can't run admin commands.
+  }
+}
+
+/**
+ * Runs fn inside a transaction (the driver retries it on transient conflicts)
+ * and returns its result. With DB_TRANSACTIONS=off, which env.ts accepts only
+ * when NODE_ENV=test, fn runs without a session.
+ */
+export async function withTransaction<T>(fn: (session: ClientSession | null) => Promise<T>): Promise<T> {
+  if (env.DB_TRANSACTIONS === "off") {
+    return fn(null);
+  }
+  const session = await mongoose.startSession();
+  try {
+    return await session.withTransaction(() => fn(session));
+  } finally {
+    await session.endSession();
   }
 }
 

@@ -36,6 +36,9 @@ const staffSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    // Bumped inside every booking transaction for this person, so two
+    // concurrent bookings for them conflict instead of both succeeding.
+    scheduleVersion: { type: Number },
     // Bidirectional with Service.staffIds — see note there.
     serviceIds: {
       type: [{ type: Schema.Types.ObjectId, ref: "Service" }],

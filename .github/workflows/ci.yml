@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, release]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      # Bookings use transactions, which need a replica set. Service containers
+      # can't pass --replSet, so start MongoDB 7 by hand as a one-node set.
+      - name: Start MongoDB 7 (single-node replica set)
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:7 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker exec mongo mongosh --quiet --eval 'rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "127.0.0.1:27017" }] })'
+          for attempt in $(seq 1 30); do
+            [ "$(docker exec mongo mongosh --quiet --eval 'db.hello().isWritablePrimary')" = "true" ] && exit 0
+            sleep 2
+          done
+          echo "MongoDB did not become primary" >&2
+          docker logs mongo
+          exit 1
+
+      - name: API tests (transactions on)
+        run: pnpm --filter api test
+        env:
+          MONGODB_REPLICA_SET: "1"
+          MONGODB_TEST_URI: mongodb://127.0.0.1:27017/sbx_test?directConnection=true
+
+      - name: Web tests
+        run: pnpm --filter web test
+
+      - name: Web production build
+        run: pnpm --filter web build
+        env:
+          VITE_API_URL: https://api.example.com
+
+      - name: API build and smoke import
+        run: |
+          pnpm --filter api build
+          node apps/api/scripts/smoke-dist.mjs

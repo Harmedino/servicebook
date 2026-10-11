@@ -1,4 +1,4 @@
-import mongoose, { type ClientSession } from "mongoose";
+import type { ClientSession } from "mongoose";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { Booking, type BookingDocument } from "../models/Booking";
 import { Service, type ServiceDocument } from "../models/Service";
@@ -9,6 +9,7 @@ import type { CustomerDocument } from "../models/Customer";
 import { BadRequestError, ConflictError } from "./errors";
 import { ensureBusinessHours } from "./businessHours";
 import { ensureStaffAvailability } from "./staffAvailability";
+import { withTransaction } from "./database";
 import { notifyBookingCreated } from "../services/notifications";
 
 // The interval at which candidate slots are offered. Not the same as service
@@ -142,8 +143,7 @@ export async function validateBookingWindow(params: {
  * (a double-booked staff member) or the same customer within the business (a
  * customer double-booked with themselves). Must be called with the same
  * session used for the subsequent insert/update to keep the check-then-write
- * atomic — see the "atomicity" note in the bookings route for the limits of
- * this guarantee on a non-serializable transaction.
+ * atomic.
  */
 export async function findConflictMessage(params: {
   businessId: string;
@@ -152,9 +152,15 @@ export async function findConflictMessage(params: {
   startTime: Date;
   endTime: Date;
   excludeBookingId?: string;
-  session: ClientSession;
+  session: ClientSession | null;
 }): Promise<string | null> {
   const { businessId, staffId, customerId, startTime, endTime, excludeBookingId, session } = params;
+
+  // Transactions are snapshot-isolated, not serialisable: two requests for the
+  // same staff member could both find the slot free and both insert. Writing
+  // to the staff document makes those transactions collide; the driver
+  // retries the loser, which then sees the winner's booking.
+  await Staff.updateOne({ _id: staffId, businessId }, { $inc: { scheduleVersion: 1 } }, { timestamps: false }).session(session);
 
   const overlapFilter = {
     status: { $ne: "CANCELLED" },
@@ -309,39 +315,31 @@ export async function createValidatedBooking(params: {
 
   await validateBookingWindow({ businessId, business, staffId, startTime, endTime });
 
-  const session = await mongoose.startSession();
-  let booking: BookingDocument | undefined;
-  try {
-    await session.withTransaction(async () => {
-      const conflictMessage = await findConflictMessage({ businessId, staffId, customerId, startTime, endTime, session });
-      if (conflictMessage) {
-        throw new ConflictError(conflictMessage);
-      }
+  const createdBooking = await withTransaction(async (session) => {
+    const conflictMessage = await findConflictMessage({ businessId, staffId, customerId, startTime, endTime, session });
+    if (conflictMessage) {
+      throw new ConflictError(conflictMessage);
+    }
 
-      const [created] = await Booking.create(
-        [
-          {
-            businessId,
-            staffId,
-            serviceId,
-            customerId,
-            startTime,
-            endTime,
-            notes,
-            price: service.price,
-            serviceName: service.name,
-            staffName: staff.name,
-          },
-        ],
-        { session },
-      );
-      booking = created;
-    });
-  } finally {
-    await session.endSession();
-  }
-
-  const createdBooking = booking as BookingDocument;
+    const [created] = await Booking.create(
+      [
+        {
+          businessId,
+          staffId,
+          serviceId,
+          customerId,
+          startTime,
+          endTime,
+          notes,
+          price: service.price,
+          serviceName: service.name,
+          staffName: staff.name,
+        },
+      ],
+      { session },
+    );
+    return created;
+  });
 
   // Fire-and-forget, and deliberately outside the transaction: email I/O is
   // slow and unreliable compared to a DB write, and a failed/slow send must

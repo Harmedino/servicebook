@@ -18,14 +18,19 @@ Work towards the first release sold to single businesses: one business per deplo
 
 - `docs/RELEASING.md`: the freeze of the multi-business version, the seller's checklist for it, branches and tags, the rules every release keeps, cutting and rolling out a release (demo first, API before website), backups and rolling back.
 - This changelog, and a link to both files from the README's Deploying section.
+- Automated tests for the API (against a real database) and the website, run with `pnpm test`, and a CI workflow that runs them against a MongoDB replica set, builds both apps and checks that the built API loads.
+
+### Fixed
+
+- Two people booking the same staff member at the same moment could both get the slot. Simultaneous bookings for one person now conflict, and the second gets "This staff member already has a booking that overlaps this time".
 
 ### Upgrading
 
 - **Backup required:** no.
-- **Environment:** none.
+- **Environment:** `DB_TRANSACTIONS` is new and only for tests (default `on`). The API refuses to start with `off` unless `NODE_ENV=test`. Nothing to set.
 - **Migrations:** none.
 - **Manual steps:** before anything else merges into `main`, the seller finishes the [checklist in docs/RELEASING.md](docs/RELEASING.md#sellers-checklist): push `saas-final` and `saas-legacy`, pin the live API and website to `saas-legacy`, prove that `main` no longer deploys, and tell the hosted site's real users.
-- **Deploy order:** nothing to deploy; this changes documentation only.
+- **Deploy order:** the API; the website's code is unchanged.
 
 ## saas-final - 2026-10-02 (frozen, not a release)
 
