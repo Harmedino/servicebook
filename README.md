@@ -217,6 +217,8 @@ pnpm --filter api seed      # demo salon with staff, services, clients, bookings
 
 The API runs on **Render**, the web app on **Vercel**. `render.yaml` describes the API as a Blueprint.
 
+Releases, the frozen multi-business version and the order to deploy in are in [docs/RELEASING.md](docs/RELEASING.md); release notes are in [CHANGELOG.md](CHANGELOG.md).
+
 ### API → Render
 
 | Setting | Value |
