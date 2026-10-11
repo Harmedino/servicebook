@@ -2,11 +2,6 @@ import "dotenv/config";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-// Render sets RENDER=true on every service. Treat it like production for the
-// required-variable checks, so a missing NODE_ENV can't silently fall back to
-// the insecure local-development defaults below.
-const isDeployed = process.env.NODE_ENV === "production" || process.env.RENDER === "true";
-
 // Local development works without a .env file; deployed environments never use these.
 const DEV_DEFAULTS: Record<string, string> = {
   MONGODB_URI: "mongodb://127.0.0.1:27017/servicebook",
@@ -18,8 +13,6 @@ const DEV_DEFAULTS: Record<string, string> = {
 // CORS_ORIGIN can't block sign-up from the real site.
 const DEFAULT_WEB_ORIGIN = "https://servicebook-drab.vercel.app";
 const DEFAULT_PREVIEW_ORIGINS = "https://servicebook-*.vercel.app";
-
-const warnings: string[] = [];
 
 const envSchema = z
   .object({
@@ -55,8 +48,19 @@ const envSchema = z
     EMAIL_PROVIDER: z.enum(["console", "resend"]).default("console"),
     EMAIL_FROM: z.string().trim().optional(),
     EMAIL_API_KEY: z.string().trim().optional(),
+
+    // Bookings are created inside MongoDB transactions. "off" exists only for
+    // test databases that can't run them (no replica set, or FerretDB).
+    DB_TRANSACTIONS: z.enum(["on", "off"]).default("on"),
   })
   .superRefine((value, ctx) => {
+    if (value.DB_TRANSACTIONS === "off" && value.NODE_ENV !== "test") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["DB_TRANSACTIONS"],
+        message: "can only be off in tests (NODE_ENV=test): bookings need transactions",
+      });
+    }
     if (value.EMAIL_PROVIDER === "resend") {
       if (!value.EMAIL_API_KEY) {
         ctx.addIssue({ code: "custom", path: ["EMAIL_API_KEY"], message: "is required when EMAIL_PROVIDER=resend" });
@@ -67,39 +71,63 @@ const envSchema = z
     }
   });
 
-// Empty strings (e.g. `JWT_SECRET=` on a dashboard) count as unset.
-const rawEnv: Record<string, string | undefined> = {};
-for (const [key, value] of Object.entries(process.env)) {
-  rawEnv[key] = value === "" ? undefined : value;
+/**
+ * Validates a set of environment variables and applies the defaults. Throws on
+ * an invalid configuration (never exits), so tests can check configurations.
+ */
+export function parseEnv(source: Record<string, string | undefined>) {
+  // Render sets RENDER=true on every service. Treat it like production for the
+  // required-variable checks, so a missing NODE_ENV can't silently fall back to
+  // the insecure local-development defaults below.
+  const isDeployed = source.NODE_ENV === "production" || source.RENDER === "true";
+  const warnings: string[] = [];
+
+  // Empty strings (e.g. `JWT_SECRET=` on a dashboard) count as unset.
+  const rawEnv: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(source)) {
+    rawEnv[key] = value === "" ? undefined : value;
+  }
+  if (!isDeployed) {
+    for (const [key, value] of Object.entries(DEV_DEFAULTS)) {
+      rawEnv[key] ??= value;
+    }
+  } else {
+    // Don't refuse to start over settings with a safe fallback; warn loudly instead.
+    if ((!rawEnv.JWT_SECRET || rawEnv.JWT_SECRET.length < 32) && rawEnv.MONGODB_URI) {
+      warnings.push(
+        `JWT_SECRET is ${rawEnv.JWT_SECRET ? "too short" : "not set"}; using a secret derived from MONGODB_URI. ` +
+          "Set JWT_SECRET to 32+ random characters (openssl rand -base64 48) on Render.",
+      );
+      // Stable across restarts (so logins survive) and as secret as the database password.
+      rawEnv.JWT_SECRET = createHash("sha256").update(`jwt:${rawEnv.MONGODB_URI}`).digest("hex");
+    }
+    if (!rawEnv.CORS_ORIGIN) {
+      warnings.push(`CORS_ORIGIN is not set; allowing ${DEFAULT_WEB_ORIGIN}.`);
+      rawEnv.CORS_ORIGIN = DEFAULT_WEB_ORIGIN;
+    }
+  }
+
+  const parsed = envSchema.safeParse(rawEnv);
+  if (!parsed.success) {
+    const lines = parsed.error.issues.map((issue) => `  - ${issue.path.join(".") || "env"} ${issue.message}`);
+    throw new Error(`Invalid environment configuration${isDeployed ? " (production)" : ""}:\n${lines.join("\n")}`);
+  }
+  return { env: parsed.data, isDeployed, warnings };
 }
-if (!isDeployed) {
-  for (const [key, value] of Object.entries(DEV_DEFAULTS)) {
-    rawEnv[key] ??= value;
-  }
-} else {
-  // Don't refuse to start over settings with a safe fallback; warn loudly instead.
-  if ((!rawEnv.JWT_SECRET || rawEnv.JWT_SECRET.length < 32) && rawEnv.MONGODB_URI) {
-    warnings.push(
-      `JWT_SECRET is ${rawEnv.JWT_SECRET ? "too short" : "not set"}; using a secret derived from MONGODB_URI. ` +
-        "Set JWT_SECRET to 32+ random characters (openssl rand -base64 48) on Render.",
-    );
-    // Stable across restarts (so logins survive) and as secret as the database password.
-    rawEnv.JWT_SECRET = createHash("sha256").update(`jwt:${rawEnv.MONGODB_URI}`).digest("hex");
-  }
-  if (!rawEnv.CORS_ORIGIN) {
-    warnings.push(`CORS_ORIGIN is not set; allowing ${DEFAULT_WEB_ORIGIN}.`);
-    rawEnv.CORS_ORIGIN = DEFAULT_WEB_ORIGIN;
+
+function loadEnv(): ReturnType<typeof parseEnv> {
+  try {
+    return parseEnv(process.env);
+  } catch (error) {
+    // Tests assert on configuration errors, so they get the error instead of an exit.
+    if (process.env.NODE_ENV === "test") throw error;
+    console.error(`\n${error instanceof Error ? error.message : String(error)}\n`);
+    console.error("Set these in your host's environment settings (Render → Environment) or in apps/api/.env locally.\n");
+    process.exit(1);
   }
 }
 
-const parsed = envSchema.safeParse(rawEnv);
-
-if (!parsed.success) {
-  const lines = parsed.error.issues.map((issue) => `  - ${issue.path.join(".") || "env"} ${issue.message}`);
-  console.error(`\nInvalid environment configuration${isDeployed ? " (production)" : ""}:\n${lines.join("\n")}\n`);
-  console.error("Set these in your host's environment settings (Render → Environment) or in apps/api/.env locally.\n");
-  process.exit(1);
-}
+const { env: parsedEnv, isDeployed, warnings } = loadEnv();
 
 /**
  * Allowed CORS origins. Entries are normalised (trailing slashes removed) and
@@ -140,7 +168,7 @@ function parseAllowedOrigins(raw: string): Array<string | RegExp> {
   return origins;
 }
 
-export const env = parsed.data;
+export const env = parsedEnv;
 export const isProduction = isDeployed;
 export const allowedOrigins = parseAllowedOrigins(env.CORS_ORIGIN);
 

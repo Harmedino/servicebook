@@ -211,11 +211,21 @@ pnpm --filter api seed      # demo salon with staff, services, clients, bookings
 
 **Type checks:** run `pnpm typecheck` from the repo root, or `pnpm --filter api typecheck` / `pnpm --filter web typecheck` for one app.
 
+**Tests:** `pnpm test` runs both apps' tests (`pnpm --filter api test` / `pnpm --filter web test` for one). The API tests need MongoDB: each test file creates its own database from `MONGODB_TEST_URI` (default `mongodb://127.0.0.1:27017/sbx_test`, plus a random suffix) and drops it at the end. Against a replica set, also set `MONGODB_REPLICA_SET=1` to run the transaction and simultaneous-booking tests:
+
+```bash
+MONGODB_REPLICA_SET=1 MONGODB_TEST_URI="mongodb://127.0.0.1:27017/sbx_test?directConnection=true" pnpm --filter api test
+```
+
+Without a replica set those tests are skipped and the rest run with `DB_TRANSACTIONS=off`, a switch the API accepts only when `NODE_ENV=test`. CI (`.github/workflows/ci.yml`) runs everything against a MongoDB 7 replica set, builds both apps, and imports the built API with `node apps/api/scripts/smoke-dist.mjs`.
+
 ---
 
 ## Deploying
 
 The API runs on **Render**, the web app on **Vercel**. `render.yaml` describes the API as a Blueprint.
+
+Releases, the frozen multi-business version and the order to deploy in are in [docs/RELEASING.md](docs/RELEASING.md); release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 ### API → Render
 

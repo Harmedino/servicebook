@@ -1,7 +1,6 @@
 import { announceOpening } from "../lib/waitlist";
 import { Router } from "express";
 import { z } from "zod";
-import mongoose from "mongoose";
 import type { AvailableSlotsResponse, BookingListResponse, BookingProfile, BookingResponse } from "@servicebook/types";
 import { Booking, type BookingDocument } from "../models/Booking";
 import { Customer } from "../models/Customer";
@@ -11,6 +10,7 @@ import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError, Forbi
 import { asyncHandler } from "../utils/asyncHandler";
 import { requireAuth, requireBusiness } from "../middleware/auth";
 import { escapeRegExp, objectIdField } from "../lib/validation";
+import { withTransaction } from "../lib/database";
 import {
   computeAvailableSlots,
   createValidatedBooking,
@@ -357,57 +357,47 @@ bookingsRouter.patch(
       });
     }
 
-    const session = await mongoose.startSession();
-    let updatedBooking: BookingDocument | null = null;
-    try {
-      await session.withTransaction(async () => {
-        if (isRescheduling) {
-          const conflictMessage = await findConflictMessage({
-            businessId,
-            staffId,
-            customerId: existingBooking.customerId.toString(),
-            startTime,
-            endTime,
-            excludeBookingId: existingBooking.id,
-            session,
-          });
-          if (conflictMessage) {
-            throw new ConflictError(conflictMessage);
-          }
+    const updatedBooking = await withTransaction(async (session) => {
+      if (isRescheduling) {
+        const conflictMessage = await findConflictMessage({
+          businessId,
+          staffId,
+          customerId: existingBooking.customerId.toString(),
+          startTime,
+          endTime,
+          excludeBookingId: existingBooking.id,
+          session,
+        });
+        if (conflictMessage) {
+          throw new ConflictError(conflictMessage);
         }
+      }
 
-        const setFields: Record<string, unknown> = {};
-        if (updates.status !== undefined) {
-          setFields.status = updates.status;
-        }
-        if (updates.notes !== undefined) {
-          setFields.notes = updates.notes;
-        }
-        if (isRescheduling) {
-          setFields.staffId = staffId;
-          setFields.serviceId = serviceId;
-          setFields.startTime = startTime;
-          setFields.endTime = endTime;
-          // Mirrors endTime above: a reschedule re-derives the booking's
-          // operational details from the service's current state, same as
-          // duration does. A service edit alone (PATCH /api/services/:id)
-          // never touches any Booking document, so untouched bookings keep
-          // their original price snapshot regardless of later service edits —
-          // only an explicit reschedule of *this* booking re-syncs it.
-          setFields.price = rescheduledService!.price;
-          setFields.serviceName = rescheduledService!.name;
-          setFields.staffName = rescheduledStaff!.name;
-        }
+      const setFields: Record<string, unknown> = {};
+      if (updates.status !== undefined) {
+        setFields.status = updates.status;
+      }
+      if (updates.notes !== undefined) {
+        setFields.notes = updates.notes;
+      }
+      if (isRescheduling) {
+        setFields.staffId = staffId;
+        setFields.serviceId = serviceId;
+        setFields.startTime = startTime;
+        setFields.endTime = endTime;
+        // Mirrors endTime above: a reschedule re-derives the booking's
+        // operational details from the service's current state, same as
+        // duration does. A service edit alone (PATCH /api/services/:id)
+        // never touches any Booking document, so untouched bookings keep
+        // their original price snapshot regardless of later service edits —
+        // only an explicit reschedule of *this* booking re-syncs it.
+        setFields.price = rescheduledService!.price;
+        setFields.serviceName = rescheduledService!.name;
+        setFields.staffName = rescheduledStaff!.name;
+      }
 
-        updatedBooking = await Booking.findByIdAndUpdate(
-          existingBooking.id,
-          { $set: setFields },
-          { new: true, runValidators: true, session },
-        );
-      });
-    } finally {
-      await session.endSession();
-    }
+      return Booking.findByIdAndUpdate(existingBooking.id, { $set: setFields }, { new: true, runValidators: true, session });
+    });
 
     if (!updatedBooking) {
       throw new NotFoundError("Booking not found");
